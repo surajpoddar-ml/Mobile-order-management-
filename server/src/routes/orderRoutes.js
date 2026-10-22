@@ -8,15 +8,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'mws_eagle_mobile_parts_super_secre
 
 /**
  * 1. Create a New Order
- * Accessible to authenticated users and guest checkouts
+ * Requires user authentication via verifyToken middleware (Customer or Distributor)
  */
-router.post('/', async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
   try {
     const {
       customerName,
       customerEmail,
       customerPhone,
       shippingAddress,
+      district,
       city,
       state,
       postalCode,
@@ -26,32 +27,16 @@ router.post('/', async (req, res) => {
       notes = ''
     } = req.body;
 
-    if (!customerName || !customerEmail || !customerPhone || !shippingAddress || !items || !items.length) {
+    // Check mandatory fields (including District)
+    if (!customerName || !customerEmail || !customerPhone || !shippingAddress || !district || !items || !items.length) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required order details (Name, Email, Phone, Address, and Items are required).'
+        message: 'Missing required order details (Full Name, Email, Phone, Delivery Address, District, and Items are required).'
       });
     }
 
-    // Attempt to identify user session from token if present
-    let userId = null;
-    let userType = 'Customer';
-
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        const user = await queryGet('SELECT id, userId, userType, fullName FROM users WHERE id = ?', [decoded.id]);
-        if (user) {
-          userId = user.userId;
-          userType = user.userType;
-        }
-      } catch (err) {
-        // Continue as guest customer
-      }
-    }
-
+    const userId = req.user.userId;
+    const userType = req.user.userType;
     const orderNumber = `MWS-ORD-${Math.floor(100000 + Math.random() * 900000)}`;
     const now = new Date().toISOString();
     const itemsJson = typeof items === 'string' ? items : JSON.stringify(items);
@@ -59,9 +44,9 @@ router.post('/', async (req, res) => {
     const result = await queryRun(
       `INSERT INTO orders (
         orderNumber, userId, customerName, customerEmail, customerPhone, userType,
-        shippingAddress, city, state, postalCode, items, totalAmount, paymentMethod,
+        shippingAddress, district, city, state, postalCode, items, totalAmount, paymentMethod,
         orderStatus, notes, createdDate, updatedDate
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?)`,
       [
         orderNumber,
         userId,
@@ -70,9 +55,10 @@ router.post('/', async (req, res) => {
         customerPhone.trim(),
         userType,
         shippingAddress.trim(),
-        city || '',
-        state || '',
-        postalCode || '',
+        district.trim(),
+        city ? city.trim() : '',
+        state ? state.trim() : '',
+        postalCode ? postalCode.trim() : '',
         itemsJson,
         Number(totalAmount) || 0,
         paymentMethod,

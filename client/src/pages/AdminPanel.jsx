@@ -1117,6 +1117,7 @@ export const AdminPanel = () => {
                           <td style={{ padding: '12px 14px', verticalAlign: 'top', maxWidth: '200px' }}>
                             <div style={{ fontSize: '0.8rem', color: '#334155', lineHeight: 1.4 }}>
                               {ord.shippingAddress}
+                              {ord.district && `, Dist: ${ord.district}`}
                               {ord.city && `, ${ord.city}`}
                               {ord.postalCode && ` - ${ord.postalCode}`}
                             </div>
@@ -2340,6 +2341,7 @@ export const AdminPanel = () => {
                   </div>
                   <div style={{ fontSize: '0.86rem', color: '#1e293b', lineHeight: 1.45 }}>
                     {selectedOrderDetails.shippingAddress}
+                    {selectedOrderDetails.district && `, District: ${selectedOrderDetails.district}`}
                     {selectedOrderDetails.city && `, ${selectedOrderDetails.city}`}
                     {selectedOrderDetails.state && `, ${selectedOrderDetails.state}`}
                     {selectedOrderDetails.postalCode && ` - ${selectedOrderDetails.postalCode}`}

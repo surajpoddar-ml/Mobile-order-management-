@@ -130,6 +130,7 @@ export const initDb = async () => {
       customerPhone TEXT NOT NULL,
       userType TEXT NOT NULL,
       shippingAddress TEXT NOT NULL,
+      district TEXT,
       city TEXT,
       state TEXT,
       postalCode TEXT,
@@ -142,6 +143,10 @@ export const initDb = async () => {
       updatedDate TEXT NOT NULL
     )
   `);
+
+  try {
+    await queryRun('ALTER TABLE orders ADD COLUMN district TEXT');
+  } catch (e) {}
 
   console.log('Database tables verified and ready.');
 };

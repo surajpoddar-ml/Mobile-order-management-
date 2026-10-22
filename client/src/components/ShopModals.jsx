@@ -22,11 +22,14 @@ import {
   Building2,
   User,
   ShieldCheck,
-  ArrowRight
+  ArrowRight,
+  Lock,
+  LogIn,
+  UserPlus
 } from 'lucide-react';
 
 export const ShopModals = () => {
-  const { user } = useAuth();
+  const { user, login, registerCustomer, navigate } = useAuth();
   const {
     cart,
     removeFromCart,
@@ -47,17 +50,27 @@ export const ShopModals = () => {
     showToast
   } = useCart();
 
-  // Checkout Step: 'cart' | 'checkout' | 'success'
+  // Checkout Step: 'cart' | 'login_required' | 'checkout' | 'success'
   const [checkoutStep, setCheckoutStep] = useState('cart');
   const [placedOrder, setPlacedOrder] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form Fields
+  // Inline Auth State for Guest Ordering Gate
+  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authFullName, setAuthFullName] = useState('');
+  const [authPhone, setAuthPhone] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState(null);
+
+  // Form Fields (including delivery location & district)
   const [formData, setFormData] = useState({
     customerName: user?.fullName || '',
     customerEmail: user?.email || '',
     customerPhone: user?.phoneNumber || '',
     shippingAddress: user?.businessAddress || '',
+    district: '',
     city: '',
     state: '',
     postalCode: '',
@@ -76,14 +89,70 @@ export const ShopModals = () => {
     if (user) {
       setFormData(prev => ({
         ...prev,
-        customerName: user.fullName || '',
-        customerEmail: user.email || '',
-        customerPhone: user.phoneNumber || '',
+        customerName: user.fullName || prev.customerName,
+        customerEmail: user.email || prev.customerEmail,
+        customerPhone: user.phoneNumber || prev.customerPhone,
         shippingAddress: user.businessAddress || prev.shippingAddress,
         paymentMethod: user.userType === 'Distributor' ? 'Wholesale Invoice (Net 30)' : 'Cash on Delivery'
       }));
     }
   }, [user]);
+
+  // Proceed to Checkout handler (Enforces login before ordering)
+  const handleProceedToCheckout = () => {
+    if (!user) {
+      setCheckoutStep('login_required');
+    } else {
+      setCheckoutStep('checkout');
+    }
+  };
+
+  // Inline Sign In handler inside checkout drawer
+  const handleInlineLogin = async (e) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const res = await login(authEmail, authPassword);
+      if (res.success) {
+        setCheckoutStep('checkout');
+      } else {
+        setAuthError(res.message || 'Login failed. Please check your credentials.');
+      }
+    } catch (err) {
+      setAuthError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Inline Customer Registration handler inside checkout drawer
+  const handleInlineRegister = async (e) => {
+    e.preventDefault();
+    if (!authFullName || !authEmail || !authPhone || !authPassword) {
+      setAuthError('Please fill in all registration fields.');
+      return;
+    }
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const res = await registerCustomer({
+        fullName: authFullName,
+        email: authEmail,
+        phoneNumber: authPhone,
+        password: authPassword
+      });
+      if (res.success) {
+        setCheckoutStep('checkout');
+      } else {
+        setAuthError(res.message || 'Registration failed.');
+      }
+    } catch (err) {
+      setAuthError(err.message || 'Registration failed.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   // When Track Order opens, if user is logged in, automatically load their orders
   useEffect(() => {
@@ -126,8 +195,13 @@ export const ShopModals = () => {
     e.preventDefault();
     if (!cart.length) return;
 
-    if (!formData.customerName || !formData.customerEmail || !formData.customerPhone || !formData.shippingAddress) {
-      alert('Please fill in your name, email, phone number, and delivery address.');
+    if (!user) {
+      setCheckoutStep('login_required');
+      return;
+    }
+
+    if (!formData.customerName || !formData.customerEmail || !formData.customerPhone || !formData.shippingAddress || !formData.district) {
+      alert('Please fill in your full name, email, phone number, delivery address, and district.');
       return;
     }
 
@@ -365,7 +439,7 @@ export const ShopModals = () => {
                     </div>
 
                     <button
-                      onClick={() => setCheckoutStep('checkout')}
+                      onClick={handleProceedToCheckout}
                       className="btn btn-primary"
                       style={{
                         width: '100%',
@@ -379,23 +453,300 @@ export const ShopModals = () => {
                         gap: '8px'
                       }}
                     >
-                      Proceed to Checkout <ArrowRight size={18} />
+                      Proceed to Order <ArrowRight size={18} />
                     </button>
                   </div>
                 )}
               </>
             )}
 
-            {/* STEP 2: CHECKOUT FORM */}
+            {/* STEP: LOGIN REQUIRED TO ORDER GATE */}
+            {checkoutStep === 'login_required' && (
+              <div style={{ flex: 1, padding: '24px 20px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                {/* Auth Notice Card */}
+                <div style={{
+                  textAlign: 'center',
+                  marginBottom: '20px',
+                  padding: '16px',
+                  background: 'rgba(37, 99, 235, 0.05)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(37, 99, 235, 0.15)'
+                }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    background: 'rgba(37, 99, 235, 0.12)',
+                    color: '#2563eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 10px auto'
+                  }}>
+                    <Lock size={24} />
+                  </div>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '4px' }}>
+                    Sign In Required to Place Order
+                  </h4>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.45 }}>
+                    You can add different products to your cart freely, but you must log in to your account before placing an order.
+                  </p>
+                </div>
+
+                {/* Auth Mode Toggle Tabs */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '6px',
+                  background: '#f1f5f9',
+                  padding: '4px',
+                  borderRadius: '10px',
+                  marginBottom: '18px'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode('login'); setAuthError(null); }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '7px',
+                      border: 'none',
+                      background: authMode === 'login' ? '#ffffff' : 'transparent',
+                      color: authMode === 'login' ? '#2563eb' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: '0.84rem',
+                      cursor: 'pointer',
+                      boxShadow: authMode === 'login' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    }}
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode('register'); setAuthError(null); }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '7px',
+                      border: 'none',
+                      background: authMode === 'register' ? '#ffffff' : 'transparent',
+                      color: authMode === 'register' ? '#2563eb' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: '0.84rem',
+                      cursor: 'pointer',
+                      boxShadow: authMode === 'register' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    }}
+                  >
+                    New Customer Sign Up
+                  </button>
+                </div>
+
+                {authError && (
+                  <div style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: 'rgba(220, 38, 38, 0.08)',
+                    color: '#dc2626',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    marginBottom: '14px'
+                  }}>
+                    {authError}
+                  </div>
+                )}
+
+                {/* Sign In Form */}
+                {authMode === 'login' ? (
+                  <form onSubmit={handleInlineLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={authEmail}
+                        onChange={(e) => setAuthEmail(e.target.value)}
+                        placeholder="your@email.com"
+                        className="form-input"
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
+                        Password *
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={authPassword}
+                        onChange={(e) => setAuthPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="form-input"
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px' }}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={authLoading}
+                      className="btn btn-primary"
+                      style={{
+                        marginTop: '8px',
+                        padding: '12px',
+                        fontWeight: 800,
+                        borderRadius: 'var(--radius-full)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      {authLoading ? 'Signing In...' : 'Sign In & Proceed to Order'} <ArrowRight size={16} />
+                    </button>
+                  </form>
+                ) : (
+                  /* Quick Customer Registration Form */
+                  <form onSubmit={handleInlineRegister} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
+                        Full Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={authFullName}
+                        onChange={(e) => setAuthFullName(e.target.value)}
+                        placeholder="Ramesh Sharma"
+                        className="form-input"
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
+                        Mobile Phone Number *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={authPhone}
+                        onChange={(e) => setAuthPhone(e.target.value)}
+                        placeholder="+91 98765 43210"
+                        className="form-input"
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={authEmail}
+                        onChange={(e) => setAuthEmail(e.target.value)}
+                        placeholder="ramesh@example.com"
+                        className="form-input"
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
+                        Create Password *
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={authPassword}
+                        onChange={(e) => setAuthPassword(e.target.value)}
+                        placeholder="At least 6 characters"
+                        className="form-input"
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={authLoading}
+                      className="btn btn-primary"
+                      style={{
+                        marginTop: '8px',
+                        padding: '12px',
+                        fontWeight: 800,
+                        borderRadius: 'var(--radius-full)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      {authLoading ? 'Creating Account...' : 'Register & Proceed to Order'} <ArrowRight size={16} />
+                    </button>
+                  </form>
+                )}
+
+                {/* Navigation Options */}
+                <div style={{ marginTop: 'auto', paddingTop: '18px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutStep('cart')}
+                    className="btn btn-secondary btn-sm"
+                  >
+                    ← Back to Cart
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCartOpen(false);
+                      navigate('/login');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#2563eb',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Full Login Page →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2: CHECKOUT & DELIVERY FORM */}
             {checkoutStep === 'checkout' && (
               <form onSubmit={handleOrderSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
+                  {/* Verified User Banner */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 12px',
+                    background: 'rgba(37, 99, 235, 0.06)',
+                    border: '1px solid rgba(37, 99, 235, 0.2)',
+                    borderRadius: '8px',
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <ShieldCheck size={18} color="#2563eb" />
+                      <span style={{ fontSize: '0.82rem', color: '#1e293b' }}>
+                        Ordering as: <strong>{user?.fullName}</strong> ({user?.userType})
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700 }}>
+                      ● Active Account
+                    </span>
+                  </div>
+
                   <div style={{ marginBottom: '18px' }}>
                     <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '4px' }}>
-                      Delivery Information
+                      Delivery Location & Information
                     </h4>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-                      Enter your shipping and contact information for immediate dispatch.
+                      Enter your destination address, district, and contact details for dispatch.
                     </p>
                   </div>
 
@@ -448,7 +799,7 @@ export const ShopModals = () => {
 
                     <div>
                       <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
-                        Delivery Address (Street / Landmark) *
+                        Delivery Address (House / Flat / Street / Landmark) *
                       </label>
                       <textarea
                         required
@@ -461,44 +812,66 @@ export const ShopModals = () => {
                       />
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    {/* District & City */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
-                          City
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
+                          District *
                         </label>
                         <input
                           type="text"
+                          required
+                          value={formData.district}
+                          onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                          placeholder="e.g. Mumbai Suburban, Patna..."
+                          className="form-input"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
+                          City / Town *
+                        </label>
+                        <input
+                          type="text"
+                          required
                           value={formData.city}
                           onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                          placeholder="Delhi"
+                          placeholder="e.g. Mumbai"
                           className="form-input"
-                          style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '0.84rem' }}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px' }}
                         />
                       </div>
+                    </div>
+
+                    {/* State & PIN Code */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
-                          State
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
+                          State *
                         </label>
                         <input
                           type="text"
+                          required
                           value={formData.state}
                           onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                          placeholder="Delhi"
+                          placeholder="e.g. Maharashtra"
                           className="form-input"
-                          style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '0.84rem' }}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px' }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
-                          PIN Code
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>
+                          PIN / Postal Code *
                         </label>
                         <input
                           type="text"
+                          required
                           value={formData.postalCode}
                           onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                          placeholder="110001"
+                          placeholder="e.g. 400001"
                           className="form-input"
-                          style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '0.84rem' }}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px' }}
                         />
                       </div>
                     </div>
@@ -627,6 +1000,12 @@ export const ShopModals = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.84rem' }}>
                     <span style={{ color: '#64748b' }}>Total Amount:</span>
                     <strong style={{ color: '#0f172a' }}>₹{Number(placedOrder.totalAmount || cartTotal).toLocaleString()}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.84rem' }}>
+                    <span style={{ color: '#64748b' }}>Destination:</span>
+                    <strong style={{ color: '#1e293b', textAlign: 'right', maxWidth: '200px' }}>
+                      {formData.district ? `${formData.district}, ` : ''}{formData.city || formData.state}
+                    </strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem' }}>
                     <span style={{ color: '#64748b' }}>Status:</span>
