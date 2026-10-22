@@ -18,7 +18,8 @@ import {
   Heart,
   Truck,
   TrendingUp,
-  FileText
+  FileText,
+  MapPin
 } from 'lucide-react';
 
 export const DistributorPortal = () => {
@@ -654,7 +655,7 @@ export const DistributorPortal = () => {
                         {ord.orderNumber}
                       </div>
                       <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>
-                        Placed on {new Date(ord.createdDate).toLocaleDateString()} · Payment: <strong>{ord.paymentMethod}</strong>
+                        Placed on {new Date(ord.createdDate).toLocaleDateString()} at {new Date(ord.createdDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
 
@@ -665,8 +666,18 @@ export const DistributorPortal = () => {
                         borderRadius: 'var(--radius-full)',
                         fontSize: '0.82rem',
                         fontWeight: 700,
-                        background: ord.orderStatus === 'Delivered' ? 'rgba(5, 150, 105, 0.1)' : 'rgba(2, 132, 199, 0.1)',
-                        color: ord.orderStatus === 'Delivered' ? '#059669' : '#0284c7'
+                        background:
+                          ord.orderStatus === 'Delivered' ? 'rgba(5, 150, 105, 0.1)' :
+                          ord.orderStatus === 'Processing' ? 'rgba(124, 58, 237, 0.1)' :
+                          ord.orderStatus === 'Dispatched' ? 'rgba(2, 132, 199, 0.1)' :
+                          ord.orderStatus === 'Cancelled' ? 'rgba(220, 38, 38, 0.1)' :
+                          'rgba(217, 119, 6, 0.1)',
+                        color:
+                          ord.orderStatus === 'Delivered' ? '#059669' :
+                          ord.orderStatus === 'Processing' ? '#7c3aed' :
+                          ord.orderStatus === 'Dispatched' ? '#0284c7' :
+                          ord.orderStatus === 'Cancelled' ? '#dc2626' :
+                          '#d97706'
                       }}>
                         {ord.orderStatus}
                       </span>
@@ -676,17 +687,112 @@ export const DistributorPortal = () => {
                     </div>
                   </div>
 
+                  {/* Payment & Verification Strip */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                    padding: '10px 14px',
+                    background: '#f8fafc',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0',
+                    marginBottom: '14px',
+                    fontSize: '0.82rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: '#475569' }}>Payment Method: <strong>{ord.paymentMethod}</strong></span>
+                      {ord.transactionId && (
+                        <span style={{ fontFamily: 'monospace', color: '#059669', background: '#ecfdf5', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                          UTR: {ord.transactionId}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ color: '#64748b' }}>Verification:</span>
+                      <span style={{
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        background:
+                          ord.paymentStatus === 'Verified & Approved' ? '#dcfce7' :
+                          ord.paymentStatus === 'Payment Rejected' ? '#fee2e2' :
+                          ord.paymentStatus === 'Pending Verification' ? '#fef3c7' : '#f1f5f9',
+                        color:
+                          ord.paymentStatus === 'Verified & Approved' ? '#15803d' :
+                          ord.paymentStatus === 'Payment Rejected' ? '#b91c1c' :
+                          ord.paymentStatus === 'Pending Verification' ? '#b45309' : '#475569'
+                      }}>
+                        {ord.paymentStatus || 'Pending Verification'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Visual 4-Step Progress Tracker */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: '8px',
+                    padding: '14px 10px',
+                    background: '#ffffff',
+                    border: '1px solid #f1f5f9',
+                    borderRadius: '10px',
+                    marginBottom: '14px'
+                  }}>
+                    {['Placed', 'Processing', 'Dispatched', 'Delivered'].map((step, idx) => {
+                      const stages = ['Pending', 'Processing', 'Dispatched', 'Delivered'];
+                      const currentIdx = stages.indexOf(ord.orderStatus);
+                      const isReached = currentIdx >= idx;
+
+                      return (
+                        <div key={step} style={{ textAlign: 'center' }}>
+                          <div style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '50%',
+                            background: isReached ? '#0284c7' : '#e2e8f0',
+                            color: '#ffffff',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '0 auto 6px auto'
+                          }}>
+                            {isReached ? '✓' : idx + 1}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', fontWeight: isReached ? 800 : 500, color: isReached ? '#1e293b' : '#94a3b8' }}>
+                            {step}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Wholesale Delivery Address */}
                   <div style={{
                     fontSize: '0.84rem',
                     color: '#475569',
                     background: '#f8fafc',
                     padding: '10px 14px',
                     borderRadius: '8px',
-                    marginBottom: '14px'
+                    marginBottom: '14px',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '8px'
                   }}>
-                    <strong>Wholesale Delivery Address:</strong> {ord.customerName} — {ord.shippingAddress}, {ord.city} {ord.postalCode} (Phone: {ord.customerPhone})
+                    <MapPin size={16} color="#0284c7" style={{ marginTop: '2px', flexShrink: 0 }} />
+                    <div>
+                      <strong>Wholesale Delivery Address:</strong> {ord.customerName} ({ord.customerPhone}) — {ord.shippingAddress}
+                      {ord.district && `, District: ${ord.district}`}
+                      {ord.city && `, ${ord.city}`}
+                      {ord.postalCode && ` - ${ord.postalCode}`}
+                    </div>
                   </div>
 
+                  {/* Wholesale Items List */}
                   {ord.items && ord.items.length > 0 && (
                     <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
                       <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>

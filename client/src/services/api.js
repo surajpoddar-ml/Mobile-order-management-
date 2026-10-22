@@ -201,10 +201,27 @@ export const api = {
         method: 'GET'
       }),
 
-    updateStatus: (id, status) =>
+    updateStatus: (id, status, paymentStatus) =>
       request(`/orders/admin/${id}/status`, {
         method: 'PUT',
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status, paymentStatus })
+      }),
+
+    uploadPaymentProof: (formData) =>
+      request('/orders/upload-payment-proof', {
+        method: 'POST',
+        body: formData
+      }),
+
+    approvePayment: (id) =>
+      request(`/orders/admin/${id}/approve-payment`, {
+        method: 'PUT'
+      }),
+
+    rejectPayment: (id, reason) =>
+      request(`/orders/admin/${id}/reject-payment`, {
+        method: 'PUT',
+        body: JSON.stringify({ reason })
       })
   }
 };

@@ -25,7 +25,12 @@ import {
   ArrowRight,
   Lock,
   LogIn,
-  UserPlus
+  UserPlus,
+  QrCode,
+  Upload,
+  FileCheck,
+  Eye,
+  Check
 } from 'lucide-react';
 
 export const ShopModals = () => {
@@ -55,6 +60,10 @@ export const ShopModals = () => {
   const [placedOrder, setPlacedOrder] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Online Payment Proof Upload state
+  const [proofUploading, setProofUploading] = useState(false);
+  const [proofPreview, setProofPreview] = useState(null);
+
   // Inline Auth State for Guest Ordering Gate
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
   const [authEmail, setAuthEmail] = useState('');
@@ -64,7 +73,7 @@ export const ShopModals = () => {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
 
-  // Form Fields (including delivery location & district)
+  // Form Fields (including delivery location, district & online payment proof)
   const [formData, setFormData] = useState({
     customerName: user?.fullName || '',
     customerEmail: user?.email || '',
@@ -75,8 +84,37 @@ export const ShopModals = () => {
     state: '',
     postalCode: '',
     paymentMethod: user?.userType === 'Distributor' ? 'Wholesale Invoice (Net 30)' : 'Cash on Delivery',
+    transactionId: '',
+    paymentScreenshot: null,
     notes: ''
   });
+
+  // Handle uploading payment screenshot proof to server
+  const handleScreenshotUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Instant local preview
+    const localUrl = URL.createObjectURL(file);
+    setProofPreview(localUrl);
+    setProofUploading(true);
+
+    try {
+      const uploadData = new FormData();
+      uploadData.append('paymentProof', file);
+      const res = await api.orders.uploadPaymentProof(uploadData);
+      if (res.success && res.fileUrl) {
+        setFormData(prev => ({ ...prev, paymentScreenshot: res.fileUrl }));
+        showToast('Payment screenshot attached successfully!', 'success');
+      } else {
+        alert(res.message || 'Failed to upload screenshot.');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to upload payment proof.');
+    } finally {
+      setProofUploading(false);
+    }
+  };
 
   // Track Order state
   const [trackQuery, setTrackQuery] = useState('');
@@ -203,6 +241,17 @@ export const ShopModals = () => {
     if (!formData.customerName || !formData.customerEmail || !formData.customerPhone || !formData.shippingAddress || !formData.district) {
       alert('Please fill in your full name, email, phone number, delivery address, and district.');
       return;
+    }
+
+    if (formData.paymentMethod === 'UPI / QR Payment' || formData.paymentMethod.includes('QR')) {
+      if (!formData.transactionId?.trim()) {
+        alert('Please enter your UPI / Online Payment Transaction ID (UTR reference number).');
+        return;
+      }
+      if (!formData.paymentScreenshot) {
+        alert('Please upload a screenshot proof of your completed payment before placing the order.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -913,6 +962,177 @@ export const ShopModals = () => {
                           </label>
                         ))}
                       </div>
+
+                      {/* Online Payment Proof Section (QR Code, Transaction ID, Screenshot Proof) */}
+                      {formData.paymentMethod === 'UPI / QR Payment' && (
+                        <div style={{
+                          marginTop: '12px',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                          border: '1.5px solid #cbd5e1'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              background: '#2563eb',
+                              color: '#fff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <QrCode size={18} />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a' }}>
+                                Scan & Pay Online
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                Use any UPI App (GPay, PhonePe, Paytm, BHIM)
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* QR Code Card */}
+                          <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            background: '#ffffff',
+                            padding: '16px',
+                            borderRadius: '12px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                            border: '1px solid #e2e8f0',
+                            marginBottom: '16px'
+                          }}>
+                            <div style={{
+                              padding: '10px',
+                              background: '#ffffff',
+                              borderRadius: '12px',
+                              border: '2px dashed #94a3b8',
+                              display: 'inline-block',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                            }}>
+                              <img
+                                src="/mws_payment_qr.png"
+                                alt="MWS EAGLE Payment QR"
+                                style={{ width: '180px', height: '180px', objectFit: 'contain', display: 'block', borderRadius: '6px' }}
+                              />
+                            </div>
+                            <div style={{ marginTop: '10px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155' }}>
+                                Amount to Pay: <span style={{ color: '#2563eb', fontSize: '1.05rem', fontWeight: 900 }}>₹{cartTotal.toLocaleString('en-IN')}</span>
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                                Scan this QR code and complete the transfer in your UPI app.
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Transaction ID / UTR Input */}
+                          <div style={{ marginBottom: '14px' }}>
+                            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '5px', color: '#1e293b' }}>
+                              Payment Transaction ID / UTR Number *
+                            </label>
+                            <input
+                              type="text"
+                              required={formData.paymentMethod === 'UPI / QR Payment'}
+                              value={formData.transactionId}
+                              onChange={(e) => setFormData({ ...formData, transactionId: e.target.value })}
+                              placeholder="e.g. 12-digit UTR: 428901234567 or UPI Ref ID"
+                              className="form-input"
+                              style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                borderRadius: '8px',
+                                border: '1.5px solid #94a3b8',
+                                fontSize: '0.88rem',
+                                background: '#ffffff',
+                                fontFamily: 'monospace'
+                              }}
+                            />
+                            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '3px' }}>
+                              You can find the 12-digit UPI reference / UTR number in your payment receipt.
+                            </div>
+                          </div>
+
+                          {/* Screenshot Upload */}
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '5px', color: '#1e293b' }}>
+                              Upload Payment Screenshot Proof *
+                            </label>
+                            
+                            <div style={{
+                              border: '1.5px dashed #94a3b8',
+                              borderRadius: '8px',
+                              padding: '14px',
+                              textAlign: 'center',
+                              background: '#ffffff',
+                              position: 'relative'
+                            }}>
+                              {proofPreview ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                  <img
+                                    src={proofPreview}
+                                    alt="Payment Screenshot Preview"
+                                    style={{
+                                      maxHeight: '140px',
+                                      maxWidth: '100%',
+                                      borderRadius: '6px',
+                                      objectFit: 'contain',
+                                      border: '1px solid #cbd5e1'
+                                    }}
+                                  />
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#059669', fontSize: '0.78rem', fontWeight: 700 }}>
+                                    <FileCheck size={16} /> Screenshot Attached
+                                  </div>
+                                  <label
+                                    style={{
+                                      fontSize: '0.74rem',
+                                      color: '#2563eb',
+                                      cursor: 'pointer',
+                                      fontWeight: 600,
+                                      textDecoration: 'underline'
+                                    }}
+                                  >
+                                    Change Image
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={handleScreenshotUpload}
+                                      style={{ display: 'none' }}
+                                    />
+                                  </label>
+                                </div>
+                              ) : (
+                                <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', padding: '8px' }}>
+                                  <Upload size={24} color="#64748b" style={{ marginBottom: '6px' }} />
+                                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>
+                                    {proofUploading ? 'Uploading screenshot...' : 'Click to Upload Screenshot'}
+                                  </span>
+                                  <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '2px' }}>
+                                    PNG, JPG or JPEG from your payment app
+                                  </span>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleScreenshotUpload}
+                                    style={{ display: 'none' }}
+                                    disabled={proofUploading}
+                                  />
+                                </label>
+                              )}
+                            </div>
+                            {formData.paymentScreenshot && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', color: '#059669', fontSize: '0.72rem', fontWeight: 600 }}>
+                                <Check size={14} /> Ready for admin verification
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1007,9 +1227,17 @@ export const ShopModals = () => {
                       {formData.district ? `${formData.district}, ` : ''}{formData.city || formData.state}
                     </strong>
                   </div>
+                  {formData.transactionId && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.84rem' }}>
+                      <span style={{ color: '#64748b' }}>UTR / Ref No:</span>
+                      <strong style={{ color: '#16a34a', fontFamily: 'monospace' }}>{formData.transactionId}</strong>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem' }}>
-                    <span style={{ color: '#64748b' }}>Status:</span>
-                    <span style={{ color: '#d97706', fontWeight: 700 }}>Pending Processing</span>
+                    <span style={{ color: '#64748b' }}>Payment Status:</span>
+                    <span style={{ color: formData.paymentMethod === 'UPI / QR Payment' ? '#2563eb' : '#d97706', fontWeight: 700 }}>
+                      {formData.paymentMethod === 'UPI / QR Payment' ? 'Proof Submitted (Awaiting Approval)' : 'COD / Pending'}
+                    </span>
                   </div>
                 </div>
 
@@ -1278,6 +1506,44 @@ export const ShopModals = () => {
                             <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0f172a', marginTop: '4px' }}>
                               ₹{Number(ord.totalAmount).toLocaleString()}
                             </div>
+                          </div>
+                        </div>
+
+                        {/* Payment & Location Info Strip */}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                          padding: '8px 12px',
+                          background: '#f8fafc',
+                          borderRadius: '8px',
+                          fontSize: '0.8rem',
+                          marginBottom: '12px'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569' }}>
+                            <MapPin size={14} color="#2563eb" />
+                            <span>Destination: <strong>{ord.district ? `${ord.district}, ` : ''}{ord.city || ord.state}</strong></span>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ color: '#64748b' }}>Payment: <strong>{ord.paymentMethod}</strong></span>
+                            {ord.transactionId && (
+                              <span style={{ fontFamily: 'monospace', color: '#059669', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', fontSize: '0.74rem' }}>
+                                UTR: {ord.transactionId}
+                              </span>
+                            )}
+                            <span style={{
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              background: ord.paymentStatus?.includes('Approved') || ord.paymentStatus?.includes('Paid') ? '#dcfce7' : '#fef3c7',
+                              color: ord.paymentStatus?.includes('Approved') || ord.paymentStatus?.includes('Paid') ? '#15803d' : '#b45309'
+                            }}>
+                              {ord.paymentStatus || 'Pending Verification'}
+                            </span>
                           </div>
                         </div>
 

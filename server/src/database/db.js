@@ -137,6 +137,9 @@ export const initDb = async () => {
       items TEXT NOT NULL,
       totalAmount REAL NOT NULL,
       paymentMethod TEXT DEFAULT 'Cash on Delivery',
+      transactionId TEXT,
+      paymentScreenshot TEXT,
+      paymentStatus TEXT DEFAULT 'Pending Verification',
       orderStatus TEXT DEFAULT 'Pending' CHECK(orderStatus IN ('Pending', 'Processing', 'Dispatched', 'Delivered', 'Cancelled')),
       notes TEXT,
       createdDate TEXT NOT NULL,
@@ -146,6 +149,15 @@ export const initDb = async () => {
 
   try {
     await queryRun('ALTER TABLE orders ADD COLUMN district TEXT');
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE orders ADD COLUMN transactionId TEXT');
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE orders ADD COLUMN paymentScreenshot TEXT');
+  } catch (e) {}
+  try {
+    await queryRun("ALTER TABLE orders ADD COLUMN paymentStatus TEXT DEFAULT 'Pending Verification'");
   } catch (e) {}
 
   console.log('Database tables verified and ready.');

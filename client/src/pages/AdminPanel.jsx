@@ -6,7 +6,7 @@ import {
   Search, Eye, Trash2, Check, X, PauseCircle, PlayCircle, RefreshCw, Layers,
   Film, Image as ImageIcon, Upload, Plus, ExternalLink, Sparkles,
   LayoutDashboard, Package, Menu, Edit, ArrowLeft, AlertCircle,
-  ShoppingCart, Truck, FileText
+  ShoppingCart, Truck, FileText, QrCode
 } from 'lucide-react';
 
 export const AdminPanel = () => {
@@ -26,9 +26,11 @@ export const AdminPanel = () => {
   // Orders management state
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [orderUserType, setOrderUserType] = useState('All'); // 'All' | 'Customer' | 'Distributor'
   const [orderFilterStatus, setOrderFilterStatus] = useState('All');
   const [orderSearchTerm, setOrderSearchTerm] = useState('');
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
+  const [viewProofModal, setViewProofModal] = useState(null); // Order object for viewing payment proof image
 
   // User management state
   const [users, setUsers] = useState([]);
@@ -162,6 +164,48 @@ export const AdminPanel = () => {
       }
     } catch (err) {
       alert(err.message || 'Failed to update order status.');
+    }
+  };
+
+  const handleApprovePayment = async (orderId) => {
+    try {
+      const res = await api.orders.approvePayment(orderId);
+      if (res.success) {
+        notify('Payment verified & approved! Order status moved to Processing.');
+        loadOrderData();
+        if (selectedOrderDetails && selectedOrderDetails.id === orderId) {
+          setSelectedOrderDetails(res.order);
+        }
+        if (viewProofModal && viewProofModal.id === orderId) {
+          setViewProofModal(res.order);
+        }
+      } else {
+        alert(res.message || 'Failed to approve payment.');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to approve payment.');
+    }
+  };
+
+  const handleRejectPayment = async (orderId) => {
+    const reason = window.prompt('Enter reason for rejecting payment proof (optional):', 'Invalid transaction ID or payment not received');
+    if (reason === null) return;
+    try {
+      const res = await api.orders.rejectPayment(orderId, reason);
+      if (res.success) {
+        notify('Payment rejected. Order has been cancelled.');
+        loadOrderData();
+        if (selectedOrderDetails && selectedOrderDetails.id === orderId) {
+          setSelectedOrderDetails(res.order);
+        }
+        if (viewProofModal && viewProofModal.id === orderId) {
+          setViewProofModal(res.order);
+        }
+      } else {
+        alert(res.message || 'Failed to reject payment.');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to reject payment.');
     }
   };
 
@@ -466,7 +510,7 @@ export const AdminPanel = () => {
   // Sidebar Menu Items Definition
   const navMenuItems = [
     { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard, badge: null, color: 'var(--primary)' },
-    { id: 'orders', label: 'Customer Orders', icon: ShoppingCart, badge: orders.length, color: '#2563eb' },
+    { id: 'orders', label: 'Orders', icon: ShoppingCart, badge: orders.length, color: '#2563eb' },
     { id: 'pending', label: 'Pending Approvals', icon: Clock, badge: metrics.distributors.pending, color: 'var(--status-pending)' },
     { id: 'distributors', label: 'Distributors', icon: Building2, badge: metrics.distributors.approved, color: 'var(--distributor-accent)' },
     { id: 'customers', label: 'Customers', icon: Users, badge: metrics.customers.active, color: 'var(--customer-accent)' },
@@ -817,7 +861,7 @@ export const AdminPanel = () => {
               marginBottom: '28px'
             }}>
               {[
-                { label: 'Customer Orders', value: orders.length, color: '#2563eb', bg: 'rgba(37, 99, 235, 0.08)', Icon: ShoppingCart, tab: 'orders' },
+                { label: 'Total Orders', value: orders.length, color: '#2563eb', bg: 'rgba(37, 99, 235, 0.08)', Icon: ShoppingCart, tab: 'orders' },
                 { label: 'Pending Approvals', value: metrics.distributors.pending, color: 'var(--status-pending)', bg: 'var(--status-pending-bg)', Icon: Clock, tab: 'pending' },
                 { label: 'Verified Distributors', value: metrics.distributors.approved, color: 'var(--distributor-accent)', bg: 'var(--distributor-light)', Icon: Building2, tab: 'distributors' },
                 { label: 'Active Customers', value: metrics.customers.active, color: 'var(--customer-accent)', bg: 'var(--customer-light)', Icon: Users, tab: 'customers' },
@@ -902,10 +946,10 @@ export const AdminPanel = () => {
                   <ShoppingCart size={14} /> Full Order Fulfillment Access
                 </div>
                 <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.85rem)', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                  Customer & Distributor Orders
+                  Orders & Payment Verification
                 </h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '4px 0 0 0' }}>
-                  Complete administrative visibility into which customers ordered which products, delivery addresses, items ordered, and live dispatch updates.
+                  Manage customer and distributor orders, verify online QR payment transaction IDs & screenshots, approve payments, and maintain complete dispatch history.
                 </p>
               </div>
 
@@ -919,11 +963,11 @@ export const AdminPanel = () => {
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
               gap: '14px',
-              marginBottom: '22px'
+              marginBottom: '20px'
             }}>
               {[
                 { label: 'Total Orders', value: orders.length, color: '#2563eb' },
-                { label: 'Pending', value: orders.filter(o => o.orderStatus === 'Pending').length, color: '#d97706' },
+                { label: 'Pending Verification', value: orders.filter(o => o.paymentStatus === 'Pending Verification').length, color: '#b45309', bg: '#fef3c7' },
                 { label: 'Processing', value: orders.filter(o => o.orderStatus === 'Processing').length, color: '#7c3aed' },
                 { label: 'Dispatched', value: orders.filter(o => o.orderStatus === 'Dispatched').length, color: '#0284c7' },
                 { label: 'Delivered', value: orders.filter(o => o.orderStatus === 'Delivered').length, color: '#059669' },
@@ -932,14 +976,14 @@ export const AdminPanel = () => {
                 <div
                   key={stat.label}
                   style={{
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
+                    background: stat.bg || '#ffffff',
+                    border: '1px solid ' + (stat.bg ? '#fde68a' : '#e2e8f0'),
                     borderRadius: '12px',
                     padding: '14px 18px',
                     boxShadow: 'var(--shadow-xs)'
                   }}
                 >
-                  <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                  <div style={{ fontSize: '0.74rem', fontWeight: 700, color: stat.bg ? '#92400e' : '#64748b', textTransform: 'uppercase' }}>
                     {stat.label}
                   </div>
                   <div style={{ fontSize: '1.45rem', fontWeight: 900, color: stat.color, marginTop: '2px' }}>
@@ -947,6 +991,56 @@ export const AdminPanel = () => {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* TWO PRIMARY PARTS: CUSTOMER ORDERS & DISTRIBUTOR ORDERS */}
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              marginBottom: '16px',
+              borderBottom: '2px solid #e2e8f0',
+              paddingBottom: '12px'
+            }}>
+              {[
+                { id: 'All', label: 'All Orders', count: orders.length, color: '#2563eb' },
+                { id: 'Customer', label: 'Customer Orders', count: orders.filter(o => o.userType === 'Customer').length, color: '#059669' },
+                { id: 'Distributor', label: 'Distributor Orders', count: orders.filter(o => o.userType === 'Distributor').length, color: '#0284c7' }
+              ].map(tab => {
+                const isSelected = orderUserType === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setOrderUserType(tab.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 20px',
+                      borderRadius: '10px',
+                      border: isSelected ? `2px solid ${tab.color}` : '1.5px solid #e2e8f0',
+                      background: isSelected ? '#ffffff' : '#f8fafc',
+                      color: isSelected ? tab.color : '#475569',
+                      fontWeight: 800,
+                      fontSize: '0.92rem',
+                      cursor: 'pointer',
+                      boxShadow: isSelected ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                      transition: 'all 0.16s ease'
+                    }}
+                  >
+                    <span>{tab.label}</span>
+                    <span style={{
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-full)',
+                      background: isSelected ? tab.color : '#e2e8f0',
+                      color: isSelected ? '#ffffff' : '#64748b',
+                      fontSize: '0.75rem',
+                      fontWeight: 700
+                    }}>
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Filter Pills & Search bar */}
@@ -963,27 +1057,41 @@ export const AdminPanel = () => {
               gap: '14px'
             }}>
               {/* Status filter pills */}
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {['All', 'Pending', 'Processing', 'Dispatched', 'Delivered', 'Cancelled'].map(st => {
-                  const active = orderFilterStatus === st;
-                  const count = st === 'All' ? orders.length : orders.filter(o => o.orderStatus === st).length;
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Filter:</span>
+                {[
+                  { id: 'All', label: 'All Statuses' },
+                  { id: 'Pending Verification', label: 'Pending Payment Proof ⚠️', isProof: true },
+                  { id: 'Pending', label: 'Pending' },
+                  { id: 'Processing', label: 'Processing' },
+                  { id: 'Dispatched', label: 'Dispatched' },
+                  { id: 'Delivered', label: 'Delivered' },
+                  { id: 'Cancelled', label: 'Cancelled' }
+                ].map(st => {
+                  const active = orderFilterStatus === st.id;
+                  const count = st.id === 'All'
+                    ? (orderUserType === 'All' ? orders.length : orders.filter(o => o.userType === orderUserType).length)
+                    : st.id === 'Pending Verification'
+                    ? orders.filter(o => (orderUserType === 'All' || o.userType === orderUserType) && o.paymentStatus === 'Pending Verification').length
+                    : orders.filter(o => (orderUserType === 'All' || o.userType === orderUserType) && o.orderStatus === st.id).length;
+
                   return (
                     <button
-                      key={st}
-                      onClick={() => setOrderFilterStatus(st)}
+                      key={st.id}
+                      onClick={() => setOrderFilterStatus(st.id)}
                       style={{
                         padding: '6px 14px',
                         borderRadius: 'var(--radius-full)',
-                        border: '1px solid ' + (active ? '#2563eb' : '#e2e8f0'),
-                        background: active ? '#2563eb' : '#ffffff',
-                        color: active ? '#ffffff' : '#334155',
+                        border: '1px solid ' + (active ? (st.isProof ? '#d97706' : '#2563eb') : (st.isProof ? '#fcd34d' : '#e2e8f0')),
+                        background: active ? (st.isProof ? '#d97706' : '#2563eb') : (st.isProof ? '#fef3c7' : '#ffffff'),
+                        color: active ? '#ffffff' : (st.isProof ? '#92400e' : '#334155'),
                         fontSize: '0.82rem',
                         fontWeight: 700,
                         cursor: 'pointer',
                         transition: 'all 0.16s'
                       }}
                     >
-                      {st} ({count})
+                      {st.label} ({count})
                     </button>
                   );
                 })}
@@ -995,7 +1103,7 @@ export const AdminPanel = () => {
                   type="text"
                   value={orderSearchTerm}
                   onChange={e => setOrderSearchTerm(e.target.value)}
-                  placeholder="Search customer, order #, phone..."
+                  placeholder="Search order #, customer, UTR, phone..."
                   style={{
                     width: '100%',
                     padding: '8px 14px',
@@ -1020,7 +1128,7 @@ export const AdminPanel = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.86rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid #f1f5f9', background: '#f8fafc', color: '#475569' }}>
-                      {['ORDER NUMBER', 'CUSTOMER DETAILS', 'ITEMS ORDERED', 'DELIVERY ADDRESS', 'AMOUNT (INR)', 'STATUS', 'ACTION CONTROLS'].map(h => (
+                      {['ORDER NUMBER & DATE', 'BUYER DETAILS', 'ITEMS ORDERED', 'DELIVERY DESTINATION', 'PAYMENT & PROOF', 'ORDER STATUS', 'ACTION CONTROLS'].map(h => (
                         <th key={h} style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                           {h}
                         </th>
@@ -1029,31 +1137,51 @@ export const AdminPanel = () => {
                   </thead>
                   <tbody>
                     {loadingOrders ? (
-                      <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading customer orders...</td></tr>
+                      <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading orders and proof history...</td></tr>
                     ) : orders.filter(o => {
-                      if (orderFilterStatus !== 'All' && o.orderStatus !== orderFilterStatus) return false;
+                      if (orderUserType !== 'All' && o.userType !== orderUserType) return false;
+                      if (orderFilterStatus !== 'All') {
+                        if (orderFilterStatus === 'Pending Verification') {
+                          if (o.paymentStatus !== 'Pending Verification') return false;
+                        } else if (o.orderStatus !== orderFilterStatus) {
+                          return false;
+                        }
+                      }
                       if (orderSearchTerm.trim()) {
                         const q = orderSearchTerm.toLowerCase();
                         return (
                           (o.orderNumber && o.orderNumber.toLowerCase().includes(q)) ||
                           (o.customerName && o.customerName.toLowerCase().includes(q)) ||
                           (o.customerEmail && o.customerEmail.toLowerCase().includes(q)) ||
-                          (o.customerPhone && o.customerPhone.toLowerCase().includes(q))
+                          (o.customerPhone && o.customerPhone.toLowerCase().includes(q)) ||
+                          (o.transactionId && o.transactionId.toLowerCase().includes(q))
                         );
                       }
                       return true;
                     }).length === 0 ? (
-                      <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>No orders found under this filter.</td></tr>
+                      <tr>
+                        <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                          No orders found matching the selected filter criteria.
+                        </td>
+                      </tr>
                     ) : (
                       orders.filter(o => {
-                        if (orderFilterStatus !== 'All' && o.orderStatus !== orderFilterStatus) return false;
+                        if (orderUserType !== 'All' && o.userType !== orderUserType) return false;
+                        if (orderFilterStatus !== 'All') {
+                          if (orderFilterStatus === 'Pending Verification') {
+                            if (o.paymentStatus !== 'Pending Verification') return false;
+                          } else if (o.orderStatus !== orderFilterStatus) {
+                            return false;
+                          }
+                        }
                         if (orderSearchTerm.trim()) {
                           const q = orderSearchTerm.toLowerCase();
                           return (
                             (o.orderNumber && o.orderNumber.toLowerCase().includes(q)) ||
                             (o.customerName && o.customerName.toLowerCase().includes(q)) ||
                             (o.customerEmail && o.customerEmail.toLowerCase().includes(q)) ||
-                            (o.customerPhone && o.customerPhone.toLowerCase().includes(q))
+                            (o.customerPhone && o.customerPhone.toLowerCase().includes(q)) ||
+                            (o.transactionId && o.transactionId.toLowerCase().includes(q))
                           );
                         }
                         return true;
@@ -1099,7 +1227,7 @@ export const AdminPanel = () => {
                           </td>
 
                           {/* Items Ordered */}
-                          <td style={{ padding: '12px 14px', verticalAlign: 'top', maxWidth: '240px' }}>
+                          <td style={{ padding: '12px 14px', verticalAlign: 'top', maxWidth: '220px' }}>
                             {ord.items && ord.items.length > 0 ? (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 {ord.items.map((it, idx) => (
@@ -1117,20 +1245,84 @@ export const AdminPanel = () => {
                           <td style={{ padding: '12px 14px', verticalAlign: 'top', maxWidth: '200px' }}>
                             <div style={{ fontSize: '0.8rem', color: '#334155', lineHeight: 1.4 }}>
                               {ord.shippingAddress}
-                              {ord.district && `, Dist: ${ord.district}`}
-                              {ord.city && `, ${ord.city}`}
-                              {ord.postalCode && ` - ${ord.postalCode}`}
+                              {ord.district && <div style={{ color: '#2563eb', fontWeight: 700, fontSize: '0.74rem', marginTop: '2px' }}>District: {ord.district}</div>}
+                              {ord.city && <div>{ord.city} {ord.postalCode && `- ${ord.postalCode}`}</div>}
                             </div>
                           </td>
 
-                          {/* Amount & Payment */}
-                          <td style={{ padding: '12px 14px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                          {/* Payment & Proof Details */}
+                          <td style={{ padding: '12px 14px', verticalAlign: 'top', minWidth: '180px' }}>
                             <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>
                               ₹{Number(ord.totalAmount).toLocaleString()}
                             </div>
-                            <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                            <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '1px' }}>
                               {ord.paymentMethod}
                             </div>
+
+                            {/* Payment Status Badge */}
+                            <div style={{ marginTop: '4px' }}>
+                              <span style={{
+                                display: 'inline-block',
+                                fontSize: '0.7rem',
+                                fontWeight: 800,
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                background:
+                                  ord.paymentStatus === 'Verified & Approved' ? '#dcfce7' :
+                                  ord.paymentStatus === 'Payment Rejected' ? '#fee2e2' :
+                                  ord.paymentStatus === 'Pending Verification' ? '#fef3c7' : '#f1f5f9',
+                                color:
+                                  ord.paymentStatus === 'Verified & Approved' ? '#15803d' :
+                                  ord.paymentStatus === 'Payment Rejected' ? '#b91c1c' :
+                                  ord.paymentStatus === 'Pending Verification' ? '#b45309' : '#475569'
+                              }}>
+                                {ord.paymentStatus || 'Pending Verification'}
+                              </span>
+                            </div>
+
+                            {/* UTR / Transaction ID */}
+                            {ord.transactionId && (
+                              <div style={{ marginTop: '4px', fontSize: '0.72rem', color: '#334155' }}>
+                                UTR: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#059669', background: '#f0fdf4', padding: '1px 4px', borderRadius: '3px' }}>{ord.transactionId}</span>
+                              </div>
+                            )}
+
+                            {/* Screenshot Proof Button & Thumbnail */}
+                            {ord.paymentScreenshot ? (
+                              <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <img
+                                  src={getMediaUrl(ord.paymentScreenshot)}
+                                  alt="Proof"
+                                  onClick={() => setViewProofModal(ord)}
+                                  style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '4px',
+                                    objectFit: 'cover',
+                                    border: '1.5px solid #2563eb',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Click to view full screenshot proof"
+                                />
+                                <button
+                                  onClick={() => setViewProofModal(ord)}
+                                  style={{
+                                    border: 'none',
+                                    background: 'none',
+                                    color: '#2563eb',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    textDecoration: 'underline'
+                                  }}
+                                >
+                                  View Proof
+                                </button>
+                              </div>
+                            ) : ord.paymentMethod?.includes('QR') || ord.paymentMethod?.includes('UPI') ? (
+                              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '4px' }}>No screenshot</div>
+                            ) : null}
                           </td>
 
                           {/* Status Badge */}
@@ -1161,6 +1353,44 @@ export const AdminPanel = () => {
                           {/* Actions */}
                           <td style={{ padding: '12px 14px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              {/* Quick Approve / Reject for Online Payment Proof */}
+                              {ord.paymentStatus === 'Pending Verification' && (
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <button
+                                    onClick={() => handleApprovePayment(ord.id)}
+                                    title="Verify & Approve Payment"
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '6px',
+                                      border: 'none',
+                                      background: '#059669',
+                                      color: '#ffffff',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    ✓ Approve
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectPayment(ord.id)}
+                                    title="Reject Payment Proof"
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #dc2626',
+                                      background: '#fee2e2',
+                                      color: '#dc2626',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    ✕ Reject
+                                  </button>
+                                </div>
+                              )}
+
                               <select
                                 value={ord.orderStatus}
                                 onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value)}
@@ -2349,8 +2579,101 @@ export const AdminPanel = () => {
                   <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '6px' }}>
                     Payment: <strong>{selectedOrderDetails.paymentMethod}</strong>
                   </div>
+                  <div style={{ marginTop: '4px' }}>
+                    <span style={{
+                      display: 'inline-block',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      background: selectedOrderDetails.paymentStatus === 'Verified & Approved' ? '#dcfce7' : '#fef3c7',
+                      color: selectedOrderDetails.paymentStatus === 'Verified & Approved' ? '#15803d' : '#b45309'
+                    }}>
+                      {selectedOrderDetails.paymentStatus || 'Pending Verification'}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              {/* Online Payment Proof Verification Strip (If online or proof attached) */}
+              {(selectedOrderDetails.transactionId || selectedOrderDetails.paymentScreenshot) && (
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  padding: '14px 18px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    {selectedOrderDetails.paymentScreenshot && (
+                      <img
+                        src={getMediaUrl(selectedOrderDetails.paymentScreenshot)}
+                        alt="Payment Proof"
+                        onClick={() => setViewProofModal(selectedOrderDetails)}
+                        style={{
+                          width: '54px',
+                          height: '54px',
+                          borderRadius: '8px',
+                          objectFit: 'cover',
+                          border: '2px solid #2563eb',
+                          cursor: 'pointer'
+                        }}
+                        title="Click to view full screenshot proof"
+                      />
+                    )}
+                    <div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+                        Online Payment Proof
+                      </div>
+                      {selectedOrderDetails.transactionId && (
+                        <div style={{ fontSize: '0.84rem', color: '#334155', marginTop: '2px' }}>
+                          UTR / Ref No: <strong style={{ fontFamily: 'monospace', color: '#059669' }}>{selectedOrderDetails.transactionId}</strong>
+                        </div>
+                      )}
+                      {selectedOrderDetails.paymentScreenshot && (
+                        <button
+                          onClick={() => setViewProofModal(selectedOrderDetails)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#2563eb',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            padding: 0,
+                            cursor: 'pointer',
+                            textDecoration: 'underline'
+                          }}
+                        >
+                          Enlarge Payment Screenshot ↗
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {selectedOrderDetails.paymentStatus === 'Pending Verification' && (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => handleApprovePayment(selectedOrderDetails.id)}
+                        className="btn btn-emerald"
+                        style={{ padding: '6px 14px', fontSize: '0.82rem', fontWeight: 800 }}
+                      >
+                        ✓ Approve Payment
+                      </button>
+                      <button
+                        onClick={() => handleRejectPayment(selectedOrderDetails.id)}
+                        className="btn btn-danger"
+                        style={{ padding: '6px 14px', fontSize: '0.82rem', fontWeight: 800 }}
+                      >
+                        ✕ Reject Payment
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Items Ordered List */}
               <div>
@@ -2436,6 +2759,129 @@ export const AdminPanel = () => {
             <div style={{ padding: '14px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button onClick={() => setSelectedOrderDetails(null)} className="btn btn-secondary">
                 Close Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* ========== MODAL: VIEW PAYMENT SCREENSHOT PROOF ======== */}
+      {/* ======================================================== */}
+      {viewProofModal && (
+        <div style={modalOverlay}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: 'var(--radius-xl)',
+            maxWidth: '620px',
+            width: '100%',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--border-subtle)',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#f8fafc'
+            }}>
+              <div>
+                <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
+                  Payment Screenshot Proof Verification
+                </div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: '2px 0 0 0' }}>
+                  Order #{viewProofModal.orderNumber}
+                </h3>
+              </div>
+              <button
+                onClick={() => setViewProofModal(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Info strip */}
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '10px',
+                padding: '12px 16px',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '8px',
+                fontSize: '0.84rem'
+              }}>
+                <div><strong>Buyer:</strong> {viewProofModal.customerName} ({viewProofModal.userType})</div>
+                <div><strong>Amount:</strong> <span style={{ color: '#2563eb', fontWeight: 900 }}>₹{Number(viewProofModal.totalAmount).toLocaleString()}</span></div>
+                <div><strong>Payment Method:</strong> {viewProofModal.paymentMethod}</div>
+                <div><strong>Payment Status:</strong> <span style={{ fontWeight: 800, color: viewProofModal.paymentStatus === 'Verified & Approved' ? '#059669' : '#d97706' }}>{viewProofModal.paymentStatus}</span></div>
+                {viewProofModal.transactionId && (
+                  <div style={{ gridColumn: 'span 2', background: '#ecfdf5', padding: '6px 10px', borderRadius: '6px', color: '#065f46' }}>
+                    <strong>Transaction ID / UTR:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{viewProofModal.transactionId}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Full Screenshot Image */}
+              <div style={{
+                background: '#0f172a',
+                borderRadius: '10px',
+                padding: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '260px'
+              }}>
+                <img
+                  src={getMediaUrl(viewProofModal.paymentScreenshot)}
+                  alt="Payment Proof Full"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '440px',
+                    objectFit: 'contain',
+                    borderRadius: '6px'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{
+              padding: '14px 20px',
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#f8fafc'
+            }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {viewProofModal.paymentStatus !== 'Verified & Approved' && (
+                  <button
+                    onClick={() => handleApprovePayment(viewProofModal.id)}
+                    className="btn btn-emerald"
+                    style={{ padding: '8px 16px', fontSize: '0.84rem', fontWeight: 800 }}
+                  >
+                    ✓ Approve Payment
+                  </button>
+                )}
+                {viewProofModal.paymentStatus !== 'Payment Rejected' && (
+                  <button
+                    onClick={() => handleRejectPayment(viewProofModal.id)}
+                    className="btn btn-danger"
+                    style={{ padding: '8px 16px', fontSize: '0.84rem', fontWeight: 800 }}
+                  >
+                    ✕ Reject Payment
+                  </button>
+                )}
+              </div>
+              <button onClick={() => setViewProofModal(null)} className="btn btn-secondary" style={{ padding: '8px 16px' }}>
+                Close
               </button>
             </div>
           </div>

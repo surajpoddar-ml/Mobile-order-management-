@@ -1,10 +1,72 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'mws_eagle_mobile_parts_super_secret_jwt_key_2026_auth_system';
+const JWT_SECRET = process.env.JWT_SECRET || 'mobile_parts_super_secret_jwt_key_2026_auth_system';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const paymentUploadDir = path.resolve(__dirname, '../../uploads/payments');
+
+// Ensure payments upload directory exists
+if (!fs.existsSync(paymentUploadDir)) {
+  fs.mkdirSync(paymentUploadDir, { recursive: true });
+}
+
+// Multer storage for payment screenshot proofs
+const paymentStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, paymentUploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const cleanBase = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
+    const unique = `${Date.now()}_${Math.round(Math.random() * 1e6)}`;
+    cb(null, `proof_${cleanBase}_${unique}${ext}`);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowed = /\.(jpg|jpeg|png|webp|gif|pdf)$/i;
+  if (allowed.test(path.extname(file.originalname)) || file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files (JPG, PNG, WEBP) are supported for payment screenshots.'));
+  }
+};
+
+const upload = multer({
+  storage: paymentStorage,
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB max
+  fileFilter
+});
+
+/**
+ * 0. Upload Payment Screenshot Proof
+ */
+router.post('/upload-payment-proof', verifyToken, upload.single('paymentProof'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No screenshot file uploaded.' });
+    }
+    const fileUrl = `/uploads/payments/${req.file.filename}`;
+    return res.status(200).json({
+      success: true,
+      message: 'Payment screenshot uploaded successfully.',
+      fileUrl,
+      fileName: req.file.filename
+    });
+  } catch (error) {
+    console.error('Error uploading payment proof:', error);
+    return res.status(500).json({ success: false, message: 'Failed to upload payment proof.' });
+  }
+});
 
 /**
  * 1. Create a New Order
@@ -24,6 +86,8 @@ router.post('/', verifyToken, async (req, res) => {
       items,
       totalAmount,
       paymentMethod = 'Cash on Delivery',
+      transactionId = null,
+      paymentScreenshot = null,
       notes = ''
     } = req.body;
 
@@ -33,6 +97,12 @@ router.post('/', verifyToken, async (req, res) => {
         success: false,
         message: 'Missing required order details (Full Name, Email, Phone, Delivery Address, District, and Items are required).'
       });
+    }
+
+    const isOnlinePayment = paymentMethod.includes('Online') || paymentMethod.includes('QR') || paymentMethod.includes('UPI');
+    let paymentStatus = isOnlinePayment ? 'Pending Verification' : 'Pending (Cash on Delivery)';
+    if (paymentMethod.includes('Wholesale Invoice')) {
+      paymentStatus = 'Invoice Net 30';
     }
 
     const userId = req.user.userId;
@@ -45,8 +115,8 @@ router.post('/', verifyToken, async (req, res) => {
       `INSERT INTO orders (
         orderNumber, userId, customerName, customerEmail, customerPhone, userType,
         shippingAddress, district, city, state, postalCode, items, totalAmount, paymentMethod,
-        orderStatus, notes, createdDate, updatedDate
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?)`,
+        transactionId, paymentScreenshot, paymentStatus, orderStatus, notes, createdDate, updatedDate
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?)`,
       [
         orderNumber,
         userId,
@@ -62,6 +132,9 @@ router.post('/', verifyToken, async (req, res) => {
         itemsJson,
         Number(totalAmount) || 0,
         paymentMethod,
+        transactionId ? transactionId.trim() : null,
+        paymentScreenshot || null,
+        paymentStatus,
         notes || '',
         now,
         now
@@ -190,15 +263,15 @@ router.get('/admin/all', verifyToken, requireAdmin, async (req, res) => {
 });
 
 /**
- * 5. Admin Endpoint: Update Order Status
+ * 5. Admin Endpoint: Update Order Status & Payment Status
  */
 router.put('/admin/:id/status', verifyToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, paymentStatus } = req.body;
 
     const validStatuses = ['Pending', 'Processing', 'Dispatched', 'Delivered', 'Cancelled'];
-    if (!status || !validStatuses.includes(status)) {
+    if (status && !validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
         message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
@@ -211,7 +284,13 @@ router.put('/admin/:id/status', verifyToken, requireAdmin, async (req, res) => {
     }
 
     const now = new Date().toISOString();
-    await queryRun('UPDATE orders SET orderStatus = ?, updatedDate = ? WHERE id = ?', [status, now, id]);
+    const newStatus = status || existing.orderStatus;
+    const newPaymentStatus = paymentStatus || existing.paymentStatus;
+
+    await queryRun(
+      'UPDATE orders SET orderStatus = ?, paymentStatus = ?, updatedDate = ? WHERE id = ?',
+      [newStatus, newPaymentStatus, now, id]
+    );
 
     const updatedOrder = await queryGet('SELECT * FROM orders WHERE id = ?', [id]);
     try {
@@ -220,12 +299,79 @@ router.put('/admin/:id/status', verifyToken, requireAdmin, async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `Order status updated to "${status}" successfully.`,
+      message: `Order status updated to "${newStatus}" successfully.`,
       order: updatedOrder
     });
   } catch (error) {
     console.error('Error updating order status:', error);
     return res.status(500).json({ success: false, message: 'Failed to update order status.' });
+  }
+});
+
+/**
+ * 6. Admin Endpoint: Approve Online Payment Proof
+ */
+router.put('/admin/:id/approve-payment', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await queryGet('SELECT * FROM orders WHERE id = ?', [id]);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    const now = new Date().toISOString();
+    await queryRun(
+      "UPDATE orders SET paymentStatus = 'Verified & Approved', orderStatus = 'Processing', updatedDate = ? WHERE id = ?",
+      [now, id]
+    );
+
+    const updatedOrder = await queryGet('SELECT * FROM orders WHERE id = ?', [id]);
+    try {
+      updatedOrder.items = JSON.parse(updatedOrder.items);
+    } catch (e) {}
+
+    return res.status(200).json({
+      success: true,
+      message: 'Payment verified and approved! Order moved to Processing.',
+      order: updatedOrder
+    });
+  } catch (error) {
+    console.error('Error approving payment:', error);
+    return res.status(500).json({ success: false, message: 'Failed to approve payment.' });
+  }
+});
+
+/**
+ * 7. Admin Endpoint: Reject Online Payment Proof
+ */
+router.put('/admin/:id/reject-payment', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason = 'Invalid payment proof / transaction mismatch' } = req.body;
+    const existing = await queryGet('SELECT * FROM orders WHERE id = ?', [id]);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    const now = new Date().toISOString();
+    await queryRun(
+      "UPDATE orders SET paymentStatus = 'Payment Rejected', orderStatus = 'Cancelled', notes = ?, updatedDate = ? WHERE id = ?",
+      [`Payment Rejected: ${reason}`, now, id]
+    );
+
+    const updatedOrder = await queryGet('SELECT * FROM orders WHERE id = ?', [id]);
+    try {
+      updatedOrder.items = JSON.parse(updatedOrder.items);
+    } catch (e) {}
+
+    return res.status(200).json({
+      success: true,
+      message: 'Payment rejected. Order marked as Cancelled.',
+      order: updatedOrder
+    });
+  } catch (error) {
+    console.error('Error rejecting payment:', error);
+    return res.status(500).json({ success: false, message: 'Failed to reject payment.' });
   }
 });
 
