@@ -57,7 +57,26 @@ export const CartProvider = ({ children }) => {
     } catch (e) {}
   }, [wishlist]);
 
+  // Listen for product deletion events to immediately purge from active cart and wishlist
+  useEffect(() => {
+    const handleProductDeleted = (e) => {
+      const deletedId = e.detail?.productId;
+      if (deletedId) {
+        setCart((prev) => prev.filter((item) => item.product.id !== deletedId));
+        setWishlist((prev) => prev.filter((p) => p.id !== deletedId));
+      }
+    };
+
+    window.addEventListener('mws_product_deleted', handleProductDeleted);
+    return () => window.removeEventListener('mws_product_deleted', handleProductDeleted);
+  }, []);
+
   const addToCart = (product, quantity = 1) => {
+    if (product.inStock === 0 || product.inStock === false) {
+      showToast(`Sorry, "${product.name.slice(0, 22)}..." is currently Out of Stock.`);
+      return;
+    }
+
     setCart((prevCart) => {
       const existingIndex = prevCart.findIndex((item) => item.product.id === product.id);
       if (existingIndex > -1) {

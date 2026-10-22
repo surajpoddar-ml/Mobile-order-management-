@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
-  ShieldCheck, Users, Building2, Clock, CheckCircle, XCircle,
+  ShieldCheck, Users, User, Building2, Clock, CheckCircle, XCircle,
   Search, Eye, Trash2, Check, X, PauseCircle, PlayCircle, RefreshCw, Layers,
   Film, Image as ImageIcon, Upload, Plus, ExternalLink, Sparkles,
   LayoutDashboard, Package, Menu, Edit, ArrowLeft, AlertCircle,
@@ -272,13 +272,18 @@ export const AdminPanel = () => {
   };
 
   const handleDeleteUser = async (u) => {
-    if (!window.confirm(`Permanently delete "${u.fullName}"? This action cannot be undone.`)) return;
+    if (!window.confirm(`Permanently delete "${u.fullName}" (${u.userId})? This action cannot be undone.`)) return;
+    // Optimistic removal from state
+    setUsers(prev => prev.filter(user => user.id !== u.id));
     try {
       const r = await api.admin.deleteUser(u.id);
-      notify(r.message);
+      notify(r.message || 'User deleted successfully.');
+      localStorage.setItem('mws_users_last_update', Date.now().toString());
+      window.dispatchEvent(new CustomEvent('mws_user_deleted', { detail: { userId: u.id, email: u.email } }));
       loadUserData();
     } catch (e) {
-      alert(e.message);
+      alert(e.message || 'Failed to delete user.');
+      loadUserData();
     }
   };
 
@@ -328,6 +333,8 @@ export const AdminPanel = () => {
         if (res.success) {
           notify(`Product "${productForm.name}" updated successfully!`);
           setProductModalOpen(false);
+          localStorage.setItem('mws_products_last_update', Date.now().toString());
+          window.dispatchEvent(new Event('mws_products_updated'));
           loadProductData();
         }
       } else {
@@ -335,6 +342,8 @@ export const AdminPanel = () => {
         if (res.success) {
           notify(`Product "${productForm.name}" created and published to: ${productForm.targetVisibility} Portal!`);
           setProductModalOpen(false);
+          localStorage.setItem('mws_products_last_update', Date.now().toString());
+          window.dispatchEvent(new Event('mws_products_updated'));
           loadProductData();
         }
       }
@@ -345,16 +354,51 @@ export const AdminPanel = () => {
     }
   };
 
+  // Fast 1-Click Stock Toggle
+  const handleToggleStock = async (prod) => {
+    const newStock = prod.inStock ? 0 : 1;
+    // Optimistic UI update
+    setAllProducts(prev => prev.map(p => p.id === prod.id ? { ...p, inStock: newStock } : p));
+    notify(`Stock status updating to: ${newStock ? 'In Stock' : 'Out of Stock'}...`);
+
+    try {
+      const res = await api.products.update(prod.id, { inStock: newStock });
+      if (res.success) {
+        notify(`Product "${prod.name}" is now marked ${newStock ? 'IN STOCK' : 'OUT OF STOCK'}.`);
+        localStorage.setItem('mws_products_last_update', Date.now().toString());
+        window.dispatchEvent(new Event('mws_products_updated'));
+      } else {
+        alert(res.message || 'Failed to toggle stock status.');
+        loadProductData();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to toggle stock status.');
+      loadProductData();
+    }
+  };
+
   const handleDeleteProduct = async (prod) => {
-    if (!window.confirm(`Are you sure you want to delete product "${prod.name}" (SKU: ${prod.sku})?`)) return;
+    if (!window.confirm(`Are you sure you want to delete product "${prod.name}" (SKU: ${prod.sku})?\n\nThis will permanently delete it from Admin and User portals.`)) return;
+
+    // 1. Optimistic removal from Admin UI immediately
+    setAllProducts(prev => prev.filter(p => p.id !== prod.id));
+
+    // 2. Broadcast signal immediately to user portals and carts
+    localStorage.setItem('mws_products_last_update', Date.now().toString());
+    window.dispatchEvent(new CustomEvent('mws_product_deleted', { detail: { productId: prod.id } }));
+    window.dispatchEvent(new Event('mws_products_updated'));
+
     try {
       const res = await api.products.delete(prod.id);
       if (res.success) {
-        notify(`Product "${prod.name}" deleted.`);
+        notify(`Product "${prod.name}" permanently deleted.`);
+      } else {
+        alert(res.message || 'Failed to delete product.');
         loadProductData();
       }
     } catch (err) {
       alert(err.message || 'Failed to delete product.');
+      loadProductData();
     }
   };
 
@@ -1587,11 +1631,38 @@ export const AdminPanel = () => {
                           </span>
                         </td>
 
-                        {/* Stock */}
+                        {/* Stock Status with 1-Click Quick Toggle */}
                         <td style={{ padding: '12px 14px' }}>
-                          <span className={`badge ${p.inStock ? 'badge-active' : 'badge-suspended'}`}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStock(p)}
+                            title={`Click to switch status: currently ${p.inStock ? 'In Stock' : 'Out of Stock'}`}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '5px 12px',
+                              borderRadius: 'var(--radius-full)',
+                              border: p.inStock ? '1px solid #10b981' : '1px solid #ef4444',
+                              background: p.inStock ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                              color: p.inStock ? '#047857' : '#b91c1c',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              whiteSpace: 'nowrap'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.04)'}
+                            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                          >
+                            <span style={{
+                              width: '7px',
+                              height: '7px',
+                              borderRadius: '50%',
+                              background: p.inStock ? '#10b981' : '#ef4444'
+                            }} />
                             {p.inStock ? 'In Stock' : 'Out of Stock'}
-                          </span>
+                          </button>
                         </td>
 
                         {/* Actions */}
@@ -2064,7 +2135,7 @@ export const AdminPanel = () => {
 
                         {/* Role */}
                         <td style={{ padding: '13px 16px' }}>
-                          <span className={`badge badge-${u.userType.toLowerCase()}`}>
+                          <span className={`badge badge-${(u.userType || 'customer').toLowerCase()}`}>
                             {u.userType === 'Customer' && <User size={10} />}
                             {u.userType === 'Distributor' && <Building2 size={10} />}
                             {u.userType === 'Admin' && <ShieldCheck size={10} />}
@@ -2074,7 +2145,7 @@ export const AdminPanel = () => {
 
                         {/* Status */}
                         <td style={{ padding: '13px 16px' }}>
-                          <span className={`badge badge-${u.accountStatus.toLowerCase()}`}>{u.accountStatus}</span>
+                          <span className={`badge badge-${(u.accountStatus || 'active').toLowerCase()}`}>{u.accountStatus || 'Active'}</span>
                         </td>
 
                         {/* Business */}
@@ -2093,7 +2164,7 @@ export const AdminPanel = () => {
 
                         {/* Registered */}
                         <td style={{ padding: '13px 16px', fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                          {new Date(u.createdDate).toLocaleDateString()}
+                          {u.createdDate ? new Date(u.createdDate).toLocaleDateString() : 'N/A'}
                         </td>
 
                         {/* Actions */}
@@ -2126,8 +2197,13 @@ export const AdminPanel = () => {
                               </button>
                             )}
 
-                            {u.accountStatus === 'Rejected' && (
-                              <button onClick={() => handleDeleteUser(u)} title="Delete record" className="btn btn-danger btn-sm" style={{ padding: '5px 8px' }}>
+                            {u.userType !== 'Admin' && (
+                              <button
+                                onClick={() => handleDeleteUser(u)}
+                                title={`Permanently delete ${u.fullName} (${u.userType})`}
+                                className="btn btn-danger btn-sm"
+                                style={{ padding: '5px 8px' }}
+                              >
                                 <Trash2 size={13} />
                               </button>
                             )}

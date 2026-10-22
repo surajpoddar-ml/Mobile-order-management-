@@ -80,14 +80,10 @@ export const LandingPage = () => {
 
   const filterTabs = ['All', 'Charging', 'Power', 'Cables', 'Audio', 'Protection'];
 
-  // Fetch Customer Retail Products in INR (₹)
-  useEffect(() => {
-    let isMounted = true;
+  const fetchProducts = () => {
     setLoading(true);
-
     api.products.getVisibleProducts('Customer', selectedCategory)
       .then(res => {
-        if (!isMounted) return;
         if (res && res.products) {
           setProducts(res.products);
         } else {
@@ -96,14 +92,39 @@ export const LandingPage = () => {
       })
       .catch(err => {
         console.error('Failed to fetch catalog products:', err);
-        if (isMounted) setProducts([]);
       })
       .finally(() => {
-        if (isMounted) setLoading(false);
+        setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, [selectedCategory]);
+
+  // Synchronize immediately if Admin deletes a product or toggles stock status
+  useEffect(() => {
+    const handleSync = () => fetchProducts();
+    const handleDeleted = (e) => {
+      const deletedId = e.detail?.productId;
+      if (deletedId) {
+        setProducts(prev => prev.filter(p => p.id !== deletedId));
+      }
+    };
+    const handleStorage = (e) => {
+      if (e.key === 'mws_products_last_update') {
+        fetchProducts();
+      }
+    };
+
+    window.addEventListener('mws_products_updated', handleSync);
+    window.addEventListener('mws_product_deleted', handleDeleted);
+    window.addEventListener('storage', handleStorage);
 
     return () => {
-      isMounted = false;
+      window.removeEventListener('mws_products_updated', handleSync);
+      window.removeEventListener('mws_product_deleted', handleDeleted);
+      window.removeEventListener('storage', handleStorage);
     };
   }, [selectedCategory]);
 
@@ -377,6 +398,7 @@ export const LandingPage = () => {
               const badgeLabel = p.badge || 'Bestseller';
               const isNew = badgeLabel.toLowerCase().includes('new');
               const badgeBg = isNew ? '#0284c7' : '#1d4ed8';
+              const isItemInStock = p.inStock !== 0 && p.inStock !== false;
 
               return (
                 <div
@@ -390,7 +412,8 @@ export const LandingPage = () => {
                     flexDirection: 'column',
                     justifyContent: 'space-between',
                     boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)',
-                    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                    opacity: isItemInStock ? 1 : 0.9
                   }}
                   onMouseEnter={e => {
                     e.currentTarget.style.transform = 'translateY(-4px)';
@@ -432,20 +455,22 @@ export const LandingPage = () => {
                     )}
 
                     {/* Stock Status Pill */}
-                    {p.inStock === 0 && (
+                    {!isItemInStock && (
                       <span style={{
                         position: 'absolute',
                         top: '12px',
                         right: '12px',
                         background: '#dc2626',
                         color: '#ffffff',
-                        fontSize: '0.68rem',
-                        fontWeight: 700,
-                        padding: '2px 8px',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        padding: '3px 10px',
                         borderRadius: 'var(--radius-full)',
-                        zIndex: 2
+                        zIndex: 2,
+                        boxShadow: '0 2px 8px rgba(220, 38, 38, 0.35)',
+                        letterSpacing: '0.04em'
                       }}>
-                        Out of Stock
+                        OUT OF STOCK
                       </span>
                     )}
 
@@ -457,7 +482,9 @@ export const LandingPage = () => {
                         width: '100%',
                         height: '100%',
                         objectFit: 'cover',
-                        transition: 'transform 0.3s'
+                        transition: 'transform 0.3s',
+                        filter: !isItemInStock ? 'grayscale(45%)' : 'none',
+                        opacity: !isItemInStock ? 0.75 : 1
                       }}
                       onError={(e) => {
                         e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80';
@@ -555,32 +582,38 @@ export const LandingPage = () => {
                       )}
                     </div>
 
-                    {/* Buttons Row: Add to Cart (pill) + Heart Button */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button
-                        onClick={() => addToCart(p)}
-                        style={{
-                          flex: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          background: '#2563eb',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: 'var(--radius-full)',
-                          padding: '10px 16px',
-                          fontSize: '0.88rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          transition: 'background-color 0.2s'
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#2563eb')}
-                      >
-                        <ShoppingCart size={16} />
-                        Add to Cart
-                      </button>
+                      {/* Buttons Row: Add to Cart (pill) + Heart Button */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                          onClick={() => addToCart(p)}
+                          disabled={!isItemInStock}
+                          style={{
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            background: isItemInStock ? '#2563eb' : '#94a3b8',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: 'var(--radius-full)',
+                            padding: '10px 16px',
+                            fontSize: '0.88rem',
+                            fontWeight: 700,
+                            cursor: isItemInStock ? 'pointer' : 'not-allowed',
+                            transition: 'background-color 0.2s',
+                            opacity: isItemInStock ? 1 : 0.85
+                          }}
+                          onMouseEnter={e => {
+                            if (isItemInStock) e.currentTarget.style.backgroundColor = '#1d4ed8';
+                          }}
+                          onMouseLeave={e => {
+                            if (isItemInStock) e.currentTarget.style.backgroundColor = '#2563eb';
+                          }}
+                        >
+                          <ShoppingCart size={16} />
+                          {isItemInStock ? 'Add to Cart' : 'Out of Stock'}
+                        </button>
 
                       <button
                         onClick={() => toggleWishlist(p)}

@@ -17,11 +17,12 @@ import {
   Battery,
   Cable,
   Headphones,
-  CheckCircle2
+  CheckCircle2,
+  ExternalLink
 } from 'lucide-react';
 
 export const Navbar = () => {
-  const { user, logout, navigate } = useAuth();
+  const { user, logout, navigate, currentRoute } = useAuth();
   const {
     cartCount,
     wishlistCount,
@@ -38,6 +39,174 @@ export const Navbar = () => {
   const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
+  // Check if currently on Admin Dashboard / Logged in as Admin
+  const isAdmin = user?.userType === 'Admin' || currentRoute === '/admin' || currentRoute === '/admin-access' || currentRoute === '/portal/admin';
+
+  // If viewing Admin Panel, render ONLY the required admin controls (no consumer shopping cart, search, wishlist, or category bar)
+  if (isAdmin) {
+    return (
+      <header style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        backgroundColor: '#ffffff',
+        borderBottom: '1.5px solid var(--border-medium)',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+      }}>
+        <div style={{
+          maxWidth: '100%',
+          padding: '12px clamp(16px, 3vw, 28px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px'
+        }}>
+          {/* Left: Brand Logo + Admin Authority Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              onClick={() => navigate('/admin')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              <img
+                src="/mws_eagle_logo.jpg"
+                alt="MWS EAGLE"
+                style={{
+                  height: '40px',
+                  width: 'auto',
+                  objectFit: 'contain',
+                  borderRadius: '6px'
+                }}
+              />
+              <div>
+                <div style={{
+                  fontSize: '1.24rem',
+                  fontWeight: 900,
+                  letterSpacing: '0.04em',
+                  color: '#0f172a',
+                  lineHeight: 1.1
+                }}>
+                  MWS <span style={{ color: '#2563eb' }}>EAGLE</span>
+                </div>
+                <div style={{
+                  fontSize: '0.62rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.12em',
+                  color: '#64748b',
+                  textTransform: 'uppercase'
+                }}>
+                  PREMIUM MOBILE ACCESSORIES
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              borderRadius: 'var(--radius-full)',
+              background: 'rgba(37, 99, 235, 0.08)',
+              border: '1px solid rgba(37, 99, 235, 0.2)',
+              color: '#2563eb',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              <ShieldCheck size={14} /> Admin Control Panel
+            </div>
+          </div>
+
+          {/* Right: Required Admin Controls Only */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* View Live Storefront */}
+            <button
+              onClick={() => navigate('/')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 14px',
+                borderRadius: '8px',
+                border: '1.5px solid #cbd5e1',
+                background: '#f8fafc',
+                color: '#334155',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.16s ease'
+              }}
+              title="Preview Customer Website"
+            >
+              <ExternalLink size={14} />
+              <span className="hide-on-mobile">View Storefront</span>
+            </button>
+
+            {/* Admin User Profile Pill */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 14px',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 'var(--radius-full)'
+            }}>
+              <div style={{
+                width: '26px',
+                height: '26px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.75rem',
+                fontWeight: 900
+              }}>
+                A
+              </div>
+              <div style={{ lineHeight: 1.2 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
+                  {user?.fullName || 'System Super Admin'}
+                </div>
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#059669' }}>
+                  ● Active Session
+                </div>
+              </div>
+            </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={logout}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 14px',
+                borderRadius: '8px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                color: '#dc2626',
+                border: '1px solid #fca5a5',
+                background: '#fef2f2',
+                cursor: 'pointer'
+              }}
+            >
+              <LogOut size={14} />
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   const categories = [
     { id: 'All', name: 'All Products', icon: Layers },
     { id: 'Charging', name: 'Charging', icon: Zap },
@@ -49,7 +218,6 @@ export const Navbar = () => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    // Scroll to products section if on home/catalog page
     const el = document.getElementById('best-selling-products-section');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });

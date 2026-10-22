@@ -83,21 +83,27 @@ export const verifyToken = async (req, res, next) => {
  */
 export const requireRole = (roles = []) => {
   return (req, res, next) => {
+    const checkRole = () => {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Unauthorized. Authentication required.'
+        });
+      }
+      if (!roles.includes(req.user.userType)) {
+        return res.status(403).json({
+          success: false,
+          message: `Forbidden. Access restricted to [${roles.join(', ')}] only.`
+        });
+      }
+      next();
+    };
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized. Authentication required.'
-      });
+      return verifyToken(req, res, checkRole);
     }
 
-    if (!roles.includes(req.user.userType)) {
-      return res.status(403).json({
-        success: false,
-        message: `Forbidden. Access restricted to [${roles.join(', ')}] only.`
-      });
-    }
-
-    next();
+    checkRole();
   };
 };
 

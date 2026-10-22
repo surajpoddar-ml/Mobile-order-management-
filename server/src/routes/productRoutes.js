@@ -97,7 +97,7 @@ router.get('/', async (req, res) => {
  * 2. Admin Endpoint: Create / Post a New Product
  * Allows Admin to designate Target Visibility ('Customer', 'Distributor', 'Both')
  */
-router.post('/', requireAdmin, async (req, res) => {
+router.post('/', verifyToken, requireAdmin, async (req, res) => {
   try {
     const {
       name,
@@ -175,7 +175,7 @@ router.post('/', requireAdmin, async (req, res) => {
 /**
  * 3. Admin Endpoint: Update Existing Product
  */
-router.put('/:id', requireAdmin, async (req, res) => {
+router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const existing = await queryGet('SELECT * FROM products WHERE id = ?', [id]);
@@ -261,7 +261,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
 /**
  * 4. Admin Endpoint: Delete Product
  */
-router.delete('/:id', requireAdmin, async (req, res) => {
+router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const existing = await queryGet('SELECT * FROM products WHERE id = ?', [id]);

@@ -164,23 +164,6 @@ export const AdvertisementBoard = () => {
         marginBottom: '16px'
       }}>
         <div>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '0.75rem',
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            color: 'var(--primary)',
-            background: 'rgba(79, 70, 229, 0.08)',
-            padding: '3px 10px',
-            borderRadius: 'var(--radius-full)',
-            marginBottom: '4px'
-          }}>
-            <Sparkles size={12} />
-            MWS EAGLE LIVE SHOWCASE
-          </div>
           <h2 style={{
             fontSize: 'clamp(1.2rem, 3.5vw, 1.65rem)',
             fontWeight: 800,

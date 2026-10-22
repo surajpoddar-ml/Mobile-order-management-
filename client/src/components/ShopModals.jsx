@@ -136,8 +136,13 @@ export const ShopModals = () => {
     }
   }, [user]);
 
-  // Proceed to Checkout handler (Enforces login before ordering)
+  // Proceed to Checkout handler (Enforces login before ordering and checks stock availability)
   const handleProceedToCheckout = () => {
+    const outOfStockItems = cart.filter(item => item.product.inStock === 0 || item.product.inStock === false);
+    if (outOfStockItems.length > 0) {
+      alert(`Cannot proceed to checkout:\n"${outOfStockItems[0].product.name}" is currently Out of Stock.\n\nPlease remove out-of-stock items from your cart before proceeding.`);
+      return;
+    }
     if (!user) {
       setCheckoutStep('login_required');
     } else {
@@ -232,6 +237,12 @@ export const ShopModals = () => {
   const handleOrderSubmit = async (e) => {
     e.preventDefault();
     if (!cart.length) return;
+
+    const outOfStockItems = cart.filter(item => item.product.inStock === 0 || item.product.inStock === false);
+    if (outOfStockItems.length > 0) {
+      alert(`Cannot submit order: "${outOfStockItems[0].product.name}" is currently Out of Stock.\n\nPlease remove out-of-stock items from your cart before completing payment.`);
+      return;
+    }
 
     if (!user) {
       setCheckoutStep('login_required');
@@ -413,8 +424,23 @@ export const ShopModals = () => {
                               }}>
                                 {item.product.name}
                               </div>
-                              <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#111827', marginTop: '3px' }}>
-                                ₹{Number(item.product.price).toLocaleString()}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
+                                <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#111827' }}>
+                                  ₹{Number(item.product.price).toLocaleString()}
+                                </span>
+                                {(item.product.inStock === 0 || item.product.inStock === false) && (
+                                  <span style={{
+                                    fontSize: '0.66rem',
+                                    fontWeight: 800,
+                                    color: '#dc2626',
+                                    background: 'rgba(220, 38, 38, 0.12)',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    letterSpacing: '0.03em'
+                                  }}>
+                                    OUT OF STOCK
+                                  </span>
+                                )}
                               </div>
                             </div>
 

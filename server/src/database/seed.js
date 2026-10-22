@@ -114,10 +114,25 @@ export const seedDatabase = async () => {
     console.log('[SEED] Default advertisements seeded successfully.');
   }
 
-  // 3. Check if base users and products already seeded
-  const existingCust = await queryGet('SELECT id FROM users WHERE email = "customer@example.com"');
-  if (existingCust) {
-    console.log('[SEED] Base user catalog already present. Seed check complete.');
+  // 3. Ensure system_settings table exists and check if initial seed was already completed
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    )
+  `);
+
+  const seedCompleted = await queryGet('SELECT value FROM system_settings WHERE key = "initial_seed_completed"');
+  if (seedCompleted && seedCompleted.value === 'true') {
+    console.log('[SEED] System already initialized. Preserving all admin product & user changes.');
+    return;
+  }
+
+  // Also check if any products already exist in the database (to protect existing installations)
+  const productCountRow = await queryGet('SELECT COUNT(*) as cnt FROM products');
+  if (productCountRow && productCountRow.cnt > 0) {
+    await queryRun('INSERT OR REPLACE INTO system_settings (key, value) VALUES ("initial_seed_completed", "true")');
+    console.log('[SEED] Product catalog already populated. Marked initial seed as completed.');
     return;
   }
 
@@ -464,6 +479,7 @@ export const seedDatabase = async () => {
     );
   }
 
+  await queryRun('INSERT OR REPLACE INTO system_settings (key, value) VALUES ("initial_seed_completed", "true")');
   console.log('[SEED] Database seeded successfully with default test users, products, and advertisements!');
 };
 
