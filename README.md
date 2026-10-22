@@ -51,22 +51,6 @@ cd client
 npm install
 npm run dev   # Runs on http://localhost:5173
 ```
-
----
-
-## 🔑 Pre-Seeded Test Credentials
-
-Use the **"Test Credentials"** switcher in the navbar to test every scenario:
-
-| Role | Email | Password | Account Status | Expected Behavior |
-| :--- | :--- | :--- | :--- | :--- |
-| **Admin** | `admin@sparedepot.com` | `Admin@123` | `Active` | Full Admin Panel access & approvals |
-| **Customer** | `customer@example.com` | `Customer@123` | `Active` | Instant access to Customer Portal |
-| **Distributor (Approved)** | `approved.dist@mobilecare.com` | `Distributor@123` | `Active` | Access to Wholesale Distributor Portal |
-| **Distributor (Pending)** | `pending.dist@speedyfix.com` | `Distributor@123` | `Pending` | 403: "Awaiting admin approval" |
-| **Distributor (Rejected)** | `rejected.dist@fakeparts.com` | `Distributor@123` | `Rejected` | 403: "Registration has been rejected" |
-| **Distributor (Suspended)** | `suspended.dist@latepay.com` | `Distributor@123` | `Suspended` | 403: "Account has been suspended" |
-
 ---
 
 ## 🗄️ Database Structure (`users` table)
