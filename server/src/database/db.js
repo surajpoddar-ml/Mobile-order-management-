@@ -82,7 +82,30 @@ export const initDb = async () => {
       distributorPrice REAL,
       targetVisibility TEXT NOT NULL CHECK(targetVisibility IN ('Customer', 'Distributor', 'Both')),
       description TEXT,
+      imageUrl TEXT,
       inStock INTEGER DEFAULT 1
+    )
+  `);
+
+  try {
+    await queryRun('ALTER TABLE products ADD COLUMN imageUrl TEXT');
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
+  // Advertisements table for Landing Page Board (Images and Videos uploaded by Admin)
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS advertisements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      mediaType TEXT NOT NULL CHECK(mediaType IN ('image', 'video')),
+      mediaUrl TEXT NOT NULL,
+      badgeText TEXT,
+      linkUrl TEXT,
+      isActive INTEGER DEFAULT 1,
+      orderIndex INTEGER DEFAULT 0,
+      createdDate TEXT NOT NULL
     )
   `);
 

@@ -3,6 +3,9 @@ import api from '../services/api';
 
 const AuthContext = createContext(null);
 
+// Routes that should NOT trigger re-auth redirect
+const PUBLIC_ROUTES = ['/', '/home', '/login', '/admin-access'];
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('mobile_parts_token') || null);
@@ -38,8 +41,10 @@ export const AuthProvider = ({ children }) => {
         const response = await api.auth.getMe();
         if (response.success && response.user) {
           setUser(response.user);
-          // If at root or login, redirect to proper portal based on user type
-          if (window.location.pathname === '/' || window.location.pathname === '/login') {
+          // Only redirect if on a public page (landing, login)
+          const currentPath = window.location.pathname;
+          const isPublic = PUBLIC_ROUTES.includes(currentPath) || currentPath === '/';
+          if (isPublic) {
             if (response.user.userType === 'Customer') navigate('/portal/customer');
             else if (response.user.userType === 'Distributor') navigate('/portal/distributor');
             else if (response.user.userType === 'Admin') navigate('/admin');

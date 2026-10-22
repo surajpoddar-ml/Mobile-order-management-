@@ -254,7 +254,8 @@ router.post('/login', async (req, res) => {
     }
 
     // Verify account type if the user explicitly submitted under a specific portal tab
-    if (requestedPortal && requestedPortal !== 'Any' && requestedPortal !== user.userType) {
+    // Note: Admin credentials can log in from ANY portal tab seamlessly
+    if (requestedPortal && requestedPortal !== 'Any' && requestedPortal !== user.userType && user.userType !== 'Admin') {
       return res.status(403).json({
         success: false,
         mismatchedRole: true,

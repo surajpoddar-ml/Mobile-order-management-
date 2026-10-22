@@ -1,20 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { 
-  Building2, 
-  ShieldCheck, 
-  Layers, 
-  Eye, 
-  Lock, 
-  CheckCircle, 
-  Briefcase, 
-  MapPin, 
-  FileText, 
-  Phone, 
-  Mail, 
-  Calendar, 
-  UserCheck 
+import {
+  Building2, ShieldCheck, Layers, Eye, Lock, CheckCircle, MapPin, Briefcase, Phone, Mail
 } from 'lucide-react';
 
 export const DistributorPortal = () => {
@@ -24,221 +12,126 @@ export const DistributorPortal = () => {
   const [filterCategory, setFilterCategory] = useState('All');
 
   useEffect(() => {
-    const fetchCatalog = async () => {
-      try {
-        const res = await api.products.getVisibleProducts();
-        if (res.success && res.products) {
-          setProducts(res.products);
-        }
-      } catch (err) {
-        console.error('Error fetching distributor products:', err);
-      } finally {
-        setLoadingProducts(false);
-      }
-    };
-
-    fetchCatalog();
+    api.products.getVisibleProducts()
+      .then(res => { if (res.success) setProducts(res.products); })
+      .catch(console.error)
+      .finally(() => setLoadingProducts(false));
   }, []);
 
   const categories = ['All', ...new Set(products.map(p => p.category))];
-  const filteredProducts = filterCategory === 'All' 
-    ? products 
-    : products.filter(p => p.category === filterCategory);
+  const filtered = filterCategory === 'All' ? products : products.filter(p => p.category === filterCategory);
 
   return (
-    <div style={{ maxWidth: '1240px', margin: '30px auto 80px', padding: '0 20px' }}>
-      {/* Wholesale Header Banner */}
-      <div 
-        className="glass-panel" 
-        style={{
-          padding: '32px',
-          borderRadius: 'var(--radius-xl)',
-          marginBottom: '28px',
-          background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(15, 23, 42, 0.85))',
-          border: '1px solid rgba(14, 165, 233, 0.25)',
-          position: 'relative'
-        }}
-      >
+    <div style={{ maxWidth: '1240px', margin: '32px auto 80px', padding: '0 20px' }}>
+
+      {/* Welcome Banner */}
+      <div style={{
+        background: 'linear-gradient(135deg, #f0f9ff 0%, #ffffff 60%)',
+        border: '1px solid rgba(2, 132, 199, 0.2)',
+        borderRadius: 'var(--radius-xl)',
+        padding: '32px',
+        marginBottom: '28px',
+        boxShadow: 'var(--shadow-card)'
+      }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-              <span className="badge badge-distributor">
-                <Building2 size={12} /> Approved Wholesale Partner
-              </span>
-              <span className="badge badge-active">
-                <CheckCircle size={12} /> Status: {user?.accountStatus}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
+              <span className="badge badge-distributor"><Building2 size={11} /> Approved Wholesale Partner</span>
+              <span className="badge badge-active"><CheckCircle size={11} /> {user?.accountStatus}</span>
             </div>
-            <h1 style={{ fontSize: '1.85rem', fontWeight: 800, marginBottom: '6px' }}>
+            <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '6px' }}>
               {user?.businessName || user?.fullName}
             </h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '650px' }}>
-              Wholesale distributor trade terminal. Access bulk supplier lots, technician replacement modules, special distributor volume discounts, and B2B ordering.
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '580px', lineHeight: 1.6 }}>
+              Wholesale distributor trade terminal. Access bulk supplier lots, technician replacement modules, and exclusive B2B dealer pricing.
             </p>
           </div>
 
-          {/* Verification Badge Box */}
           <div style={{
-            background: 'rgba(0, 0, 0, 0.4)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            padding: '16px 20px',
-            fontSize: '0.82rem',
-            lineHeight: '1.7',
-            minWidth: '260px'
+            background: '#ffffff', border: '1px solid rgba(2,132,199,0.15)',
+            borderRadius: 'var(--radius-md)', padding: '16px 20px',
+            fontSize: '0.82rem', lineHeight: '1.8', minWidth: '240px',
+            boxShadow: 'var(--shadow-xs)'
           }}>
-            <div style={{ color: '#38bdf8', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ShieldCheck size={14} /> Verified Distributor Credentials
+            <div style={{ color: 'var(--distributor-accent)', fontSize: '0.73rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <ShieldCheck size={13} /> Verified Credentials
             </div>
-            <div><strong>Distributor ID:</strong> <span style={{ color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>{user?.userId}</span></div>
-            <div><strong>PAN/VAT:</strong> <span style={{ fontFamily: 'var(--font-mono)' }}>{user?.panVatNumber || 'N/A'}</span></div>
-            <div><strong>Approval Date:</strong> {user?.approvalDate ? new Date(user.approvalDate).toLocaleDateString() : 'Active'}</div>
-            <div><strong>Authorized By:</strong> {user?.approvedBy || 'Master Administrator'}</div>
+            <div style={{ color: 'var(--text-body)' }}><strong>ID:</strong> <span style={{ color: 'var(--distributor-accent)', fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>{user?.userId}</span></div>
+            <div style={{ color: 'var(--text-body)' }}><strong>PAN/VAT:</strong> <span style={{ fontFamily: 'var(--font-mono)' }}>{user?.panVatNumber || 'N/A'}</span></div>
+            <div style={{ color: 'var(--text-body)' }}><strong>Approved:</strong> {user?.approvalDate ? new Date(user.approvalDate).toLocaleDateString() : 'Active'}</div>
+            <div style={{ color: 'var(--text-body)' }}><strong>By:</strong> {user?.approvedBy || 'Administrator'}</div>
           </div>
         </div>
 
-        {/* Business Information Grid */}
+        {/* Business Details Row */}
         <div style={{
-          marginTop: '24px',
-          paddingTop: '20px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '16px',
-          fontSize: '0.85rem'
+          marginTop: '22px', paddingTop: '18px',
+          borderTop: '1px solid rgba(2,132,199,0.12)',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', fontSize: '0.83rem'
         }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-            <MapPin size={16} color="var(--distributor-accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
-            <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Business Address</div>
-              <div style={{ color: 'var(--text-main)' }}>{user?.businessAddress || 'Not specified'}</div>
+          {[
+            { Icon: MapPin, label: 'Business Address', value: user?.businessAddress },
+            { Icon: Briefcase, label: 'Contact Person', value: user?.contactPerson || user?.fullName },
+            { Icon: Phone, label: 'Business Phone', value: user?.businessPhone || user?.phoneNumber },
+            { Icon: Mail, label: 'Business Email', value: user?.businessEmail || user?.email },
+          ].map(({ Icon, label, value }) => (
+            <div key={label} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <Icon size={14} color="var(--distributor-accent)" style={{ flexShrink: 0, marginTop: '3px' }} />
+              <div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1px' }}>{label}</div>
+                <div style={{ color: 'var(--text-body)', fontWeight: 500 }}>{value || 'Not specified'}</div>
+              </div>
             </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-            <Briefcase size={16} color="var(--distributor-accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
-            <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Contact Person</div>
-              <div style={{ color: 'var(--text-main)' }}>{user?.contactPerson || user?.fullName}</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-            <Phone size={16} color="var(--distributor-accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
-            <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Distributor Phone</div>
-              <div style={{ color: 'var(--text-main)' }}>{user?.businessPhone || user?.phoneNumber}</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-            <Mail size={16} color="var(--distributor-accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
-            <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Official Business Email</div>
-              <div style={{ color: 'var(--text-main)' }}>{user?.businessEmail || user?.email}</div>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Visibility System Demonstration Card (Section 5 Requirement) */}
-      <div 
-        className="glass-panel" 
-        style={{
-          padding: '20px 24px',
-          borderRadius: 'var(--radius-lg)',
-          marginBottom: '28px',
-          border: '1px solid rgba(14, 165, 233, 0.25)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '10px',
-            background: 'rgba(14, 165, 233, 0.15)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--distributor-accent)'
-          }}>
-            <Layers size={22} />
+      {/* Visibility Info Bar */}
+      <div style={{
+        background: '#ffffff', border: '1px solid rgba(2,132,199,0.15)',
+        borderRadius: 'var(--radius-lg)', padding: '16px 22px', marginBottom: '28px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px',
+        boxShadow: 'var(--shadow-xs)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--distributor-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--distributor-accent)', flexShrink: 0 }}>
+            <Layers size={20} />
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>Distributor Wholesale Visibility Engine</span>
-              <span className="badge" style={{ background: 'rgba(14, 165, 233, 0.15)', color: '#38bdf8', fontSize: '0.7rem' }}>
-                Wholesale Tier Active
-              </span>
+            <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              Distributor Wholesale Visibility Engine
+              <span className="badge" style={{ background: 'var(--distributor-light)', color: 'var(--distributor-accent)', border: '1px solid rgba(2,132,199,0.2)', fontSize: '0.68rem' }}>Wholesale Tier</span>
             </div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-              Displaying items tagged for <strong>Distributor</strong> and <strong>Both</strong>. Retail-only products are excluded from your bulk feed.
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+              Showing <strong>Distributor</strong> and <strong>Both</strong> tagged products with wholesale B2B pricing.
             </div>
           </div>
         </div>
-
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <div style={{
-            padding: '6px 14px',
-            borderRadius: 'var(--radius-full)',
-            background: 'rgba(14, 165, 233, 0.15)',
-            border: '1px solid rgba(14, 165, 233, 0.3)',
-            fontSize: '0.8rem',
-            color: '#38bdf8',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            <Eye size={14} /> Visible: {products.length} Products
-          </div>
-
-          <div style={{
-            padding: '6px 14px',
-            borderRadius: 'var(--radius-full)',
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.25)',
-            fontSize: '0.8rem',
-            color: '#f87171',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            <Lock size={14} /> Retail Items: Hidden
-          </div>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <div className="badge badge-distributor"><Eye size={11} /> {products.length} Visible</div>
+          <div className="badge badge-rejected"><Lock size={11} /> Retail Items: Hidden</div>
         </div>
       </div>
 
-      {/* Catalog Header */}
-      <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+      {/* Catalog Header + Filter */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
         <div>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 700 }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '3px' }}>
             Wholesale Mobile Spares & Bulk Components
           </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-            Exclusive B2B distributor pricing for assemblies, bulk batteries, and technician repair trays.
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.81rem' }}>
+            Exclusive B2B dealer pricing for bulk assemblies, batteries, and technician repair trays.
           </p>
         </div>
-
-        {/* Category Filter Pills */}
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setFilterCategory(cat)}
-              className="btn btn-sm"
+          {categories.map(cat => (
+            <button key={cat} onClick={() => setFilterCategory(cat)} className="btn btn-sm"
               style={{
-                background: filterCategory === cat ? 'var(--distributor-accent)' : 'rgba(255, 255, 255, 0.05)',
+                background: filterCategory === cat ? 'var(--distributor-accent)' : '#ffffff',
                 color: filterCategory === cat ? '#ffffff' : 'var(--text-muted)',
-                border: '1px solid var(--border-subtle)'
-              }}
-            >
+                border: '1px solid var(--border-medium)',
+                boxShadow: filterCategory === cat ? 'var(--shadow-sm)' : 'none'
+              }}>
               {cat}
             </button>
           ))}
@@ -247,87 +140,51 @@ export const DistributorPortal = () => {
 
       {/* Products Grid */}
       {loadingProducts ? (
-        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
-          Loading wholesale distributor catalog...
-        </div>
-      ) : filteredProducts.length === 0 ? (
-        <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-          No wholesale parts found under category "{filterCategory}".
+        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading wholesale catalog...</div>
+      ) : filtered.length === 0 ? (
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', background: '#ffffff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)' }}>
+          No parts found in category "{filterCategory}".
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '20px'
-        }}>
-          {filteredProducts.map((p) => (
-            <div
-              key={p.id}
-              className="glass-panel"
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(268px, 1fr))', gap: '20px' }}>
+          {filtered.map(p => (
+            <div key={p.id}
               style={{
-                padding: '20px',
-                borderRadius: 'var(--radius-lg)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'transform 0.2s, box-shadow 0.2s'
+                background: '#ffffff', border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-lg)', padding: '20px',
+                boxShadow: 'var(--shadow-xs)',
+                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s'
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.borderColor = 'rgba(14, 165, 233, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.borderColor = 'var(--border-subtle)';
-              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.borderColor = 'rgba(2,132,199,0.3)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-xs)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
             >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
-                    {p.sku}
-                  </span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>{p.sku}</span>
                   <span className="badge" style={{
-                    fontSize: '0.68rem',
-                    background: p.targetVisibility === 'Both' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(14, 165, 233, 0.15)',
-                    color: p.targetVisibility === 'Both' ? '#818cf8' : '#38bdf8',
-                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                    background: p.targetVisibility === 'Both' ? 'var(--primary-light)' : 'var(--distributor-light)',
+                    color: p.targetVisibility === 'Both' ? 'var(--primary)' : 'var(--distributor-accent)',
+                    border: `1px solid ${p.targetVisibility === 'Both' ? 'rgba(79,70,229,0.2)' : 'rgba(2,132,199,0.2)'}`,
+                    fontSize: '0.66rem'
                   }}>
                     {p.targetVisibility === 'Both' ? 'Universal' : 'Distributor Exclusive'}
                   </span>
                 </div>
-
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--distributor-accent)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--distributor-accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>
                   {p.category}
                 </div>
-
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, lineHeight: '1.4', marginBottom: '8px', color: '#ffffff' }}>
-                  {p.name}
-                </h3>
-
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '16px' }}>
-                  {p.description}
-                </p>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, lineHeight: 1.4, marginBottom: '8px', color: 'var(--text-main)' }}>{p.name}</h3>
+                <p style={{ fontSize: '0.81rem', color: 'var(--text-muted)', lineHeight: 1.55, marginBottom: '16px' }}>{p.description}</p>
               </div>
-
-              <div>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'baseline',
-                  paddingTop: '12px',
-                  borderTop: '1px solid var(--border-subtle)'
-                }}>
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Dealer Wholesale: </span>
-                    <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#38bdf8' }}>
-                      ${p.price?.toFixed(2)}
-                    </span>
-                  </div>
-
-                  <span style={{ fontSize: '0.75rem', color: '#0ea5e9', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <CheckCircle size={12} /> B2B Verified
-                  </span>
+              <div style={{ paddingTop: '12px', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div>
+                  <span style={{ fontSize: '0.73rem', color: 'var(--text-dim)' }}>Dealer Wholesale </span>
+                  <span style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--distributor-accent)' }}>${p.price?.toFixed(2)}</span>
                 </div>
+                <span style={{ fontSize: '0.73rem', color: 'var(--distributor-accent)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CheckCircle size={11} /> B2B Verified
+                </span>
               </div>
             </div>
           ))}

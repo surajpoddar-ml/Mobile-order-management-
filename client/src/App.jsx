@@ -2,22 +2,25 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { LandingPage } from './pages/LandingPage';
 import { AuthPage } from './pages/AuthPage';
 import { CustomerPortal } from './pages/CustomerPortal';
 import { DistributorPortal } from './pages/DistributorPortal';
 import { AdminPanel } from './pages/AdminPanel';
 
 function AppContent() {
-  const { currentRoute, user } = useAuth();
+  const { currentRoute, user, navigate } = useAuth();
   const [prefillDemo, setPrefillDemo] = useState(null);
 
   const handleQuickFill = (email, password, role) => {
     setPrefillDemo({ email, password, role });
   };
 
-  // Determine active view based on current browser path
   const renderView = () => {
-    if (currentRoute === '/portal/customer') {
+    const path = currentRoute.split('?')[0]; // strip query params for matching
+
+    // ---- Portals (protected) ----
+    if (path === '/portal/customer') {
       return (
         <ProtectedRoute allowedRoles={['Customer']}>
           <CustomerPortal />
@@ -25,7 +28,7 @@ function AppContent() {
       );
     }
 
-    if (currentRoute === '/portal/distributor') {
+    if (path === '/portal/distributor') {
       return (
         <ProtectedRoute allowedRoles={['Distributor']}>
           <DistributorPortal />
@@ -33,7 +36,8 @@ function AppContent() {
       );
     }
 
-    if (currentRoute === '/admin' || currentRoute === '/portal/admin') {
+    // ---- Admin Panel — accessible only via /admin or /admin-access (Admin role required) ----
+    if (path === '/admin' || path === '/admin-access' || path === '/portal/admin') {
       return (
         <ProtectedRoute allowedRoles={['Admin']}>
           <AdminPanel />
@@ -41,8 +45,26 @@ function AppContent() {
       );
     }
 
-    // Default to Auth / Login view
-    return <AuthPage prefillData={prefillDemo} />;
+    // ---- Auth: /login ----
+    if (path === '/login') {
+      // If already logged in, redirect to proper portal
+      if (user) {
+        if (user.userType === 'Customer') { navigate('/portal/customer'); return null; }
+        if (user.userType === 'Distributor') { navigate('/portal/distributor'); return null; }
+        if (user.userType === 'Admin') { navigate('/admin'); return null; }
+      }
+      return <AuthPage prefillData={prefillDemo} />;
+    }
+
+    // ---- Default: Landing Page ----
+    // If user is already logged in, redirect to their portal
+    if (user) {
+      if (user.userType === 'Customer') { navigate('/portal/customer'); return null; }
+      if (user.userType === 'Distributor') { navigate('/portal/distributor'); return null; }
+      if (user.userType === 'Admin') { navigate('/admin'); return null; }
+    }
+
+    return <LandingPage />;
   };
 
   return (
@@ -55,19 +77,21 @@ function AppContent() {
 
       <footer style={{
         borderTop: '1px solid var(--border-subtle)',
-        background: 'rgba(11, 15, 25, 0.95)',
-        padding: '24px 20px',
-        textAlign: 'center',
-        fontSize: '0.8rem',
-        color: 'var(--text-dim)',
-        lineHeight: '1.6'
+        background: 'rgba(11, 15, 25, 0.96)',
+        padding: '28px 20px',
       }}>
-        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-          <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
-            Mobile Spare-Parts Marketplace & Distribution Engine — User Management & RBAC Foundation
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/mws_eagle_logo.jpg" alt="MWS EAGLE" style={{ height: '40px', borderRadius: '8px' }} />
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>MWS EAGLE</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>HIGH PERFORMANCE ACCESSORIES</div>
+            </div>
           </div>
-          <div>
-            Built with strict role-based access control, bcrypt hashing, JWT token validation, distributor approval pipeline & product visibility filtering.
+
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', textAlign: 'right', lineHeight: 1.6 }}>
+            <div>© 2026 MWS EAGLE Mobile Spare-Parts Marketplace. All rights reserved.</div>
+            <div>Secure authentication · Role-based access control · bcrypt hashed credentials</div>
           </div>
         </div>
       </footer>

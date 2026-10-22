@@ -1,49 +1,131 @@
 import bcrypt from 'bcryptjs';
-import { initDb, queryGet, queryRun } from './db.js';
+import dotenv from 'dotenv';
+import { initDb, queryGet, queryRun, queryAll } from './db.js';
+
+dotenv.config();
 
 export const seedDatabase = async () => {
   await initDb();
 
-  const adminEmail = 'admin@sparedepot.com';
-  const existingAdmin = await queryGet('SELECT * FROM users WHERE email = ?', [adminEmail]);
+  const salt = await bcrypt.genSalt(10);
+  const now = new Date().toISOString();
 
-  if (existingAdmin) {
-    console.log('Database already seeded. Skipping initial seed.');
+  // 1. Ensure Admin Account configured via .env
+  const envAdminEmail = (process.env.ADMIN_EMAIL || 'admin@mwseagle.com').trim().toLowerCase();
+  const envAdminPassword = process.env.ADMIN_PASSWORD || 'Admin@123';
+  const hashedEnvAdminPassword = await bcrypt.hash(envAdminPassword, salt);
+
+  const existingAdminByEmail = await queryGet('SELECT * FROM users WHERE LOWER(email) = ?', [envAdminEmail]);
+  const primaryAdmin = await queryGet('SELECT * FROM users WHERE userId = "ADM-001"');
+
+  if (existingAdminByEmail) {
+    await queryRun(
+      'UPDATE users SET passwordHash = ?, userType = "Admin", accountStatus = "Active", updatedDate = ? WHERE id = ?',
+      [hashedEnvAdminPassword, now, existingAdminByEmail.id]
+    );
+    console.log(`[SEED] Synced Admin password from .env for: ${envAdminEmail}`);
+  } else if (primaryAdmin) {
+    await queryRun(
+      'UPDATE users SET email = ?, passwordHash = ?, userType = "Admin", accountStatus = "Active", updatedDate = ? WHERE id = ?',
+      [envAdminEmail, hashedEnvAdminPassword, now, primaryAdmin.id]
+    );
+    console.log(`[SEED] Updated primary ADM-001 to .env credentials: ${envAdminEmail}`);
+  } else {
+    await queryRun(
+      `INSERT INTO users (
+        userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
+        profileInfo, createdDate, updatedDate, lastLogin, approvalDate, approvedBy
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        'ADM-001',
+        'MWS Eagle System Admin',
+        envAdminEmail,
+        '+1-800-555-0100',
+        hashedEnvAdminPassword,
+        'Admin',
+        'Active',
+        'Master Administrator of MWS Eagle Marketplace',
+        now, now, now, now, 'SYSTEM'
+      ]
+    );
+    console.log(`[SEED] Created Admin account from .env: ${envAdminEmail}`);
+  }
+
+  // 2. Ensure Sample Advertisements for Landing Page Board (Images and Videos)
+  const existingAds = await queryAll('SELECT id FROM advertisements');
+  if (existingAds.length === 0) {
+    console.log('[SEED] Seeding interactive advertisement board items (images & videos)...');
+    const defaultAds = [
+      {
+        title: 'Next-Gen OLED Display Assemblies for Flagship Phones',
+        description: 'Ultra-high 120Hz refresh rate, true tone color accuracy, and military-grade glass coating.',
+        mediaType: 'video',
+        mediaUrl: 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-man-repairing-a-smartphone-40899-large.mp4',
+        badgeText: 'FEATURED VIDEO',
+        linkUrl: '/login?mode=signup&role=Distributor',
+        orderIndex: 1
+      },
+      {
+        title: 'Wholesale Touch Screens, ICs & Flex Ribbon Cables',
+        description: 'Direct factory imports at guaranteed volume discounts for registered service centers.',
+        mediaType: 'image',
+        mediaUrl: 'https://images.unsplash.com/photo-1597733336794-12d05021d510?auto=format&fit=crop&w=1200&q=80',
+        badgeText: 'WHOLESALE DEAL',
+        linkUrl: '/login',
+        orderIndex: 2
+      },
+      {
+        title: 'Precision Soldering & High-Tech Motherboard Rework',
+        description: 'Watch precision micro-soldering and thermal imaging diagnostics in action.',
+        mediaType: 'video',
+        mediaUrl: 'https://assets.mixkit.co/videos/preview/mixkit-circuit-board-of-a-technological-device-41559-large.mp4',
+        badgeText: 'TECH LAB',
+        linkUrl: '/login',
+        orderIndex: 3
+      },
+      {
+        title: 'Certified 5000mAh Replacement Battery Packs',
+        description: 'Zero-cycle cobalt cells with multi-layer smart temperature protection and 1-year warranty.',
+        mediaType: 'image',
+        mediaUrl: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=1200&q=80',
+        badgeText: 'NEW ARRIVAL',
+        linkUrl: '/login?mode=signup&role=Customer',
+        orderIndex: 4
+      },
+      {
+        title: 'Express 24-Hour Dispatch & Pan-National Delivery',
+        description: 'Immediate secure packing and priority dispatch for wholesale distributor shipments.',
+        mediaType: 'image',
+        mediaUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80',
+        badgeText: 'FAST SHIPPING',
+        linkUrl: '/login',
+        orderIndex: 5
+      }
+    ];
+
+    for (const ad of defaultAds) {
+      await queryRun(
+        `INSERT INTO advertisements (
+          title, description, mediaType, mediaUrl, badgeText, linkUrl, isActive, orderIndex, createdDate
+        ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+        [ad.title, ad.description, ad.mediaType, ad.mediaUrl, ad.badgeText, ad.linkUrl, ad.orderIndex, now]
+      );
+    }
+    console.log('[SEED] Default advertisements seeded successfully.');
+  }
+
+  // 3. Check if base users and products already seeded
+  const existingCust = await queryGet('SELECT id FROM users WHERE email = "customer@example.com"');
+  if (existingCust) {
+    console.log('[SEED] Base user catalog already present. Seed check complete.');
     return;
   }
 
-  console.log('Seeding initial users and product foundation...');
-  const salt = await bcrypt.genSalt(10);
-  const adminPassword = await bcrypt.hash('Admin@123', salt);
+  console.log('[SEED] Seeding initial test users and product foundation...');
   const custPassword = await bcrypt.hash('Customer@123', salt);
   const distPassword = await bcrypt.hash('Distributor@123', salt);
 
-  const now = new Date().toISOString();
-
-  // 1. Admin Account
-  await queryRun(
-    `INSERT INTO users (
-      userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
-      profileInfo, createdDate, updatedDate, lastLogin, approvalDate, approvedBy
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      'ADM-001',
-      'System Super Admin',
-      'admin@sparedepot.com',
-      '+1-800-555-0100',
-      adminPassword,
-      'Admin',
-      'Active',
-      'Master Administrator of Mobile Spares Depot',
-      now,
-      now,
-      now,
-      now,
-      'SYSTEM'
-    ]
-  );
-
-  // 2. Active Customer
+  // Active Customer
   await queryRun(
     `INSERT INTO users (
       userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
@@ -63,7 +145,7 @@ export const seedDatabase = async () => {
     ]
   );
 
-  // 3. Approved & Active Distributor
+  // Approved & Active Distributor
   await queryRun(
     `INSERT INTO users (
       userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
@@ -92,7 +174,7 @@ export const seedDatabase = async () => {
     ]
   );
 
-  // 4. Pending Distributor (Awaiting Admin Review)
+  // Pending Distributor (Awaiting Admin Review)
   await queryRun(
     `INSERT INTO users (
       userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
@@ -119,7 +201,7 @@ export const seedDatabase = async () => {
     ]
   );
 
-  // 5. Rejected Distributor
+  // Rejected Distributor
   await queryRun(
     `INSERT INTO users (
       userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
@@ -147,7 +229,7 @@ export const seedDatabase = async () => {
     ]
   );
 
-  // 6. Suspended Distributor
+  // Suspended Distributor
   await queryRun(
     `INSERT INTO users (
       userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
@@ -175,7 +257,7 @@ export const seedDatabase = async () => {
     ]
   );
 
-  // 7. Seed Foundation Products for Visibility Verification
+  // Foundation Products
   const sampleProducts = [
     {
       name: 'Ultra-Tough 9H Tempered Glass Screen Protector (iPhone 15)',
@@ -277,7 +359,7 @@ export const seedDatabase = async () => {
     );
   }
 
-  console.log('Database seeded successfully with default test users and visibility foundation products!');
+  console.log('[SEED] Database seeded successfully with default test users, products, and advertisements!');
 };
 
 // Run directly if invoked from command line

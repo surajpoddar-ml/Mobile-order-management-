@@ -1,12 +1,14 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'http://localhost:5001/api';
 
 /**
  * Universal Fetch wrapper with JWT injection & error handling
  */
 const request = async (endpoint, options = {}) => {
   const token = localStorage.getItem('mobile_parts_token');
+  const isFormData = options.body instanceof FormData;
+
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers
   };
@@ -110,11 +112,64 @@ export const api = {
       })
   },
 
-  // Role-Based Product Visibility Catalog
+  // Advertisements System (Images and Videos for Landing Board)
+  advertisements: {
+    getActive: () =>
+      request('/advertisements', {
+        method: 'GET'
+      }),
+
+    getAll: () =>
+      request('/advertisements/all', {
+        method: 'GET'
+      }),
+
+    uploadMedia: (formData) =>
+      request('/advertisements/upload', {
+        method: 'POST',
+        body: formData
+      }),
+
+    create: (payload) =>
+      request('/advertisements', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+
+    update: (id, payload) =>
+      request(`/advertisements/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      }),
+
+    delete: (id) =>
+      request(`/advertisements/${id}`, {
+        method: 'DELETE'
+      })
+  },
+
+  // Role-Based Product Catalog & Admin Authority
   products: {
     getVisibleProducts: () =>
       request('/products', {
         method: 'GET'
+      }),
+
+    create: (payload) =>
+      request('/products', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+
+    update: (id, payload) =>
+      request(`/products/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      }),
+
+    delete: (id) =>
+      request(`/products/${id}`, {
+        method: 'DELETE'
       })
   }
 };

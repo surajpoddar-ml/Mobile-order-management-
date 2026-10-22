@@ -1,28 +1,40 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import productRoutes from './routes/productRoutes.js';
+import adRoutes from './routes/adRoutes.js';
 import { seedDatabase } from './database/seed.js';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors({
-  origin: '*', // Allow frontend development requests
+  origin: '*',
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Serve uploaded media files statically
+const uploadsPath = path.resolve(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsPath));
 
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/advertisements', adRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -34,7 +46,7 @@ app.use((err, req, res, next) => {
   console.error('Unhandled server error:', err);
   res.status(500).json({
     success: false,
-    message: 'Internal server error occurred.'
+    message: err.message || 'Internal server error occurred.'
   });
 });
 
@@ -44,9 +56,10 @@ const startServer = async () => {
     await seedDatabase();
     app.listen(PORT, () => {
       console.log(`===============================================`);
-      console.log(` Mobile Spares Management Server`);
-      console.log(` Running on port: http://localhost:${PORT}`);
-      console.log(` Health check:    http://localhost:${PORT}/api/health`);
+      console.log(` MWS EAGLE — Mobile Parts Marketplace Server`);
+      console.log(` Running on:   http://localhost:${PORT}`);
+      console.log(` Health check: http://localhost:${PORT}/api/health`);
+      console.log(` Media uploads: http://localhost:${PORT}/uploads`);
       console.log(`===============================================`);
     });
   } catch (error) {
