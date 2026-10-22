@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
+import { createNotification } from '../services/notificationService.js';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
@@ -146,6 +147,44 @@ router.post('/', verifyToken, async (req, res) => {
       try {
         createdOrder.items = JSON.parse(createdOrder.items);
       } catch (e) {}
+    }
+
+    // 1. Notify Admin of New Order (with deduplication)
+    await createNotification({
+      recipientId: 'ADMIN',
+      recipientRole: 'Admin',
+      title: `🛒 New Order: ${orderNumber}`,
+      message: `${customerName} (${userType}) placed order for ₹${Number(totalAmount).toLocaleString()} via ${paymentMethod}.`,
+      type: 'order_created',
+      entityId: orderNumber,
+      linkUrl: '/admin?tab=orders',
+      dedupKey: `order_created_${orderNumber}_ADMIN`
+    });
+
+    // 2. Notify Customer or Distributor of Successful Placement
+    await createNotification({
+      recipientId: userId || customerEmail,
+      recipientRole: userType,
+      title: `Order Confirmed: ${orderNumber}`,
+      message: `Your order for ₹${Number(totalAmount).toLocaleString()} has been received and is being prepared.`,
+      type: 'order_created',
+      entityId: orderNumber,
+      linkUrl: userType === 'Distributor' ? '/distributor?tab=orders' : '/customer?tab=orders',
+      dedupKey: `order_created_${orderNumber}_USER`
+    });
+
+    // 3. If online payment was used with proof, notify Admin to verify
+    if (isOnlinePayment && (transactionId || paymentScreenshot)) {
+      await createNotification({
+        recipientId: 'ADMIN',
+        recipientRole: 'Admin',
+        title: `💳 Payment Proof Submitted`,
+        message: `Payment proof received for ${orderNumber} (Txn ID: ${transactionId || 'Uploaded Screenshot'}). Requires approval.`,
+        type: 'payment_submitted',
+        entityId: orderNumber,
+        linkUrl: '/admin?tab=orders',
+        dedupKey: `payment_submitted_${orderNumber}_ADMIN`
+      });
     }
 
     return res.status(201).json({
@@ -297,6 +336,20 @@ router.put('/admin/:id/status', verifyToken, requireAdmin, async (req, res) => {
       updatedOrder.items = JSON.parse(updatedOrder.items);
     } catch (e) {}
 
+    // Notify customer/distributor of order status update if status changed
+    if (status && status !== existing.orderStatus) {
+      await createNotification({
+        recipientId: existing.userId || existing.customerEmail,
+        recipientRole: existing.userType,
+        title: `📦 Order ${newStatus}`,
+        message: `Your order ${existing.orderNumber} status has been updated to "${newStatus}".`,
+        type: 'order_status',
+        entityId: existing.orderNumber,
+        linkUrl: existing.userType === 'Distributor' ? '/distributor?tab=orders' : '/customer?tab=orders',
+        dedupKey: `order_status_${newStatus}_${existing.orderNumber}`
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: `Order status updated to "${newStatus}" successfully.`,
@@ -329,6 +382,18 @@ router.put('/admin/:id/approve-payment', verifyToken, requireAdmin, async (req, 
     try {
       updatedOrder.items = JSON.parse(updatedOrder.items);
     } catch (e) {}
+
+    // Notify Customer / Distributor of approved payment
+    await createNotification({
+      recipientId: existing.userId || existing.customerEmail,
+      recipientRole: existing.userType,
+      title: `✅ Payment Verified & Approved`,
+      message: `Your payment for order ${existing.orderNumber} has been verified and approved by Admin. Your order is now Processing.`,
+      type: 'payment_approved',
+      entityId: existing.orderNumber,
+      linkUrl: existing.userType === 'Distributor' ? '/distributor?tab=orders' : '/customer?tab=orders',
+      dedupKey: `payment_approved_${existing.orderNumber}`
+    });
 
     return res.status(200).json({
       success: true,
@@ -363,6 +428,18 @@ router.put('/admin/:id/reject-payment', verifyToken, requireAdmin, async (req, r
     try {
       updatedOrder.items = JSON.parse(updatedOrder.items);
     } catch (e) {}
+
+    // Notify Customer / Distributor of rejected payment
+    await createNotification({
+      recipientId: existing.userId || existing.customerEmail,
+      recipientRole: existing.userType,
+      title: `❌ Payment Proof Rejected`,
+      message: `Payment proof for order ${existing.orderNumber} was rejected: "${reason}". The order has been cancelled.`,
+      type: 'payment_rejected',
+      entityId: existing.orderNumber,
+      linkUrl: existing.userType === 'Distributor' ? '/distributor?tab=orders' : '/customer?tab=orders',
+      dedupKey: `payment_rejected_${existing.orderNumber}_${Date.now()}`
+    });
 
     return res.status(200).json({
       success: true,

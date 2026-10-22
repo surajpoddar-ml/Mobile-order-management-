@@ -16,13 +16,16 @@ export const AuthProvider = ({ children }) => {
   const navigate = (path) => {
     window.history.pushState({}, '', path);
     setCurrentRoute(path);
+    window.dispatchEvent(new CustomEvent('mws_route_change', { detail: { path } }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Listen to browser Back/Forward buttons
   useEffect(() => {
     const handlePopState = () => {
-      setCurrentRoute(window.location.pathname);
+      const fullPath = window.location.pathname + window.location.search;
+      setCurrentRoute(fullPath);
+      window.dispatchEvent(new CustomEvent('mws_route_change', { detail: { path: fullPath } }));
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);

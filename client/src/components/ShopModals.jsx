@@ -289,6 +289,7 @@ export const ShopModals = () => {
         setPlacedOrder(res.order || { orderNumber: res.orderNumber, totalAmount: cartTotal });
         clearCart();
         setCheckoutStep('success');
+        window.dispatchEvent(new Event('mws_notifications_refresh'));
       } else {
         alert(res.message || 'Failed to place order.');
       }

@@ -223,6 +223,29 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify({ reason })
       })
+  },
+
+  // Real-time Notification System for Admin, Customer, and Distributor
+  notifications: {
+    getAll: () =>
+      request('/notifications', {
+        method: 'GET'
+      }),
+
+    markAsRead: (id) =>
+      request(`/notifications/${id}/read`, {
+        method: 'PATCH'
+      }),
+
+    markAllAsRead: () =>
+      request('/notifications/read-all', {
+        method: 'PATCH'
+      }),
+
+    delete: (id) =>
+      request(`/notifications/${id}`, {
+        method: 'DELETE'
+      })
   }
 };
 

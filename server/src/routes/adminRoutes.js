@@ -1,6 +1,7 @@
 import express from 'express';
 import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireRole } from '../middleware/auth.js';
+import { createNotification } from '../services/notificationService.js';
 
 const router = express.Router();
 
@@ -154,6 +155,19 @@ router.patch('/distributors/:id/approve', async (req, res) => {
     );
 
     const updated = await queryGet('SELECT id, userId, fullName, email, userType, accountStatus, approvalDate, approvedBy FROM users WHERE id = ?', [id]);
+
+    // Notify distributor of approval
+    await createNotification({
+      recipientId: distributor.userId || distributor.email,
+      recipientRole: 'Distributor',
+      title: `🎉 Distributor Account Approved!`,
+      message: `Your wholesale distributor application for "${distributor.businessName || distributor.fullName}" has been approved! You now have full access to wholesale tier pricing.`,
+      type: 'distributor_approved',
+      entityId: distributor.userId,
+      linkUrl: '/distributor',
+      dedupKey: `distributor_approved_${id}`
+    });
+
     return res.status(200).json({
       success: true,
       message: `Distributor "${distributor.businessName || distributor.fullName}" approved successfully. They can now log in.`,
@@ -188,6 +202,18 @@ router.patch('/distributors/:id/reject', async (req, res) => {
        WHERE id = ?`,
       [reason || 'Application rejected by administrator.', now, id]
     );
+
+    // Notify distributor of rejection
+    await createNotification({
+      recipientId: distributor.userId || distributor.email,
+      recipientRole: 'Distributor',
+      title: `Distributor Application Rejected`,
+      message: `Your application for "${distributor.businessName || distributor.fullName}" was rejected: "${reason || 'Application rejected by administrator.'}"`,
+      type: 'distributor_rejected',
+      entityId: distributor.userId,
+      linkUrl: '/login',
+      dedupKey: `distributor_rejected_${id}_${Date.now()}`
+    });
 
     return res.status(200).json({
       success: true,
@@ -227,6 +253,18 @@ router.patch('/users/:id/suspend', async (req, res) => {
       [reason || 'Account suspended by administrator.', now, id]
     );
 
+    // Notify user of suspension
+    await createNotification({
+      recipientId: targetUser.userId || targetUser.email,
+      recipientRole: targetUser.userType,
+      title: `⚠️ Account Suspended`,
+      message: `Your account has been suspended by the administrator: "${reason || 'Terms breach.'}"`,
+      type: 'account_status',
+      entityId: targetUser.userId,
+      linkUrl: '/login',
+      dedupKey: `account_suspended_${id}_${Date.now()}`
+    });
+
     return res.status(200).json({
       success: true,
       message: `User ${targetUser.fullName} (${targetUser.userType}) has been suspended. All active sessions are revoked.`
@@ -263,6 +301,18 @@ router.patch('/users/:id/activate', async (req, res) => {
        WHERE id = ?`,
       [now, adminEmail, now, id]
     );
+
+    // Notify user of activation
+    await createNotification({
+      recipientId: targetUser.userId || targetUser.email,
+      recipientRole: targetUser.userType,
+      title: `✅ Account Reactivated`,
+      message: `Your account has been reactivated. You may now log in to the marketplace.`,
+      type: 'account_status',
+      entityId: targetUser.userId,
+      linkUrl: targetUser.userType === 'Distributor' ? '/distributor' : '/customer',
+      dedupKey: `account_activated_${id}_${Date.now()}`
+    });
 
     return res.status(200).json({
       success: true,

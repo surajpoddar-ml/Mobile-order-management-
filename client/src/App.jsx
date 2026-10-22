@@ -20,7 +20,7 @@ function AppContent() {
     const path = currentRoute.split('?')[0]; // strip query params for matching
 
     // ---- Portals (protected) ----
-    if (path === '/portal/customer') {
+    if (path === '/portal/customer' || path === '/customer') {
       return (
         <ProtectedRoute allowedRoles={['Customer']}>
           <CustomerPortal />
@@ -28,7 +28,7 @@ function AppContent() {
       );
     }
 
-    if (path === '/portal/distributor') {
+    if (path === '/portal/distributor' || path === '/distributor') {
       return (
         <ProtectedRoute allowedRoles={['Distributor']}>
           <DistributorPortal />

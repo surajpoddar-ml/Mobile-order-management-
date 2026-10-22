@@ -160,6 +160,23 @@ export const initDb = async () => {
     await queryRun("ALTER TABLE orders ADD COLUMN paymentStatus TEXT DEFAULT 'Pending Verification'");
   } catch (e) {}
 
+  // Notifications table for Admin, Customer, and Distributor alerts
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      recipientId TEXT NOT NULL,
+      recipientRole TEXT,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      type TEXT NOT NULL,
+      entityId TEXT,
+      linkUrl TEXT NOT NULL,
+      isRead INTEGER DEFAULT 0,
+      createdDate TEXT NOT NULL,
+      dedupKey TEXT UNIQUE
+    )
+  `);
+
   console.log('Database tables verified and ready.');
 };
 

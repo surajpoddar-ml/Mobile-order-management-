@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { queryGet, queryRun } from '../database/db.js';
 import { verifyToken } from '../middleware/auth.js';
+import { createNotification } from '../services/notificationService.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'mobile_parts_super_secret_jwt_key_2026_auth_system';
@@ -204,6 +205,30 @@ router.post('/register/distributor', async (req, res) => {
         (businessEmail || email).trim().toLowerCase()
       ]
     );
+
+    // 1. Notify Admin of new distributor registration pending review
+    await createNotification({
+      recipientId: 'ADMIN',
+      recipientRole: 'Admin',
+      title: `🏢 New Distributor Application`,
+      message: `${businessName.trim()} (${fullName.trim()}) submitted a wholesale distributor application (PAN/VAT: ${panVatNumber.trim().toUpperCase()}).`,
+      type: 'distributor_pending',
+      entityId: userId,
+      linkUrl: '/admin?tab=pending',
+      dedupKey: `distributor_pending_${userId}_ADMIN`
+    });
+
+    // 2. Notify Distributor of pending status
+    await createNotification({
+      recipientId: userId,
+      recipientRole: 'Distributor',
+      title: `Application Under Review`,
+      message: `Welcome to MWS Eagle! Your distributor application for "${businessName.trim()}" has been received and is currently under admin review.`,
+      type: 'distributor_pending',
+      entityId: userId,
+      linkUrl: '/login',
+      dedupKey: `distributor_welcome_${userId}`
+    });
 
     return res.status(201).json({
       success: true,

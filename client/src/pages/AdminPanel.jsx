@@ -156,6 +156,7 @@ export const AdminPanel = () => {
       if (res.success) {
         notify(`Order status updated to "${newStatus}".`);
         loadOrderData();
+        window.dispatchEvent(new Event('mws_notifications_refresh'));
         if (selectedOrderDetails && selectedOrderDetails.id === orderId) {
           setSelectedOrderDetails(res.order);
         }
@@ -173,6 +174,7 @@ export const AdminPanel = () => {
       if (res.success) {
         notify('Payment verified & approved! Order status moved to Processing.');
         loadOrderData();
+        window.dispatchEvent(new Event('mws_notifications_refresh'));
         if (selectedOrderDetails && selectedOrderDetails.id === orderId) {
           setSelectedOrderDetails(res.order);
         }
@@ -195,6 +197,7 @@ export const AdminPanel = () => {
       if (res.success) {
         notify('Payment rejected. Order has been cancelled.');
         loadOrderData();
+        window.dispatchEvent(new Event('mws_notifications_refresh'));
         if (selectedOrderDetails && selectedOrderDetails.id === orderId) {
           setSelectedOrderDetails(res.order);
         }
@@ -212,6 +215,26 @@ export const AdminPanel = () => {
   useEffect(() => {
     loadUserData();
   }, [typeFilter, statusFilter, searchTerm]);
+
+  // Synchronize activeTab with URL query parameters (?tab=orders, ?tab=pending, etc.)
+  useEffect(() => {
+    const syncTabFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+    };
+
+    syncTabFromUrl();
+    window.addEventListener('popstate', syncTabFromUrl);
+    window.addEventListener('mws_route_change', syncTabFromUrl);
+
+    return () => {
+      window.removeEventListener('popstate', syncTabFromUrl);
+      window.removeEventListener('mws_route_change', syncTabFromUrl);
+    };
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'products' || activeTab === 'overview') {
@@ -232,6 +255,7 @@ export const AdminPanel = () => {
       const r = await api.admin.approveDistributor(dist.id);
       notify(r.message);
       loadUserData();
+      window.dispatchEvent(new Event('mws_notifications_refresh'));
     } catch (e) {
       alert(e.message);
     }
@@ -244,6 +268,7 @@ export const AdminPanel = () => {
       setRejectModalUser(null);
       setRejectionReason('');
       loadUserData();
+      window.dispatchEvent(new Event('mws_notifications_refresh'));
     } catch (e) {
       alert(e.message);
     }
@@ -256,6 +281,7 @@ export const AdminPanel = () => {
       setSuspendModalUser(null);
       setSuspensionReason('');
       loadUserData();
+      window.dispatchEvent(new Event('mws_notifications_refresh'));
     } catch (e) {
       alert(e.message);
     }
@@ -266,6 +292,7 @@ export const AdminPanel = () => {
       const r = await api.admin.activateUser(u.id);
       notify(r.message);
       loadUserData();
+      window.dispatchEvent(new Event('mws_notifications_refresh'));
     } catch (e) {
       alert(e.message);
     }

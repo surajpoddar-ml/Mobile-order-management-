@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   ExternalLink
 } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
 
 export const Navbar = () => {
   const { user, logout, navigate, currentRoute } = useAuth();
@@ -124,6 +125,9 @@ export const Navbar = () => {
 
           {/* Right: Required Admin Controls Only */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Real-time Admin Notification Bell */}
+            <NotificationBell />
+
             {/* View Live Storefront */}
             <button
               onClick={() => navigate('/')}
@@ -536,6 +540,9 @@ export const Navbar = () => {
               <span className="hide-on-mobile">Login / Register</span>
             </button>
           )}
+
+          {/* Notification Bell (Customer / Distributor) */}
+          {user && <NotificationBell />}
 
           {/* Wishlist Heart Icon */}
           <button

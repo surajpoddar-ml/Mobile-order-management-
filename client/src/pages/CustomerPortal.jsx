@@ -126,6 +126,26 @@ export const CustomerPortal = () => {
     };
   }, [selectedCategory]);
 
+  // Synchronize activeTab with URL query parameters (?tab=orders, ?tab=catalog)
+  useEffect(() => {
+    const syncTabFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+    };
+
+    syncTabFromUrl();
+    window.addEventListener('popstate', syncTabFromUrl);
+    window.addEventListener('mws_route_change', syncTabFromUrl);
+
+    return () => {
+      window.removeEventListener('popstate', syncTabFromUrl);
+      window.removeEventListener('mws_route_change', syncTabFromUrl);
+    };
+  }, []);
+
   // Load customer orders when clicking orders tab
   useEffect(() => {
     if (activeTab === 'orders') {
