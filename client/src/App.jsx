@@ -99,10 +99,16 @@ function AppContent() {
   );
 }
 
+import { CartProvider } from './context/CartContext';
+import { ShopModals } from './components/ShopModals';
+
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <CartProvider>
+        <AppContent />
+        <ShopModals />
+      </CartProvider>
     </AuthProvider>
   );
 }

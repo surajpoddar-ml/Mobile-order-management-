@@ -53,7 +53,7 @@ const upload = multer({
  * 1. Public Endpoint: Get all active advertisements
  * Used on the landing page advertisement board
  */
-router.get('/', async (req, res) => {
+router.get(['/', '/active'], async (req, res) => {
   try {
     const ads = await queryAll(
       'SELECT * FROM advertisements WHERE isActive = 1 ORDER BY orderIndex ASC, id DESC'

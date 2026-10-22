@@ -4,30 +4,78 @@ import { verifyToken, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Require authenticated user (Customer, Distributor, or Admin)
-router.use(verifyToken);
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'mws_eagle_mobile_parts_super_secret_jwt_key_2026_auth_system';
 
 /**
- * 1. Product Visibility Endpoint
- * Filters products based on the authenticated user's role:
- * - Customer: sees 'Customer' and 'Both'
- * - Distributor: sees 'Distributor' and 'Both'
- * - Admin: sees all products with full visibility metadata
+ * 1. Product Visibility Endpoint (Public + Authenticated)
+ * Filters products based on role:
+ * - If logged in as Customer (or ?role=Customer): sees 'Customer' and 'Both' with retail pricing
+ * - If logged in as Distributor (or ?role=Distributor): sees 'Distributor' and 'Both' with wholesale pricing
+ * - If logged in as Admin: sees all products with full metadata
  */
 router.get('/', async (req, res) => {
   try {
-    const { userType } = req.user;
+    let userType = req.query.role || 'Customer';
+
+    // If Authorization header is provided, decode session
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await queryGet('SELECT * FROM users WHERE id = ?', [decoded.id]);
+        if (user && user.accountStatus === 'Active') {
+          userType = user.userType;
+        }
+      } catch (err) {
+        // If expired or invalid token, fall back to query role
+      }
+    }
+
     let sql = '';
+    const categoryParam = req.query.category;
+    let whereCategory = '';
     const params = [];
 
+    if (categoryParam && categoryParam !== 'All') {
+      whereCategory = ' AND (category = ? OR category LIKE ?)';
+      params.push(categoryParam, `%${categoryParam}%`);
+    }
+
     if (userType === 'Customer') {
-      sql = "SELECT id, name, category, sku, customerPrice as price, targetVisibility, description, imageUrl, inStock FROM products WHERE targetVisibility IN ('Customer', 'Both') ORDER BY id DESC";
+      sql = `SELECT id, name, category, sku, customerPrice as price, 
+             COALESCE(originalPrice, ROUND(customerPrice * 1.33, 2)) as originalPrice, 
+             targetVisibility, description, imageUrl, inStock, badge,
+             COALESCE(rating, 5.0) as rating, COALESCE(reviewCount, 0) as reviewCount
+             FROM products 
+             WHERE targetVisibility IN ('Customer', 'Both')${whereCategory} 
+             ORDER BY id DESC`;
     } else if (userType === 'Distributor') {
-      sql = "SELECT id, name, category, sku, distributorPrice as price, targetVisibility, description, imageUrl, inStock FROM products WHERE targetVisibility IN ('Distributor', 'Both') ORDER BY id DESC";
+      sql = `SELECT id, name, category, sku, distributorPrice as price, 
+             COALESCE(originalPrice, ROUND(distributorPrice * 1.35, 2)) as originalPrice, 
+             targetVisibility, description, imageUrl, inStock, badge,
+             COALESCE(rating, 5.0) as rating, COALESCE(reviewCount, 0) as reviewCount
+             FROM products 
+             WHERE targetVisibility IN ('Distributor', 'Both')${whereCategory} 
+             ORDER BY id DESC`;
     } else if (userType === 'Admin') {
-      sql = "SELECT id, name, category, sku, customerPrice, distributorPrice, targetVisibility, description, imageUrl, inStock FROM products ORDER BY id DESC";
+      sql = `SELECT id, name, category, sku, customerPrice, distributorPrice, customerPrice as price, 
+             COALESCE(originalPrice, ROUND(customerPrice * 1.33, 2)) as originalPrice, 
+             targetVisibility, description, imageUrl, inStock, badge,
+             COALESCE(rating, 5.0) as rating, COALESCE(reviewCount, 0) as reviewCount
+             FROM products 
+             WHERE 1=1${whereCategory} 
+             ORDER BY id DESC`;
     } else {
-      return res.status(403).json({ success: false, message: 'Invalid role for product catalog.' });
+      sql = `SELECT id, name, category, sku, customerPrice as price, 
+             COALESCE(originalPrice, ROUND(customerPrice * 1.33, 2)) as originalPrice, 
+             targetVisibility, description, imageUrl, inStock, badge,
+             COALESCE(rating, 5.0) as rating, COALESCE(reviewCount, 0) as reviewCount
+             FROM products 
+             WHERE targetVisibility IN ('Customer', 'Both')${whereCategory} 
+             ORDER BY id DESC`;
     }
 
     const products = await queryAll(sql, params);

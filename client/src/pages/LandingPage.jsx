@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AdvertisementBoard from '../components/AdvertisementBoard';
+import api from '../services/api';
 import {
   ShieldCheck,
   Zap,
@@ -10,370 +11,610 @@ import {
   Smartphone,
   Battery,
   Cable,
-  Monitor,
   Headphones,
-  Plug,
-  ChevronRight,
+  CheckCircle2,
   Star,
+  ShoppingCart,
+  Heart,
   TrendingUp,
-  Globe,
   Award,
-  CheckCircle2
+  Globe,
+  SlidersHorizontal,
+  Store,
+  Building2,
+  Check,
+  LogIn,
+  X
 } from 'lucide-react';
 
+import { useCart } from '../context/CartContext';
+
 export const LandingPage = () => {
-  const { navigate } = useAuth();
-  const [currentCategory, setCurrentCategory] = useState(0);
+  const { user, navigate } = useAuth();
+  const {
+    addToCart,
+    toggleWishlist,
+    isWishlisted,
+    searchQuery,
+    selectedCategory,
+    setSelectedCategory
+  } = useCart();
 
-  const categories = [
-    { icon: Monitor, label: 'Displays & Screens', count: '200+ SKUs', color: '#4f46e5' },
-    { icon: Battery, label: 'Batteries', count: '150+ SKUs', color: '#059669' },
-    { icon: Cable, label: 'Cables & Chargers', count: '300+ SKUs', color: '#0284c7' },
-    { icon: Headphones, label: 'Earphones & Audio', count: '80+ SKUs', color: '#d97706' },
-    { icon: Plug, label: 'Connectors & Ports', count: '120+ SKUs', color: '#db2777' },
-    { icon: Smartphone, label: 'Power Banks', count: '50+ SKUs', color: '#7c3aed' },
+  // Products state (defaults strictly to Customer retail catalog in INR ₹)
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Top 5 Circular Categories from reference design
+  const circularCategories = [
+    {
+      id: 'Charging',
+      name: 'Charging',
+      image: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=300&q=80',
+      icon: Zap
+    },
+    {
+      id: 'Power',
+      name: 'Power',
+      image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=300&q=80',
+      icon: Battery
+    },
+    {
+      id: 'Cables',
+      name: 'Cables',
+      image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=300&q=80',
+      icon: Cable
+    },
+    {
+      id: 'Audio',
+      name: 'Audio',
+      image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=300&q=80',
+      icon: Headphones
+    },
+    {
+      id: 'Protection',
+      name: 'Protection',
+      image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=300&q=80',
+      icon: ShieldCheck
+    }
   ];
 
+  const filterTabs = ['All', 'Charging', 'Power', 'Cables', 'Audio', 'Protection'];
+
+  // Fetch Customer Retail Products in INR (₹)
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentCategory(prev => (prev + 1) % categories.length);
-    }, 2800);
-    return () => clearInterval(interval);
-  }, []);
+    let isMounted = true;
+    setLoading(true);
 
-  const stats = [
-    { label: 'Active Products', value: '1,200+', icon: Package, color: '#4f46e5' },
-    { label: 'Verified Distributors', value: '500+', icon: Users, color: '#0284c7' },
-    { label: 'Coverage Hubs', value: '45+ Regions', icon: Globe, color: '#059669' },
-    { label: 'Verified Ratings', value: '99.4% Positive', icon: Star, color: '#d97706' },
-  ];
+    api.products.getVisibleProducts('Customer', selectedCategory)
+      .then(res => {
+        if (!isMounted) return;
+        if (res && res.products) {
+          setProducts(res.products);
+        } else {
+          setProducts([]);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch catalog products:', err);
+        if (isMounted) setProducts([]);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
 
-  const features = [
-    {
-      icon: ShieldCheck,
-      title: 'Verified Distributors Only',
-      desc: 'Every wholesale distributor undergoes strict admin license & PAN/VAT review before obtaining marketplace access.',
-      color: '#4f46e5',
-      bg: 'rgba(79, 70, 229, 0.08)'
-    },
-    {
-      icon: Zap,
-      title: 'Fast Order Fulfillment',
-      desc: 'Genuine OEM-grade components dispatched within 24 hours with real-time tracking and logistics priority.',
-      color: '#059669',
-      bg: 'rgba(5, 150, 105, 0.08)'
-    },
-    {
-      icon: TrendingUp,
-      title: 'Competitive Wholesale Tiers',
-      desc: 'Approved distributors access wholesale tier pricing and bulk box lots hidden from general retail customers.',
-      color: '#0284c7',
-      bg: 'rgba(2, 132, 199, 0.08)'
-    },
-    {
-      icon: Award,
-      title: 'Certified OEM & Tested Spares',
-      desc: 'All spare screens, batteries, and IC chips undergo lab testing with role-segregated visibility and warranty.',
-      color: '#d97706',
-      bg: 'rgba(217, 119, 6, 0.08)'
-    },
-  ];
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCategory]);
+
+  const handleCategoryClick = (catId) => {
+    setSelectedCategory(catId);
+    const el = document.getElementById('best-selling-products-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const calculateDiscount = (price, originalPrice) => {
+    if (!originalPrice || originalPrice <= price) return null;
+    const discount = Math.round(((originalPrice - price) / originalPrice) * 100);
+    return discount > 0 ? `${discount}% OFF` : null;
+  };
+
+  // Filter products by search query
+  const displayedProducts = products.filter(p => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q)) ||
+      (p.sku && p.sku.toLowerCase().includes(q))
+    );
+  });
 
   return (
     <div style={{ overflowX: 'hidden' }}>
-      {/* ====== HERO SECTION ====== */}
-      <section style={{
-        minHeight: '82vh',
-        display: 'flex',
-        alignItems: 'center',
-        padding: 'clamp(32px, 6vw, 64px) 20px clamp(20px, 4vw, 40px) 20px',
-        position: 'relative'
-      }}>
-        {/* Soft decorative background glows */}
-        <div style={{
-          position: 'absolute',
-          top: '5%', left: '3%',
-          width: 'clamp(280px, 40vw, 500px)', height: 'clamp(280px, 40vw, 500px)',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(79, 70, 229, 0.07) 0%, transparent 70%)',
-          pointerEvents: 'none'
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '5%', right: '3%',
-          width: 'clamp(240px, 35vw, 420px)', height: 'clamp(240px, 35vw, 420px)',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(2, 132, 199, 0.06) 0%, transparent 70%)',
-          pointerEvents: 'none'
-        }} />
-
-        <div style={{
-          maxWidth: '1240px',
-          margin: '0 auto',
-          width: '100%',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: 'clamp(32px, 5vw, 60px)',
-          alignItems: 'center'
-        }}>
-          {/* LEFT: Text Content */}
-          <div className="animate-fade-in">
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: 'rgba(79, 70, 229, 0.08)',
-              border: '1px solid rgba(79, 70, 229, 0.25)',
-              borderRadius: 'var(--radius-full)',
-              padding: '6px 14px',
-              marginBottom: '20px',
-              fontSize: '0.82rem',
-              color: 'var(--primary)',
-              fontWeight: 700
-            }}>
-              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} className="pulse-indicator" />
-              Official B2B & Retail Mobile Spares Marketplace
-            </div>
-
-            <h1 style={{
-              fontSize: 'clamp(2.1rem, 5vw, 3.6rem)',
-              fontWeight: 900,
-              lineHeight: 1.12,
-              letterSpacing: '-0.03em',
-              color: 'var(--text-main)',
-              marginBottom: '18px'
-            }}>
-              MWS EAGLE
-              <span style={{
-                display: 'block',
-                background: 'linear-gradient(135deg, #4f46e5, #0284c7)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}>
-                Mobile Parts Hub
-              </span>
-            </h1>
-
-            <p style={{
-              fontSize: 'clamp(0.98rem, 2vw, 1.15rem)',
-              color: 'var(--text-body)',
-              lineHeight: 1.65,
-              marginBottom: '30px',
-              maxWidth: '520px'
-            }}>
-              Premium smartphone displays, OEM replacement batteries, high-speed cables, and wholesale spares. Connected through role-based access for Customers and Approved Distributors.
-            </p>
-
-            {/* CTAs */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '32px' }}>
-              <button
-                onClick={() => navigate('/login?mode=signup&role=Customer')}
-                className="btn btn-primary"
-                style={{ padding: '13px 26px', fontSize: '0.94rem' }}
-              >
-                Join as Customer <ArrowRight size={16} />
-              </button>
-
-              <button
-                onClick={() => navigate('/login?mode=signup&role=Distributor')}
-                className="btn btn-sky"
-                style={{ padding: '13px 24px', fontSize: '0.94rem' }}
-              >
-                Apply as Distributor
-              </button>
-
-              <button
-                onClick={() => navigate('/login')}
-                className="btn btn-secondary"
-                style={{ padding: '13px 20px', fontSize: '0.94rem' }}
-              >
-                Sign In
-              </button>
-            </div>
-
-            {/* Micro Highlights */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '18px',
-              flexWrap: 'wrap',
-              fontSize: '0.84rem',
-              color: 'var(--text-muted)',
-              fontWeight: 600
-            }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                <CheckCircle2 size={16} color="#059669" /> Instant Customer Activation
-              </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                <CheckCircle2 size={16} color="#0284c7" /> Verified Distributor Tier
-              </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                <CheckCircle2 size={16} color="#4f46e5" /> 100% Genuine Quality
-              </span>
-            </div>
-          </div>
-
-          {/* RIGHT: Featured Category Interactive Card */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div className="glass-panel" style={{
-              padding: '28px',
-              background: '#ffffff',
-              border: `1.5px solid ${categories[currentCategory].color}40`,
-              boxShadow: 'var(--shadow-card)',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                position: 'absolute', top: 0, right: 0, width: '130px', height: '130px',
-                background: `radial-gradient(circle, ${categories[currentCategory].color}18 0%, transparent 70%)`,
-                borderRadius: '50%', pointerEvents: 'none'
-              }} />
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
-                <div style={{
-                  width: '56px', height: '56px',
-                  borderRadius: '16px',
-                  background: `${categories[currentCategory].color}15`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: categories[currentCategory].color,
-                  boxShadow: `0 4px 14px ${categories[currentCategory].color}25`
-                }}>
-                  {React.createElement(categories[currentCategory].icon, { size: 28 })}
-                </div>
-                <span style={{
-                  fontSize: '0.78rem',
-                  fontWeight: 800,
-                  color: categories[currentCategory].color,
-                  background: `${categories[currentCategory].color}12`,
-                  padding: '4px 10px',
-                  borderRadius: 'var(--radius-full)'
-                }}>
-                  {categories[currentCategory].count}
-                </span>
-              </div>
-
-              <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Category Spotlight
-              </div>
-              <h3 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-main)', margin: '4px 0 10px 0' }}>
-                {categories[currentCategory].label}
-              </h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-body)', lineHeight: 1.5, margin: 0 }}>
-                High-demand original and OEM compatible replacement parts. Available for immediate retail ordering or bulk wholesale box dispatch.
-              </p>
-
-              {/* Category indicator dots */}
-              <div style={{ display: 'flex', gap: '6px', marginTop: '20px' }}>
-                {categories.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentCategory(i)}
-                    style={{
-                      width: i === currentCategory ? '24px' : '8px',
-                      height: '8px',
-                      borderRadius: '4px',
-                      background: i === currentCategory ? categories[currentCategory].color : 'var(--border-medium)',
-                      border: 'none',
-                      transition: 'all 0.3s',
-                      cursor: 'pointer',
-                      padding: 0
-                    }}
-                    aria-label={`Category ${i + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Quick Category Chips Grid (Full touch responsive) */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '8px'
-            }}>
-              {categories.map((cat, i) => {
-                const isSelected = i === currentCategory;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentCategory(i)}
-                    style={{
-                      padding: '10px 8px',
-                      borderRadius: 'var(--radius-md)',
-                      background: isSelected ? `${cat.color}15` : '#ffffff',
-                      border: `1px solid ${isSelected ? cat.color : 'var(--border-subtle)'}`,
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      transition: 'all 0.2s',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    {React.createElement(cat.icon, { size: 18, color: cat.color })}
-                    <span style={{
-                      fontSize: '0.73rem',
-                      color: isSelected ? cat.color : 'var(--text-body)',
-                      fontWeight: isSelected ? 700 : 500,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      maxWidth: '100%'
-                    }}>
-                      {cat.label.split(' ')[0]}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ====== ADVERTISEMENT BOARD (VIDEO & IMAGE SCROLLER) ====== */}
+      {/* ====== 1. ADVERTISEMENT BOARD (STARTS AT VERY TOP) ====== */}
       <AdvertisementBoard />
 
-      {/* ====== STATS BAR ====== */}
+      {/* ====== 2. CIRCULAR CATEGORIES STRIP (AS IN IMAGE 2) ====== */}
       <section style={{
         maxWidth: '1240px',
-        margin: '0 auto 60px auto',
-        padding: '0 16px'
+        margin: '0 auto',
+        padding: '30px 20px 20px 20px'
       }}>
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '16px',
-          background: '#ffffff',
-          borderRadius: 'var(--radius-xl)',
-          padding: '24px',
-          border: '1px solid var(--border-subtle)',
-          boxShadow: 'var(--shadow-card)'
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 'clamp(20px, 4vw, 50px)',
+          flexWrap: 'wrap'
         }}>
-          {stats.map((s, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '6px' }}>
-              <div style={{
-                width: '46px', height: '46px',
-                borderRadius: '12px',
-                background: `${s.color}14`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: s.color, flexShrink: 0
-              }}>
-                {React.createElement(s.icon, { size: 22 })}
-              </div>
-              <div>
-                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.1 }}>
-                  {s.value}
+          {circularCategories.map((cat) => {
+            const isSelected = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => handleCategoryClick(cat.id)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '6px',
+                  outline: 'none',
+                  transition: 'transform 0.2s ease',
+                  transform: isSelected ? 'scale(1.08)' : 'scale(1)'
+                }}
+                onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
+                onMouseLeave={e => {
+                  if (!isSelected) e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                {/* Circular image avatar */}
+                <div style={{
+                  width: 'clamp(64px, 8vw, 78px)',
+                  height: 'clamp(64px, 8vw, 78px)',
+                  borderRadius: '50%',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  background: '#0a0d14',
+                  boxShadow: isSelected
+                    ? '0 0 0 3px #2563eb, 0 8px 18px rgba(37, 99, 235, 0.35)'
+                    : '0 4px 14px rgba(0, 0, 0, 0.18)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.25s'
+                }}>
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      opacity: 0.9
+                    }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 70%)',
+                    pointerEvents: 'none'
+                  }} />
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: '2px' }}>
-                  {s.label}
-                </div>
-              </div>
-            </div>
-          ))}
+
+                <span style={{
+                  fontSize: '0.86rem',
+                  fontWeight: isSelected ? 800 : 600,
+                  color: isSelected ? 'var(--primary)' : 'var(--text-main)',
+                  letterSpacing: '0.01em',
+                  transition: 'color 0.2s'
+                }}>
+                  {cat.name}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </section>
 
-      {/* ====== FEATURES SECTION ====== */}
+      {/* ====== 3. BEST SELLING PRODUCTS (AS IN IMAGE 2) ====== */}
+      <section
+        id="best-selling-products-section"
+        style={{
+          maxWidth: '1240px',
+          margin: '0 auto',
+          padding: '24px 20px 60px 20px'
+        }}
+      >
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          marginBottom: '28px'
+        }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '16px'
+          }}>
+            <h2 style={{
+              fontSize: 'clamp(1.7rem, 4vw, 2.3rem)',
+              fontWeight: 900,
+              letterSpacing: '-0.025em',
+              color: 'var(--text-main)',
+              margin: 0
+            }}>
+              Best Selling Products
+            </h2>
+
+            {searchQuery && (
+              <span style={{ fontSize: '0.86rem', color: '#64748b' }}>
+                Search results for: <strong>"{searchQuery}"</strong>
+              </span>
+            )}
+          </div>
+
+          {/* Default notice */}
+          <div style={{
+            fontSize: '0.82rem',
+            color: 'var(--text-muted)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <span style={{
+              display: 'inline-block',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#2563eb'
+            }} />
+            <span>
+              Showing Genuine Mobile Accessories & Retail Rates in INR (₹). Fast Doorstep Fulfillment.
+            </span>
+          </div>
+
+          {/* Filter Pills */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            overflowX: 'auto',
+            paddingBottom: '8px',
+            scrollbarWidth: 'none'
+          }}>
+            {filterTabs.map(tab => {
+              const active = selectedCategory === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setSelectedCategory(tab)}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '0.86rem',
+                    fontWeight: active ? 700 : 500,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s ease',
+                    border: active ? '1px solid #2563eb' : '1px solid var(--border-medium)',
+                    background: active ? '#2563eb' : '#ffffff',
+                    color: active ? '#ffffff' : 'var(--text-body)',
+                    boxShadow: active ? '0 2px 10px rgba(37, 99, 235, 0.28)' : 'var(--shadow-xs)'
+                  }}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Loading Indicator */}
+        {loading && (
+          <div style={{
+            padding: '60px 20px',
+            textAlign: 'center',
+            background: '#ffffff',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-subtle)'
+          }}>
+            <div className="spinner" style={{ margin: '0 auto 14px auto' }} />
+            <div style={{ fontSize: '0.92rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              Loading products...
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && products.length === 0 && (
+          <div style={{
+            padding: '60px 20px',
+            textAlign: 'center',
+            background: '#ffffff',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-subtle)'
+          }}>
+            <Package size={44} color="#9ca3af" style={{ margin: '0 auto 12px auto' }} />
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
+              No Products Found in this Category
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '16px' }}>
+              We could not find any {selectedCategory} products in the catalog.
+            </p>
+            <button
+              onClick={() => setSelectedCategory('All')}
+              className="btn btn-outline"
+              style={{ fontSize: '0.86rem', padding: '8px 18px' }}
+            >
+              View All Products
+            </button>
+          </div>
+        )}
+
+        {/* Products Grid (Identical Layout to User's Second Image) */}
+        {!loading && displayedProducts.length > 0 && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+            gap: '22px'
+          }}>
+            {displayedProducts.map((p) => {
+              const wish = isWishlisted(p.id);
+              const discountStr = calculateDiscount(p.price, p.originalPrice);
+              const badgeLabel = p.badge || 'Bestseller';
+              const isNew = badgeLabel.toLowerCase().includes('new');
+              const badgeBg = isNew ? '#0284c7' : '#1d4ed8';
+
+              return (
+                <div
+                  key={p.id}
+                  style={{
+                    background: '#ffffff',
+                    borderRadius: '12px',
+                    border: '1px solid #e5e7eb',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)',
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.08)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.04)';
+                  }}
+                >
+                  {/* Top Area: Image with Badges */}
+                  <div style={{
+                    position: 'relative',
+                    width: '100%',
+                    height: '240px',
+                    background: '#f8fafc',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {/* Badge (Bestseller, New!) */}
+                    {badgeLabel && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '12px',
+                        left: '12px',
+                        background: badgeBg,
+                        color: '#ffffff',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        padding: '3px 10px',
+                        borderRadius: 'var(--radius-full)',
+                        zIndex: 2,
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                      }}>
+                        {badgeLabel}
+                      </span>
+                    )}
+
+                    {/* Stock Status Pill */}
+                    {p.inStock === 0 && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '12px',
+                        background: '#dc2626',
+                        color: '#ffffff',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: 'var(--radius-full)',
+                        zIndex: 2
+                      }}>
+                        Out of Stock
+                      </span>
+                    )}
+
+                    {/* Product Image */}
+                    <img
+                      src={p.imageUrl || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80'}
+                      alt={p.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        transition: 'transform 0.3s'
+                      }}
+                      onError={(e) => {
+                        e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80';
+                      }}
+                    />
+                  </div>
+
+                  {/* Card Content Area */}
+                  <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                    {/* Category uppercase label */}
+                    <div style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      color: '#9ca3af',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      marginBottom: '6px'
+                    }}>
+                      {p.category || 'MWS ACCESSORIES'}
+                    </div>
+
+                    {/* Product Title */}
+                    <h3 style={{
+                      fontSize: '0.92rem',
+                      fontWeight: 700,
+                      color: '#1f2937',
+                      lineHeight: 1.35,
+                      marginBottom: '8px',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      minHeight: '2.7em'
+                    }} title={p.name}>
+                      {p.name}
+                    </h3>
+
+                    {/* Star Rating & Reviews */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      marginBottom: '12px'
+                    }}>
+                      {[1, 2, 3, 4, 5].map((starIdx) => {
+                        const isFilled = starIdx <= Math.round(p.rating || 0);
+                        return (
+                          <Star
+                            key={starIdx}
+                            size={14}
+                            color={isFilled ? '#f59e0b' : '#d1d5db'}
+                            fill={isFilled ? '#f59e0b' : 'none'}
+                          />
+                        );
+                      })}
+                      <span style={{ fontSize: '0.78rem', color: '#9ca3af', fontWeight: 600, marginLeft: '4px' }}>
+                        ({p.reviewCount || 0})
+                      </span>
+                    </div>
+
+                    {/* Pricing Row: Current Price in INR ₹, Strikethrough Original, Discount Tag */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      gap: '8px',
+                      marginBottom: '16px',
+                      marginTop: 'auto'
+                    }}>
+                      <span style={{
+                        fontSize: '1.25rem',
+                        fontWeight: 800,
+                        color: '#111827'
+                      }}>
+                        ₹{Number(p.price || 0).toLocaleString()}
+                      </span>
+
+                      {p.originalPrice && p.originalPrice > p.price && (
+                        <span style={{
+                          fontSize: '0.88rem',
+                          color: '#9ca3af',
+                          textDecoration: 'line-through'
+                        }}>
+                          ₹{Number(p.originalPrice).toLocaleString()}
+                        </span>
+                      )}
+
+                      {discountStr && (
+                        <span style={{
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          color: '#ef4444'
+                        }}>
+                          {discountStr}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Buttons Row: Add to Cart (pill) + Heart Button */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        onClick={() => addToCart(p)}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          background: '#2563eb',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: 'var(--radius-full)',
+                          padding: '10px 16px',
+                          fontSize: '0.88rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#2563eb')}
+                      >
+                        <ShoppingCart size={16} />
+                        Add to Cart
+                      </button>
+
+                      <button
+                        onClick={() => toggleWishlist(p)}
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          border: '1px solid #e5e7eb',
+                          background: '#ffffff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          color: wish ? '#ef4444' : '#6b7280'
+                        }}
+                        aria-label="Wishlist"
+                      >
+                        <Heart
+                          size={18}
+                          fill={wish ? '#ef4444' : 'none'}
+                          color={wish ? '#ef4444' : 'currentColor'}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* ====== 4. PLATFORM CAPABILITIES & FEATURES ====== */}
       <section style={{
         padding: '60px 20px',
         background: 'rgba(120, 95, 55, 0.04)',
@@ -381,7 +622,7 @@ export const LandingPage = () => {
         borderBottom: '1px solid var(--border-subtle)'
       }}>
         <div style={{ maxWidth: '1240px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '44px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <div style={{
               fontSize: '0.8rem',
               fontWeight: 800,
@@ -417,7 +658,36 @@ export const LandingPage = () => {
             gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
             gap: '20px'
           }}>
-            {features.map((feat, i) => (
+            {[
+              {
+                icon: ShieldCheck,
+                title: 'Verified Distributors Only',
+                desc: 'Every wholesale distributor undergoes strict admin license & PAN/VAT review before obtaining marketplace access.',
+                color: '#4f46e5',
+                bg: 'rgba(79, 70, 229, 0.08)'
+              },
+              {
+                icon: Zap,
+                title: 'Fast Order Fulfillment',
+                desc: 'Genuine OEM-grade components dispatched within 24 hours with real-time tracking and logistics priority.',
+                color: '#059669',
+                bg: 'rgba(5, 150, 105, 0.08)'
+              },
+              {
+                icon: TrendingUp,
+                title: 'Competitive Wholesale Tiers',
+                desc: 'Approved distributors access wholesale tier pricing and bulk box lots hidden from general retail customers.',
+                color: '#0284c7',
+                bg: 'rgba(2, 132, 199, 0.08)'
+              },
+              {
+                icon: Award,
+                title: 'Certified OEM & Tested Spares',
+                desc: 'All spare screens, batteries, and IC chips undergo lab testing with role-segregated visibility and warranty.',
+                color: '#d97706',
+                bg: 'rgba(217, 119, 6, 0.08)'
+              }
+            ].map((feat, i) => (
               <div
                 key={i}
                 className="glass-panel"
@@ -457,7 +727,7 @@ export const LandingPage = () => {
         </div>
       </section>
 
-      {/* ====== TWO PORTALS SELECTOR CTA ====== */}
+      {/* ====== 5. TWO PORTALS SELECTOR CTA ====== */}
       <section style={{ padding: '70px 20px' }}>
         <div style={{
           maxWidth: '1060px',
@@ -511,11 +781,11 @@ export const LandingPage = () => {
               </ul>
             </div>
             <button
-              onClick={() => navigate('/login?mode=signup&role=Customer')}
+              onClick={() => navigate('/login?role=Customer')}
               className="btn btn-emerald"
-              style={{ width: '100%', padding: '12px' }}
+              style={{ width: '100%', padding: '13px', fontSize: '0.92rem', fontWeight: 700 }}
             >
-              Sign Up as Customer
+              Sign In to Customer Portal
             </button>
           </div>
 
@@ -541,17 +811,17 @@ export const LandingPage = () => {
                 <Package size={26} />
               </div>
               <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Wholesale Application
+                Wholesale Portal
               </div>
               <h3 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-main)', margin: '4px 0 10px 0' }}>
                 Distributor Portal
               </h3>
               <p style={{ color: 'var(--text-body)', fontSize: '0.9rem', lineHeight: 1.55, marginBottom: '20px' }}>
-                Wholesale dealer registration. Submit your business credentials and PAN/VAT number for admin review to unlock wholesale lots and exclusive inventory.
+                Authorized wholesale dealer portal. Unlock bulk lots, factory pricing tiers, and technician assemblies for verified business partners.
               </p>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px 0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {[
-                  'Admin review & verification workflow',
+                  'Admin-verified wholesale access',
                   'Exclusive wholesale box pricing',
                   'Distributor-only component assemblies',
                   'Bulk logistics & invoice processing'
@@ -564,17 +834,17 @@ export const LandingPage = () => {
               </ul>
             </div>
             <button
-              onClick={() => navigate('/login?mode=signup&role=Distributor')}
+              onClick={() => navigate('/login?role=Distributor')}
               className="btn btn-sky"
-              style={{ width: '100%', padding: '12px' }}
+              style={{ width: '100%', padding: '13px', fontSize: '0.92rem', fontWeight: 700 }}
             >
-              Apply as Distributor
+              Sign In to Distributor Portal
             </button>
           </div>
         </div>
       </section>
 
-      {/* ====== BOTTOM CALLOUT ====== */}
+      {/* ====== 6. BOTTOM CALLOUT ====== */}
       <section style={{
         padding: '50px 20px',
         background: '#ffffff',

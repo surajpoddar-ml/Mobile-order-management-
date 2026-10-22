@@ -87,11 +87,21 @@ export const initDb = async () => {
     )
   `);
 
-  try {
+    try {
     await queryRun('ALTER TABLE products ADD COLUMN imageUrl TEXT');
-  } catch (e) {
-    // Column already exists, ignore
-  }
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE products ADD COLUMN badge TEXT');
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE products ADD COLUMN originalPrice REAL');
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE products ADD COLUMN rating REAL DEFAULT 5.0');
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE products ADD COLUMN reviewCount INTEGER DEFAULT 0');
+  } catch (e) {}
 
   // Advertisements table for Landing Page Board (Images and Videos uploaded by Admin)
   await queryRun(`
@@ -106,6 +116,30 @@ export const initDb = async () => {
       isActive INTEGER DEFAULT 1,
       orderIndex INTEGER DEFAULT 0,
       createdDate TEXT NOT NULL
+    )
+  `);
+
+  // Orders table for customer & distributor order management
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      orderNumber TEXT UNIQUE NOT NULL,
+      userId TEXT,
+      customerName TEXT NOT NULL,
+      customerEmail TEXT NOT NULL,
+      customerPhone TEXT NOT NULL,
+      userType TEXT NOT NULL,
+      shippingAddress TEXT NOT NULL,
+      city TEXT,
+      state TEXT,
+      postalCode TEXT,
+      items TEXT NOT NULL,
+      totalAmount REAL NOT NULL,
+      paymentMethod TEXT DEFAULT 'Cash on Delivery',
+      orderStatus TEXT DEFAULT 'Pending' CHECK(orderStatus IN ('Pending', 'Processing', 'Dispatched', 'Delivered', 'Cancelled')),
+      notes TEXT,
+      createdDate TEXT NOT NULL,
+      updatedDate TEXT NOT NULL
     )
   `);
 

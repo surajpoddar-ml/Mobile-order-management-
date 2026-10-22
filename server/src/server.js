@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import adRoutes from './routes/adRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
 import { seedDatabase } from './database/seed.js';
 
 dotenv.config();
@@ -35,10 +36,16 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/advertisements', adRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+// Root endpoint - automatic redirect to frontend website if visited in browser
+app.get('/', (req, res) => {
+  res.redirect('http://localhost:5173');
 });
 
 // Global Error Handler

@@ -150,10 +150,15 @@ export const api = {
 
   // Role-Based Product Catalog & Admin Authority
   products: {
-    getVisibleProducts: () =>
-      request('/products', {
+    getVisibleProducts: (role, category) => {
+      const params = new URLSearchParams();
+      if (role) params.append('role', role);
+      if (category && category !== 'All') params.append('category', category);
+      const query = params.toString() ? `?${params.toString()}` : '';
+      return request(`/products${query}`, {
         method: 'GET'
-      }),
+      });
+    },
 
     create: (payload) =>
       request('/products', {
@@ -170,6 +175,36 @@ export const api = {
     delete: (id) =>
       request(`/products/${id}`, {
         method: 'DELETE'
+      })
+  },
+
+  // Orders Management (Customer & Distributor ordering + Admin authority)
+  orders: {
+    create: (payload) =>
+      request('/orders', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+
+    getMyOrders: () =>
+      request('/orders/my-orders', {
+        method: 'GET'
+      }),
+
+    track: (query) =>
+      request(`/orders/track/${encodeURIComponent(query)}`, {
+        method: 'GET'
+      }),
+
+    getAllAdmin: () =>
+      request('/orders/admin/all', {
+        method: 'GET'
+      }),
+
+    updateStatus: (id, status) =>
+      request(`/orders/admin/${id}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status })
       })
   }
 };

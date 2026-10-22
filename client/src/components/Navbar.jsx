@@ -1,213 +1,621 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import {
-  LogOut,
+  Search,
   User,
+  Heart,
+  ShoppingCart,
+  Menu,
+  ChevronDown,
+  LogOut,
   Building2,
   ShieldCheck,
-  ChevronDown,
-  Sparkles,
-  Menu,
-  X
+  Package,
+  Layers,
+  Zap,
+  Battery,
+  Cable,
+  Headphones,
+  CheckCircle2
 } from 'lucide-react';
 
-export const Navbar = ({ onQuickFillDemo }) => {
-  const { user, logout, navigate, currentRoute } = useAuth();
-  const [showDemoMenu, setShowDemoMenu] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+export const Navbar = () => {
+  const { user, logout, navigate } = useAuth();
+  const {
+    cartCount,
+    wishlistCount,
+    setIsCartOpen,
+    setIsWishlistOpen,
+    setIsTrackOrderOpen,
+    setIsContactOpen,
+    searchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory
+  } = useCart();
 
-  const demoAccounts = [
-    { label: 'Active Customer', email: 'customer@example.com', password: 'Customer@123', role: 'Customer', status: 'Active', desc: 'Instant access & retail catalog' },
-    { label: 'Approved Distributor', email: 'approved.dist@mobilecare.com', password: 'Distributor@123', role: 'Distributor', status: 'Active', desc: 'Wholesale pricing & bulk spare lots' },
-    { label: 'Pending Distributor', email: 'pending.dist@speedyfix.com', password: 'Distributor@123', role: 'Distributor', status: 'Pending', desc: 'Tests pending review alert' },
-    { label: 'Rejected Distributor', email: 'rejected.dist@fakeparts.com', password: 'Distributor@123', role: 'Distributor', status: 'Rejected', desc: 'Tests rejection alert notice' },
-    { label: 'Suspended Distributor', email: 'suspended.dist@latepay.com', password: 'Distributor@123', role: 'Distributor', status: 'Suspended', desc: 'Tests suspended access denial' },
+  const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
+  const categories = [
+    { id: 'All', name: 'All Products', icon: Layers },
+    { id: 'Charging', name: 'Charging', icon: Zap },
+    { id: 'Power', name: 'Power', icon: Battery },
+    { id: 'Cables', name: 'Cables', icon: Cable },
+    { id: 'Audio', name: 'Audio', icon: Headphones },
+    { id: 'Protection', name: 'Protection', icon: ShieldCheck }
   ];
 
-  const isLanding = !user && (currentRoute === '/' || currentRoute === '/home');
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    // Scroll to products section if on home/catalog page
+    const el = document.getElementById('best-selling-products-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleCategorySelect = (catId) => {
+    setSelectedCategory(catId);
+    setCategoriesDropdownOpen(false);
+    const el = document.getElementById('best-selling-products-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleShopClick = () => {
+    const el = document.getElementById('best-selling-products-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      navigate('/');
+    }
+  };
 
   return (
     <header style={{
       position: 'sticky',
       top: 0,
-      zIndex: 50,
-      backgroundColor: 'var(--bg-nav)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-      borderBottom: '1px solid var(--border-subtle)',
-      boxShadow: '0 1px 8px rgba(120, 90, 40, 0.08)',
+      zIndex: 100,
+      backgroundColor: '#ffffff',
+      borderBottom: '1px solid #e5e7eb',
+      boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)'
     }}>
+      {/* ================= TIER 1: BRAND LOGO + SEARCH + ACTIONS ================= */}
       <div style={{
         maxWidth: '1280px',
         margin: '0 auto',
-        padding: '0 clamp(12px, 3vw, 24px)',
-        height: '66px',
+        padding: '12px clamp(14px, 3vw, 24px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: '12px'
+        gap: 'clamp(12px, 3vw, 24px)'
       }}>
-        {/* Brand Logo */}
+        {/* Left: Brand Logo & Tagline */}
         <div
           onClick={() => navigate('/')}
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', flexShrink: 0 }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            cursor: 'pointer',
+            flexShrink: 0
+          }}
         >
           <img
             src="/mws_eagle_logo.jpg"
-            alt="MWS EAGLE Logo"
-            style={{ height: 'clamp(38px, 6vw, 46px)', width: 'auto', objectFit: 'contain', borderRadius: '8px' }}
+            alt="MWS EAGLE"
+            style={{
+              height: '42px',
+              width: 'auto',
+              objectFit: 'contain',
+              borderRadius: '6px'
+            }}
           />
+          <div>
+            <div style={{
+              fontSize: '1.28rem',
+              fontWeight: 900,
+              letterSpacing: '0.04em',
+              color: '#0f172a',
+              lineHeight: 1.1,
+              fontFamily: 'var(--font-main)'
+            }}>
+              MWS <span style={{ color: '#2563eb' }}>EAGLE</span>
+            </div>
+            <div style={{
+              fontSize: '0.62rem',
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              color: '#64748b',
+              textTransform: 'uppercase'
+            }}>
+              PREMIUM MOBILE ACCESSORIES
+            </div>
+          </div>
         </div>
 
-        {/* Center Nav (Desktop only) */}
-        {isLanding && (
-          <nav style={{
-            display: 'none',
-            '@media (min-width: 768px)': { display: 'flex' },
-            alignItems: 'center',
-            gap: '4px'
-          }} className="desktop-nav">
-            {['Products', 'Wholesale', 'About'].map(item => (
-              <button
-                key={item}
-                onClick={() => navigate(item === 'Wholesale' ? '/login?mode=signup&role=Distributor' : '/')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-body)',
-                  fontSize: '0.88rem',
-                  fontWeight: 600,
-                  padding: '7px 14px',
-                  borderRadius: 'var(--radius-sm)',
-                  cursor: 'pointer',
-                  transition: 'color 0.15s, background 0.15s'
-                }}
-                onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-main)'; e.currentTarget.style.background = 'rgba(120,90,40,0.08)'; }}
-                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-body)'; e.currentTarget.style.background = 'none'; }}
-              >
-                {item}
-              </button>
-            ))}
-          </nav>
-        )}
+        {/* Center: Large Rounded Search Bar with Blue Action Button */}
+        <form
+          onSubmit={handleSearchSubmit}
+          style={{
+            flex: 1,
+            maxWidth: '620px',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center'
+          }}
+        >
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search for products, model or category..."
+            style={{
+              width: '100%',
+              padding: '11px 54px 11px 20px',
+              fontSize: '0.9rem',
+              color: '#1f2937',
+              backgroundColor: '#f8fafc',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '9999px',
+              outline: 'none',
+              transition: 'border-color 0.2s, background-color 0.2s, box-shadow 0.2s'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = '#2563eb';
+              e.target.style.backgroundColor = '#ffffff';
+              e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = '#e2e8f0';
+              e.target.style.backgroundColor = '#f8fafc';
+              e.target.style.boxShadow = 'none';
+            }}
+          />
 
-        {/* Right side controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+          {/* Blue Round Search Button at Right Edge */}
+          <button
+            type="submit"
+            style={{
+              position: 'absolute',
+              right: '4px',
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#2563eb')}
+            aria-label="Search"
+          >
+            <Search size={18} />
+          </button>
+        </form>
 
-          {/* Demo switcher (when not logged in) */}
-          {!user && (
+        {/* Right: User Login/Register + Wishlist + Cart */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+          {/* User Account / Login */}
+          {user ? (
             <div style={{ position: 'relative' }}>
               <button
-                onClick={() => setShowDemoMenu(!showDemoMenu)}
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', padding: '7px 10px' }}
+                type="button"
+                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  padding: '7px 14px',
+                  borderRadius: 'var(--radius-full)',
+                  cursor: 'pointer',
+                  fontSize: '0.86rem',
+                  fontWeight: 700,
+                  color: '#1e293b'
+                }}
               >
-                <Sparkles size={12} color="var(--primary)" />
-                <span className="hide-on-very-small">Test Accounts</span>
-                <ChevronDown size={12} />
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: user.userType === 'Distributor' ? '#0284c7' : '#2563eb',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.72rem',
+                  fontWeight: 800
+                }}>
+                  {user.fullName ? user.fullName[0].toUpperCase() : 'U'}
+                </div>
+                <span className="hide-on-mobile">{user.fullName.split(' ')[0]}</span>
+                <ChevronDown size={14} color="#64748b" />
               </button>
 
-              {showDemoMenu && (
-                <div style={{
-                  position: 'absolute',
-                  right: 0,
-                  top: '115%',
-                  width: 'min(310px, 90vw)',
-                  background: '#ffffff',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid var(--border-medium)',
-                  padding: '10px',
-                  boxShadow: 'var(--shadow-lg)',
-                  zIndex: 200
-                }}>
-                  <div style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 800,
-                    color: 'var(--text-body)',
-                    marginBottom: '8px',
-                    paddingBottom: '6px',
-                    borderBottom: '1px solid var(--border-subtle)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em'
-                  }}>
-                    Quick Demo Credentials
+              {/* User Dropdown */}
+              {userDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    width: '210px',
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                    zIndex: 200,
+                    padding: '8px 0',
+                    overflow: 'hidden'
+                  }}
+                  onMouseLeave={() => setUserDropdownOpen(false)}
+                >
+                  <div style={{ padding: '8px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a' }}>{user.fullName}</div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{user.userType} Account</div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {demoAccounts.map((acc, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          if (onQuickFillDemo) onQuickFillDemo(acc.email, acc.password, acc.role);
-                          setShowDemoMenu(false);
-                          navigate('/login');
-                        }}
-                        style={{
-                          padding: '8px 10px',
-                          borderRadius: '7px',
-                          background: 'transparent',
-                          cursor: 'pointer',
-                          transition: 'background 0.15s'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(79,70,229,0.06)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                          <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)' }}>{acc.label}</span>
-                          <span className={`badge badge-${acc.status.toLowerCase()}`} style={{ fontSize: '0.62rem', padding: '1px 5px' }}>{acc.status}</span>
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-body)' }}>{acc.desc}</div>
-                      </div>
-                    ))}
-                  </div>
+
+                  <button
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      if (user.userType === 'Customer') navigate('/portal/customer');
+                      else if (user.userType === 'Distributor') navigate('/portal/distributor');
+                      else if (user.userType === 'Admin') navigate('/admin');
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '9px 16px',
+                      background: 'none',
+                      border: 'none',
+                      textAlign: 'left',
+                      fontSize: '0.86rem',
+                      color: '#1e293b',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <Layers size={15} color="#2563eb" />
+                    My Portal
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      setIsTrackOrderOpen(true);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '9px 16px',
+                      background: 'none',
+                      border: 'none',
+                      textAlign: 'left',
+                      fontSize: '0.86rem',
+                      color: '#1e293b',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <Package size={15} color="#059669" />
+                    My Orders
+                  </button>
+
+                  <div style={{ borderTop: '1px solid #f1f5f9', margin: '4px 0' }} />
+
+                  <button
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      logout();
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '9px 16px',
+                      background: 'none',
+                      border: 'none',
+                      textAlign: 'left',
+                      fontSize: '0.86rem',
+                      color: '#dc2626',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <LogOut size={15} />
+                    Logout
+                  </button>
                 </div>
               )}
             </div>
-          )}
-
-          {/* Authenticated User */}
-          {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {user.userType === 'Customer' && <span className="badge badge-customer"><User size={11} /> <span className="hide-on-mobile">Customer</span></span>}
-                {user.userType === 'Distributor' && <span className="badge badge-distributor"><Building2 size={11} /> <span className="hide-on-mobile">Distributor</span></span>}
-                {user.userType === 'Admin' && <span className="badge badge-admin"><ShieldCheck size={11} /> <span className="hide-on-mobile">Admin</span></span>}
-
-                <div style={{ lineHeight: 1.2, textAlign: 'right', display: 'none', '@media (min-width: 640px)': { display: 'block' } }} className="hide-on-mobile">
-                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {user.fullName}
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={logout}
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '0.8rem' }}
-                title="Log out of account"
-              >
-                <LogOut size={13} />
-                <span className="hide-on-mobile">Logout</span>
-              </button>
-            </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <button
-                onClick={() => navigate('/login?mode=signup&role=Customer')}
-                className="btn btn-secondary btn-sm hide-on-very-small"
-                style={{ padding: '7px 12px', fontSize: '0.82rem' }}
-              >
-                Register
-              </button>
-
-              <button
-                onClick={() => navigate('/login')}
-                className="btn btn-primary btn-sm"
-                style={{ padding: '7px 16px', fontSize: '0.84rem' }}
-              >
-                Sign In
-              </button>
-            </div>
+            <button
+              onClick={() => navigate('/login')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                color: '#1e293b',
+                padding: '6px 8px'
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#1e293b')}
+            >
+              <User size={20} color="#1e293b" />
+              <span className="hide-on-mobile">Login / Register</span>
+            </button>
           )}
+
+          {/* Wishlist Heart Icon */}
+          <button
+            onClick={() => setIsWishlistOpen(true)}
+            style={{
+              position: 'relative',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#1e293b'
+            }}
+            aria-label="Wishlist"
+          >
+            <Heart size={23} />
+            {wishlistCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '0',
+                right: '0',
+                background: '#ef4444',
+                color: '#ffffff',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                width: '18px',
+                height: '18px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {wishlistCount}
+              </span>
+            )}
+          </button>
+
+          {/* Cart Icon */}
+          <button
+            onClick={() => setIsCartOpen(true)}
+            style={{
+              position: 'relative',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#1e293b'
+            }}
+            aria-label="Shopping Cart"
+          >
+            <ShoppingCart size={23} />
+            {cartCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '0',
+                right: '0',
+                background: '#2563eb',
+                color: '#ffffff',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                width: '18px',
+                height: '18px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {cartCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* ================= TIER 2: SUB-NAVIGATION BAR (AS IN IMAGE) ================= */}
+      <div style={{
+        backgroundColor: '#fafbfc',
+        borderTop: '1px solid #f1f5f9'
+      }}>
+        <div style={{
+          maxWidth: '1280px',
+          margin: '0 auto',
+          padding: '0 clamp(14px, 3vw, 24px)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'clamp(18px, 4vw, 36px)',
+          height: '46px',
+          overflowX: 'auto',
+          scrollbarWidth: 'none'
+        }}>
+          {/* All Categories Dropdown Trigger */}
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setCategoriesDropdownOpen(!categoriesDropdownOpen)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'transparent',
+                border: 'none',
+                color: '#1e293b',
+                fontSize: '0.92rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                padding: '6px 0',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Menu size={18} color="#2563eb" />
+              <span>All Categories</span>
+              <ChevronDown size={14} color="#64748b" />
+            </button>
+
+            {/* Dropdown Menu */}
+            {categoriesDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 4px)',
+                  left: 0,
+                  width: '230px',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 30px rgba(0,0,0,0.12)',
+                  zIndex: 200,
+                  padding: '6px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px'
+                }}
+                onMouseLeave={() => setCategoriesDropdownOpen(false)}
+              >
+                {categories.map((cat) => {
+                  const isCurrent = selectedCategory === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => handleCategorySelect(cat.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        background: isCurrent ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
+                        color: isCurrent ? '#2563eb' : '#1f2937',
+                        border: 'none',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        fontSize: '0.88rem',
+                        fontWeight: isCurrent ? 800 : 600,
+                        transition: 'background-color 0.15s'
+                      }}
+                      onMouseEnter={e => {
+                        if (!isCurrent) e.currentTarget.style.backgroundColor = '#f8fafc';
+                      }}
+                      onMouseLeave={e => {
+                        if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      {React.createElement(cat.icon, { size: 16, color: isCurrent ? '#2563eb' : '#64748b' })}
+                      <span>{cat.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Subnav links: Home, Shop, Track Order, Contact Us */}
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#334155',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              padding: '6px 0',
+              whiteSpace: 'nowrap'
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#334155')}
+          >
+            Home
+          </button>
+
+          <button
+            onClick={handleShopClick}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#334155',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              padding: '6px 0',
+              whiteSpace: 'nowrap'
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#334155')}
+          >
+            Shop
+          </button>
+
+          <button
+            onClick={() => setIsTrackOrderOpen(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#334155',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              padding: '6px 0',
+              whiteSpace: 'nowrap'
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#334155')}
+          >
+            Track Order
+          </button>
+
+          <button
+            onClick={() => setIsContactOpen(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#334155',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              padding: '6px 0',
+              whiteSpace: 'nowrap'
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#334155')}
+          >
+            Contact Us
+          </button>
         </div>
       </div>
     </header>

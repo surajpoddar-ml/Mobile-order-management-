@@ -457,7 +457,7 @@ export const AdvertisementBoard = () => {
               </button>
 
               <button
-                onClick={() => navigate('/login?mode=signup&role=Distributor')}
+                onClick={() => navigate('/login')}
                 style={{
                   background: 'rgba(255, 255, 255, 0.12)',
                   color: '#ffffff',
@@ -473,7 +473,7 @@ export const AdvertisementBoard = () => {
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'}
               >
-                Wholesale Portal
+                Sign In to Portal
               </button>
             </div>
           </div>
