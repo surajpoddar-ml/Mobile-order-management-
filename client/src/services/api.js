@@ -216,6 +216,12 @@ export const api = {
         body: JSON.stringify({ status })
       }),
 
+    uploadImage: (formData) =>
+      request('/categories/upload', {
+        method: 'POST',
+        body: formData
+      }),
+
     delete: (id) =>
       request(`/categories/${id}`, {
         method: 'DELETE'

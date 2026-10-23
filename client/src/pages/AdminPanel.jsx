@@ -105,14 +105,10 @@ export const AdminPanel = () => {
   const [editingCategory, setEditingCategory] = useState(null);
   const [savingCategory, setSavingCategory] = useState(false);
   const [deletingCategoryId, setDeletingCategoryId] = useState(null);
+  const [uploadingCategoryImg, setUploadingCategoryImg] = useState(false);
   const [categoryForm, setCategoryForm] = useState({
     name: '',
-    slug: '',
-    icon: 'Tag',
-    imageUrl: '',
-    description: '',
-    status: 'Active',
-    displayOrder: 0
+    imageUrl: ''
   });
 
   const categoryIconMap = {
@@ -153,7 +149,7 @@ export const AdminPanel = () => {
 
   // Dynamic categories list from database (with fallback to defaults)
   const activeCategoryList = (Array.isArray(categories) && categories.length > 0)
-    ? categories.filter(c => c && c.status === 'Active').map(c => c.name)
+    ? categories.map(c => c && c.name).filter(Boolean)
     : [
         'Charging',
         'Power',
@@ -262,12 +258,7 @@ export const AdminPanel = () => {
     setEditingCategory(null);
     setCategoryForm({
       name: '',
-      slug: '',
-      icon: 'Tag',
-      imageUrl: '',
-      description: '',
-      status: 'Active',
-      displayOrder: (categories.length || 0) + 1
+      imageUrl: ''
     });
     setCategoryModalOpen(true);
   };
@@ -276,33 +267,48 @@ export const AdminPanel = () => {
     setEditingCategory(cat);
     setCategoryForm({
       name: cat.name || '',
-      slug: cat.slug || '',
-      icon: cat.icon || 'Tag',
-      imageUrl: cat.imageUrl || '',
-      description: cat.description || '',
-      status: cat.status || 'Active',
-      displayOrder: cat.displayOrder ?? 0
+      imageUrl: cat.imageUrl || ''
     });
     setCategoryModalOpen(true);
   };
 
+  const handleCategoryImgUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('imageFile', file);
+
+    setUploadingCategoryImg(true);
+    try {
+      const res = await api.categories.uploadImage(formData);
+      if (res.success && res.url) {
+        setCategoryForm(prev => ({
+          ...prev,
+          imageUrl: res.url
+        }));
+        notify('Category image uploaded successfully!');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to upload category image.');
+    } finally {
+      setUploadingCategoryImg(false);
+    }
+  };
+
   const handleSaveCategory = async (e) => {
     if (e) e.preventDefault();
-    if (!categoryForm.name.trim()) {
-      alert('Category Name is required.');
+    const catName = categoryForm.name.trim();
+    if (!catName) {
+      alert('Please enter a category name.');
       return;
     }
 
     setSavingCategory(true);
     try {
       const payload = {
-        name: categoryForm.name.trim(),
-        slug: categoryForm.slug?.trim() || slugify(categoryForm.name),
-        icon: categoryForm.icon || 'Tag',
-        imageUrl: categoryForm.imageUrl?.trim() || '',
-        description: categoryForm.description?.trim() || '',
-        status: categoryForm.status || 'Active',
-        displayOrder: Number(categoryForm.displayOrder) || 0
+        name: catName,
+        imageUrl: categoryForm.imageUrl?.trim() || ''
       };
 
       if (editingCategory) {
@@ -324,23 +330,11 @@ export const AdminPanel = () => {
     }
   };
 
-  const handleToggleCategoryStatus = async (cat) => {
-    const nextStatus = cat.status === 'Active' ? 'Inactive' : 'Active';
-    try {
-      const res = await api.categories.toggleStatus(cat.id, nextStatus);
-      notify(res.message || `Category status updated to ${nextStatus}`);
-      await loadCategoryData();
-      window.dispatchEvent(new Event('mws_categories_updated'));
-    } catch (err) {
-      alert(err.message || 'Failed to update category status');
-    }
-  };
-
   const handleDeleteCategory = async (cat) => {
     const prodCount = cat.productCount || 0;
     const confirmMsg = prodCount > 0
-      ? `Warning: Category "${cat.name}" is assigned to ${prodCount} product(s).\n\nDeleting this category will keep the products but remove this category from the taxonomy.\n\nAre you sure you want to delete "${cat.name}"?`
-      : `Are you sure you want to permanently delete category "${cat.name}"?`;
+      ? `Are you sure you want to delete category "${cat.name}"?\n\n(${prodCount} product(s) are assigned to this category)`
+      : `Are you sure you want to delete category "${cat.name}"?`;
 
     if (!window.confirm(confirmMsg)) return;
 
@@ -349,6 +343,7 @@ export const AdminPanel = () => {
       const res = await api.categories.delete(cat.id);
       notify(res.message || 'Category deleted successfully');
       await loadCategoryData();
+      await loadProductData();
       window.dispatchEvent(new Event('mws_categories_updated'));
     } catch (err) {
       alert(err.message || 'Failed to delete category');
@@ -956,16 +951,7 @@ export const AdminPanel = () => {
   const safeCategories = Array.isArray(categories) ? categories : [];
   const filteredCategories = safeCategories.filter(cat => {
     if (!cat) return false;
-    const matchesSearch =
-      !categorySearchTerm ||
-      cat.name?.toLowerCase().includes(categorySearchTerm.toLowerCase()) ||
-      cat.slug?.toLowerCase().includes(categorySearchTerm.toLowerCase()) ||
-      cat.description?.toLowerCase().includes(categorySearchTerm.toLowerCase());
-
-    const matchesStatus =
-      categoryStatusFilter === 'All' || cat.status === categoryStatusFilter;
-
-    return matchesSearch && matchesStatus;
+    return !categorySearchTerm.trim() || cat.name?.toLowerCase().includes(categorySearchTerm.toLowerCase().trim());
   });
 
   // Common UI Styles
@@ -2422,7 +2408,7 @@ export const AdminPanel = () => {
         {/* ======================================================== */}
         {activeTab === 'categories' && (
           <div>
-            {/* Header with Add Category button */}
+            {/* Header with Title and Add Category button */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -2433,13 +2419,13 @@ export const AdminPanel = () => {
             }}>
               <div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
-                  <FolderTree size={14} /> Catalog Authority Control
+                  <FolderTree size={14} /> Catalog Taxonomy
                 </div>
                 <h1 style={{ fontSize: 'clamp(1.4rem, 3.5vw, 1.85rem)', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                   Category Management
                 </h1>
                 <p style={{ color: 'var(--text-body)', fontSize: '0.88rem', margin: '4px 0 0 0' }}>
-                  Organize catalog taxonomy, manage display icons and cover images, control portal activation, and associate products with categories.
+                  Manage product categories with simple name and image controls.
                 </p>
               </div>
 
@@ -2471,53 +2457,7 @@ export const AdminPanel = () => {
               </div>
             </div>
 
-            {/* Quick Metrics KPI Strip */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-              gap: '14px',
-              marginBottom: '22px'
-            }}>
-              <div className="glass-panel" style={{ padding: '16px 20px', background: '#ffffff', border: '1.5px solid var(--border-medium)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase' }}>Total Categories</span>
-                  <FolderTree size={16} color="#7c3aed" />
-                </div>
-                <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#7c3aed' }}>{categories.length}</div>
-              </div>
-
-              <div className="glass-panel" style={{ padding: '16px 20px', background: '#ffffff', border: '1.5px solid var(--border-medium)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>Active in Portals</span>
-                  <CheckCircle size={16} color="#059669" />
-                </div>
-                <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#059669' }}>
-                  {categories.filter(c => c.status === 'Active').length}
-                </div>
-              </div>
-
-              <div className="glass-panel" style={{ padding: '16px 20px', background: '#ffffff', border: '1.5px solid var(--border-medium)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Inactive / Draft</span>
-                  <PauseCircle size={16} color="#64748b" />
-                </div>
-                <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#64748b' }}>
-                  {categories.filter(c => c.status === 'Inactive').length}
-                </div>
-              </div>
-
-              <div className="glass-panel" style={{ padding: '16px 20px', background: '#ffffff', border: '1.5px solid var(--border-medium)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase' }}>Assigned Products</span>
-                  <Package size={16} color="#2563eb" />
-                </div>
-                <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#2563eb' }}>
-                  {categories.reduce((acc, c) => acc + (c.productCount || 0), 0)}
-                </div>
-              </div>
-            </div>
-
-            {/* Filter and Search Bar */}
+            {/* Search and Summary Bar */}
             <div className="glass-panel" style={{
               padding: '16px 20px',
               background: '#ffffff',
@@ -2529,33 +2469,19 @@ export const AdminPanel = () => {
               alignItems: 'center',
               justifyContent: 'space-between'
             }}>
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', flex: 1, minWidth: '280px' }}>
-                <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
-                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                  <input
-                    type="text"
-                    placeholder="Search categories by name, slug, or keywords..."
-                    value={categorySearchTerm}
-                    onChange={e => setCategorySearchTerm(e.target.value)}
-                    style={{ ...inputStyle, paddingLeft: '34px', fontSize: '0.84rem' }}
-                  />
-                </div>
-
-                <div style={{ minWidth: '150px' }}>
-                  <select
-                    value={categoryStatusFilter}
-                    onChange={e => setCategoryStatusFilter(e.target.value)}
-                    style={{ ...selectStyle, width: '100%', fontSize: '0.84rem' }}
-                  >
-                    <option value="All">All Statuses</option>
-                    <option value="Active">Active Only</option>
-                    <option value="Inactive">Inactive Only</option>
-                  </select>
-                </div>
+              <div style={{ position: 'relative', flex: 1, minWidth: '240px', maxWidth: '420px' }}>
+                <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input
+                  type="text"
+                  placeholder="Search categories by name..."
+                  value={categorySearchTerm}
+                  onChange={e => setCategorySearchTerm(e.target.value)}
+                  style={{ ...inputStyle, paddingLeft: '34px', fontSize: '0.86rem' }}
+                />
               </div>
 
-              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#64748b' }}>
-                Showing {filteredCategories.length} of {categories.length} categories
+              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#64748b' }}>
+                Total Categories: <strong style={{ color: '#7c3aed' }}>{categories.length}</strong>
               </div>
             </div>
 
@@ -2568,25 +2494,19 @@ export const AdminPanel = () => {
               boxShadow: 'var(--shadow-card)'
             }}>
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '780px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
-                      <th style={{ padding: '12px 18px', fontSize: '0.74rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Category & Details
+                      <th style={{ padding: '14px 20px', fontSize: '0.76rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', width: '90px' }}>
+                        Image
                       </th>
-                      <th style={{ padding: '12px 14px', fontSize: '0.74rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Visual Icon
+                      <th style={{ padding: '14px 18px', fontSize: '0.76rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Category Name
                       </th>
-                      <th style={{ padding: '12px 14px', fontSize: '0.74rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
-                        Order
-                      </th>
-                      <th style={{ padding: '12px 14px', fontSize: '0.74rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <th style={{ padding: '14px 18px', fontSize: '0.76rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         Products
                       </th>
-                      <th style={{ padding: '12px 14px', fontSize: '0.74rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
-                        Status & Activation
-                      </th>
-                      <th style={{ padding: '12px 18px', fontSize: '0.74rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>
+                      <th style={{ padding: '14px 20px', fontSize: '0.76rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>
                         Actions
                       </th>
                     </tr>
@@ -2594,15 +2514,15 @@ export const AdminPanel = () => {
                   <tbody>
                     {filteredCategories.length === 0 ? (
                       <tr>
-                        <td colSpan={6} style={{ padding: '48px 24px', textAlign: 'center' }}>
+                        <td colSpan={4} style={{ padding: '48px 24px', textAlign: 'center' }}>
                           <FolderTree size={36} color="#94a3b8" style={{ margin: '0 auto 12px auto' }} />
                           <div style={{ fontSize: '1rem', fontWeight: 800, color: '#1e293b', marginBottom: '4px' }}>
                             No Categories Found
                           </div>
                           <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '0 0 16px 0' }}>
-                            {categorySearchTerm || categoryStatusFilter !== 'All'
-                              ? 'Try adjusting your search terms or filters.'
-                              : 'No categories have been configured yet.'}
+                            {categorySearchTerm.trim()
+                              ? 'No category matching "' + categorySearchTerm + '".'
+                              : 'No categories have been added yet.'}
                           </p>
                           <button onClick={openNewCategoryModal} className="btn btn-primary btn-sm" style={{ background: '#7c3aed' }}>
                             <Plus size={14} /> Add First Category
@@ -2611,8 +2531,6 @@ export const AdminPanel = () => {
                       </tr>
                     ) : (
                       filteredCategories.map((cat, idx) => {
-                        const IconComponent = getCategoryIconComponent(cat.icon);
-                        const isInactive = cat.status === 'Inactive';
                         const productCount = cat.productCount || 0;
 
                         return (
@@ -2620,187 +2538,90 @@ export const AdminPanel = () => {
                             key={cat.id || idx}
                             style={{
                               borderBottom: '1px solid #f1f5f9',
-                              background: isInactive ? 'rgba(248, 250, 252, 0.7)' : '#ffffff',
+                              background: '#ffffff',
                               transition: 'background 0.15s ease'
                             }}
-                            onMouseEnter={e => { e.currentTarget.style.background = isInactive ? '#f1f5f9' : '#f8fafc'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = isInactive ? 'rgba(248, 250, 252, 0.7)' : '#ffffff'; }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; }}
                           >
-                            {/* Category Thumbnail, Name, Slug, Description */}
-                            <td style={{ padding: '14px 18px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                                <div style={{
-                                  width: '46px',
-                                  height: '46px',
-                                  borderRadius: '12px',
-                                  background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(99, 102, 241, 0.15))',
-                                  border: '1px solid rgba(124, 58, 237, 0.2)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  overflow: 'hidden',
-                                  flexShrink: 0
-                                }}>
-                                  {cat.imageUrl ? (
-                                    <img
-                                      src={cat.imageUrl}
-                                      alt={cat.name}
-                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                      onError={e => { e.currentTarget.style.display = 'none'; }}
-                                    />
-                                  ) : (
-                                    <IconComponent size={22} color="#7c3aed" />
-                                  )}
-                                </div>
-                                <div>
-                                  <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    {cat.name}
-                                    {cat.slug && (
-                                      <span style={{
-                                        fontSize: '0.70rem',
-                                        fontFamily: 'var(--font-mono)',
-                                        color: '#6366f1',
-                                        background: 'rgba(99, 102, 241, 0.08)',
-                                        padding: '1px 6px',
-                                        borderRadius: '4px',
-                                        fontWeight: 600
-                                      }}>
-                                        /{cat.slug}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px', maxWidth: '380px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {cat.description || 'No description provided'}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-
-                            {/* Icon Identifier */}
-                            <td style={{ padding: '14px 14px' }}>
+                            {/* Category Image Thumbnail */}
+                            <td style={{ padding: '14px 20px' }}>
                               <div style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                background: '#f8fafc',
-                                border: '1px solid #e2e8f0',
-                                padding: '4px 10px',
-                                borderRadius: '20px',
-                                fontSize: '0.78rem',
-                                fontWeight: 700,
-                                color: '#475569'
-                              }}>
-                                <IconComponent size={14} color="#7c3aed" />
-                                <span>{cat.icon || 'Tag'}</span>
-                              </div>
-                            </td>
-
-                            {/* Display Order */}
-                            <td style={{ padding: '14px 14px', textAlign: 'center' }}>
-                              <span style={{
-                                fontSize: '0.78rem',
-                                fontWeight: 800,
-                                color: '#0f172a',
+                                width: '52px',
+                                height: '52px',
+                                borderRadius: '10px',
                                 background: '#f1f5f9',
-                                padding: '3px 8px',
-                                borderRadius: '6px'
+                                border: '1.5px solid #e2e8f0',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                overflow: 'hidden',
+                                flexShrink: 0
                               }}>
-                                #{cat.displayOrder ?? idx + 1}
-                              </span>
-                            </td>
-
-                            {/* Products count & link */}
-                            <td style={{ padding: '14px 14px' }}>
-                              <div>
-                                <span style={{
-                                  fontSize: '0.82rem',
-                                  fontWeight: 800,
-                                  color: productCount > 0 ? '#0f766e' : '#94a3b8',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '5px'
-                                }}>
-                                  <Package size={13} />
-                                  {productCount} {productCount === 1 ? 'Product' : 'Products'}
-                                </span>
-                                {productCount > 0 && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
-                                    <span style={{ fontSize: '0.70rem', color: '#64748b' }}>
-                                      {cat.customerProductCount || 0} Retail • {cat.distributorProductCount || 0} Wholesale
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setProductCategoryFilter(cat.name);
-                                        setActiveTab('products');
-                                      }}
-                                      style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: '#2563eb',
-                                        fontSize: '0.70rem',
-                                        fontWeight: 700,
-                                        cursor: 'pointer',
-                                        padding: 0,
-                                        textDecoration: 'underline'
-                                      }}
-                                    >
-                                      View
-                                    </button>
-                                  </div>
+                                {cat.imageUrl ? (
+                                  <img
+                                    src={getMediaUrl(cat.imageUrl)}
+                                    alt={cat.name}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    onError={e => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                ) : (
+                                  <Tag size={22} color="#7c3aed" />
                                 )}
                               </div>
                             </td>
 
-                            {/* Status with 1-Click Toggle */}
-                            <td style={{ padding: '14px 14px', textAlign: 'center' }}>
-                              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleCategoryStatus(cat)}
-                                  title={`Click to ${isInactive ? 'activate' : 'deactivate'} category`}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    padding: '4px 10px',
-                                    borderRadius: '20px',
-                                    border: isInactive ? '1px solid #cbd5e1' : '1px solid rgba(16, 185, 129, 0.3)',
-                                    background: isInactive ? '#f1f5f9' : 'rgba(16, 185, 129, 0.1)',
-                                    color: isInactive ? '#64748b' : '#059669',
-                                    fontSize: '0.76rem',
-                                    fontWeight: 800,
-                                    cursor: 'pointer',
-                                    transition: 'all 0.15s ease'
-                                  }}
-                                >
-                                  {isInactive ? (
-                                    <>
-                                      <ToggleLeft size={16} color="#94a3b8" />
-                                      <span>Inactive</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <ToggleRight size={16} color="#059669" />
-                                      <span>Active</span>
-                                    </>
-                                  )}
-                                </button>
-                                <span style={{ fontSize: '0.66rem', color: '#94a3b8' }}>
-                                  {isInactive ? 'Hidden from creation' : 'Live in catalog'}
-                                </span>
+                            {/* Category Name */}
+                            <td style={{ padding: '14px 18px' }}>
+                              <div style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a' }}>
+                                {cat.name}
                               </div>
                             </td>
 
+                            {/* Assigned Products Count */}
+                            <td style={{ padding: '14px 18px' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setProductCategoryFilter(cat.name);
+                                  setActiveTab('products');
+                                }}
+                                style={{
+                                  background: productCount > 0 ? 'rgba(124, 58, 237, 0.08)' : '#f1f5f9',
+                                  border: '1px solid ' + (productCount > 0 ? 'rgba(124, 58, 237, 0.2)' : '#e2e8f0'),
+                                  borderRadius: '20px',
+                                  padding: '5px 12px',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 800,
+                                  color: productCount > 0 ? '#7c3aed' : '#64748b',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}
+                                title="Click to filter products in this category"
+                              >
+                                <Package size={13} />
+                                {productCount} {productCount === 1 ? 'Product' : 'Products'}
+                              </button>
+                            </td>
+
                             {/* Actions (Edit / Delete) */}
-                            <td style={{ padding: '14px 18px', textAlign: 'right' }}>
+                            <td style={{ padding: '14px 20px', textAlign: 'right' }}>
                               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
                                 <button
                                   type="button"
                                   onClick={() => openEditCategoryModal(cat)}
                                   className="btn btn-secondary btn-sm"
-                                  style={{ padding: '6px 12px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-                                  title="Edit Category Details"
+                                  style={{
+                                    padding: '7px 14px',
+                                    fontSize: '0.80rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontWeight: 700
+                                  }}
+                                  title="Edit Category Name and Image"
                                 >
                                   <Edit size={13} /> Edit
                                 </button>
@@ -2809,10 +2630,17 @@ export const AdminPanel = () => {
                                   disabled={deletingCategoryId === cat.id}
                                   onClick={() => handleDeleteCategory(cat)}
                                   className="btn btn-danger btn-sm"
-                                  style={{ padding: '6px 10px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  style={{
+                                    padding: '7px 12px',
+                                    fontSize: '0.80rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    fontWeight: 700
+                                  }}
                                   title="Delete Category"
                                 >
-                                  <Trash2 size={13} />
+                                  <Trash2 size={13} /> Delete
                                 </button>
                               </div>
                             </td>
@@ -4212,25 +4040,22 @@ export const AdminPanel = () => {
           <div style={{
             background: '#ffffff',
             borderRadius: 'var(--radius-xl)',
-            maxWidth: '620px',
+            maxWidth: '480px',
             width: '100%',
-            padding: '28px',
+            padding: '24px 28px',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             border: '1px solid var(--border-subtle)',
-            maxHeight: '92vh',
+            maxHeight: '90vh',
             overflowY: 'auto'
           }}>
             {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', paddingBottom: '14px', borderBottom: '1.5px solid var(--border-subtle)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1.5px solid var(--border-subtle)' }}>
               <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
-                  <FolderTree size={14} /> Catalog Authority Taxonomy
-                </div>
-                <h3 style={{ fontSize: '1.30rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                  {editingCategory ? `Edit Category: ${editingCategory.name}` : 'Create New Catalog Category'}
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                  {editingCategory ? 'Edit Category' : 'Add New Category'}
                 </h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', margin: '4px 0 0 0' }}>
-                  Define the category title, URL slug, custom icon, cover image, and portal activation status.
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: '4px 0 0 0' }}>
+                  {editingCategory ? 'Update category name or image' : 'Enter category name and image'}
                 </p>
               </div>
               <button
@@ -4243,155 +4068,44 @@ export const AdminPanel = () => {
             </div>
 
             <form onSubmit={handleSaveCategory}>
-              {/* Category Name & Slug */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                gap: '14px',
-                marginBottom: '16px'
-              }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
-                    Category Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Fast Chargers & Adapters"
-                    value={categoryForm.name}
-                    onChange={e => {
-                      const newName = e.target.value;
-                      const currentAutoSlug = slugify(categoryForm.name);
-                      const shouldAutoUpdateSlug = !categoryForm.slug || categoryForm.slug === currentAutoSlug;
-                      setCategoryForm({
-                        ...categoryForm,
-                        name: newName,
-                        slug: shouldAutoUpdateSlug ? slugify(newName) : categoryForm.slug
-                      });
-                    }}
-                    style={inputStyle}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
-                    Slug (URL Identifier)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. fast-chargers"
-                    value={categoryForm.slug}
-                    onChange={e => setCategoryForm({ ...categoryForm, slug: slugify(e.target.value) })}
-                    style={{ ...inputStyle, fontFamily: 'var(--font-mono)', fontSize: '0.84rem' }}
-                  />
-                </div>
-              </div>
-
-              {/* Status & Display Order */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '14px',
-                marginBottom: '18px'
-              }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
-                    Status & Activation *
-                  </label>
-                  <select
-                    value={categoryForm.status}
-                    onChange={e => setCategoryForm({ ...categoryForm, status: e.target.value })}
-                    style={{ ...inputStyle, cursor: 'pointer' }}
-                  >
-                    <option value="Active">Active (Live in catalogs & product forms)</option>
-                    <option value="Inactive">Inactive (Deactivated / Hidden from creation)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
-                    Display Order
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={categoryForm.displayOrder}
-                    onChange={e => setCategoryForm({ ...categoryForm, displayOrder: e.target.value })}
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
-
-              {/* Select Category Icon */}
+              {/* Category Name */}
               <div style={{ marginBottom: '18px' }}>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '8px', color: '#1e293b' }}>
-                  Category Icon
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                  Category Name *
                 </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Displays, Fast Chargers, Batteries..."
+                  value={categoryForm.name}
+                  onChange={e => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                  style={inputStyle}
+                  autoFocus
+                />
+              </div>
+
+              {/* Category Image */}
+              <div style={{ marginBottom: '22px' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                  Category Image
+                </label>
+                
+                {/* Image Live Preview */}
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                  gap: '8px',
-                  maxHeight: '160px',
-                  overflowY: 'auto',
-                  padding: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  marginBottom: '12px',
+                  padding: '12px',
                   background: '#f8fafc',
                   borderRadius: '10px',
                   border: '1px solid #e2e8f0'
                 }}>
-                  {AVAILABLE_CATEGORY_ICONS.map(item => {
-                    const IconComp = getCategoryIconComponent(item.id);
-                    const isSelected = (categoryForm.icon || 'Tag') === item.id;
-
-                    return (
-                      <button
-                        type="button"
-                        key={item.id}
-                        onClick={() => setCategoryForm({ ...categoryForm, icon: item.id })}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '7px 10px',
-                          borderRadius: '8px',
-                          border: isSelected ? '2px solid #7c3aed' : '1px solid #e2e8f0',
-                          background: isSelected ? 'rgba(124, 58, 237, 0.1)' : '#ffffff',
-                          color: isSelected ? '#7c3aed' : '#334155',
-                          fontSize: '0.78rem',
-                          fontWeight: isSelected ? 800 : 600,
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                          textAlign: 'left'
-                        }}
-                      >
-                        <IconComp size={16} color={isSelected ? '#7c3aed' : '#64748b'} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {item.id}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Cover Image URL with Live Thumbnail Preview */}
-              <div style={{ marginBottom: '18px' }}>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
-                  Cover / Thumbnail Image URL
-                </label>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    placeholder="https://images.unsplash.com/... (Direct image link)"
-                    value={categoryForm.imageUrl}
-                    onChange={e => setCategoryForm({ ...categoryForm, imageUrl: e.target.value })}
-                    style={{ ...inputStyle, flex: 1 }}
-                  />
                   <div style={{
-                    width: '44px',
-                    height: '44px',
+                    width: '64px',
+                    height: '64px',
                     borderRadius: '10px',
-                    background: '#f1f5f9',
+                    background: '#ffffff',
                     border: '1.5px solid #cbd5e1',
                     display: 'flex',
                     alignItems: 'center',
@@ -4401,56 +4115,98 @@ export const AdminPanel = () => {
                   }}>
                     {categoryForm.imageUrl ? (
                       <img
-                        src={categoryForm.imageUrl}
+                        src={getMediaUrl(categoryForm.imageUrl)}
                         alt="Preview"
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={e => { e.currentTarget.style.display = 'none'; }}
                       />
                     ) : (
-                      React.createElement(getCategoryIconComponent(categoryForm.icon), { size: 20, color: '#94a3b8' })
+                      <ImageIcon size={26} color="#94a3b8" />
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>
+                      {categoryForm.imageUrl ? 'Image Selected' : 'No Image Selected'}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px', wordBreak: 'break-all' }}>
+                      {categoryForm.imageUrl ? categoryForm.imageUrl : 'Paste an image URL or choose a file from your device below.'}
+                    </div>
+                    {categoryForm.imageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setCategoryForm({ ...categoryForm, imageUrl: '' })}
+                        style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', padding: 0, marginTop: '4px' }}
+                      >
+                        Remove image
+                      </button>
                     )}
                   </div>
                 </div>
+
+                {/* Image URL Input */}
+                <div style={{ marginBottom: '10px' }}>
+                  <input
+                    type="text"
+                    placeholder="https://... (Direct image link)"
+                    value={categoryForm.imageUrl}
+                    onChange={e => setCategoryForm({ ...categoryForm, imageUrl: e.target.value })}
+                    style={inputStyle}
+                  />
+                </div>
+
+                {/* File Upload Option */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.80rem',
+                    fontWeight: 700,
+                    color: '#334155',
+                    cursor: uploadingCategoryImg ? 'wait' : 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}>
+                    <Upload size={14} />
+                    {uploadingCategoryImg ? 'Uploading...' : 'Upload Image File'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploadingCategoryImg}
+                      onChange={handleCategoryImgUpload}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>PNG, JPG, WEBP, SVG</span>
+                </div>
               </div>
 
-              {/* Description */}
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
-                  Description (Optional)
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Short description of products found in this category..."
-                  value={categoryForm.description}
-                  onChange={e => setCategoryForm({ ...categoryForm, description: e.target.value })}
-                  style={textareaStyle}
-                />
-              </div>
-
-              {/* Modal Action Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
+              {/* Modal Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
                 <button
                   type="button"
                   onClick={() => setCategoryModalOpen(false)}
                   className="btn btn-secondary"
-                  style={{ padding: '10px 18px', fontSize: '0.88rem' }}
+                  style={{ padding: '9px 18px', fontSize: '0.86rem' }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={savingCategory}
+                  disabled={savingCategory || uploadingCategoryImg}
                   className="btn btn-primary"
                   style={{
                     background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
                     border: 'none',
-                    boxShadow: '0 4px 12px rgba(124, 58, 237, 0.28)',
-                    padding: '10px 24px',
-                    fontSize: '0.90rem',
+                    padding: '9px 22px',
+                    fontSize: '0.88rem',
                     fontWeight: 700
                   }}
                 >
-                  {savingCategory ? 'Saving Category...' : editingCategory ? 'Save Changes' : 'Create Category'}
+                  {savingCategory ? 'Saving...' : editingCategory ? 'Save Changes' : 'Create Category'}
                 </button>
               </div>
             </form>

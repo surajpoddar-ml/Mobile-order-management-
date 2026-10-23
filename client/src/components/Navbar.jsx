@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import api from '../services/api';
 import {
   Search,
   User,
@@ -17,6 +18,7 @@ import {
   Battery,
   Cable,
   Headphones,
+  Tag,
   CheckCircle2,
   ExternalLink
 } from 'lucide-react';
@@ -211,13 +213,34 @@ export const Navbar = () => {
     );
   }
 
+  const [dbCategories, setDbCategories] = useState([]);
+
+  useEffect(() => {
+    const loadCats = () => {
+      api.categories.getAll()
+        .then(res => {
+          if (res && res.success && Array.isArray(res.categories)) {
+            setDbCategories(res.categories);
+          }
+        })
+        .catch(console.error);
+    };
+    loadCats();
+    window.addEventListener('mws_categories_updated', loadCats);
+    return () => window.removeEventListener('mws_categories_updated', loadCats);
+  }, []);
+
   const categories = [
     { id: 'All', name: 'All Products', icon: Layers },
-    { id: 'Charging', name: 'Charging', icon: Zap },
-    { id: 'Power', name: 'Power', icon: Battery },
-    { id: 'Cables', name: 'Cables', icon: Cable },
-    { id: 'Audio', name: 'Audio', icon: Headphones },
-    { id: 'Protection', name: 'Protection', icon: ShieldCheck }
+    ...(dbCategories.length > 0
+      ? dbCategories.map(c => ({ id: c.name, name: c.name, icon: Tag }))
+      : [
+          { id: 'Charging', name: 'Charging', icon: Zap },
+          { id: 'Power', name: 'Power', icon: Battery },
+          { id: 'Cables', name: 'Cables', icon: Cable },
+          { id: 'Audio', name: 'Audio', icon: Headphones },
+          { id: 'Protection', name: 'Protection', icon: ShieldCheck }
+        ])
   ];
 
   const handleSearchSubmit = (e) => {

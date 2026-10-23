@@ -1,10 +1,54 @@
 import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import multer from 'multer';
 import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'mws_eagle_mobile_parts_super_secret_jwt_key_2026_auth_system';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadDir = path.resolve(__dirname, '../../uploads/categories');
+
+// Ensure category uploads directory exists
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Multer storage for category images
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const cleanBaseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
+    const uniqueSuffix = `${Date.now()}_${Math.round(Math.random() * 1e6)}`;
+    cb(null, `${cleanBaseName}_${uniqueSuffix}${ext}`);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowedExtensions = /\.(jpg|jpeg|png|webp|gif|svg|avif)$/i;
+  const isExtAllowed = allowedExtensions.test(path.extname(file.originalname));
+  const isMimeAllowed = file.mimetype.startsWith('image/');
+
+  if (isExtAllowed || isMimeAllowed) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files (JPG, PNG, WEBP, GIF, SVG) are allowed.'));
+  }
+};
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB max
+  fileFilter
+});
 
 /**
  * Helper to generate URL-friendly slug
@@ -22,29 +66,33 @@ const slugify = (text) => {
 };
 
 /**
- * 1. GET /api/categories
- * Public / Authenticated catalog categories with dynamic product counts
+ * 1. POST /api/categories/upload
+ * Upload Category Image File (Admin Only)
+ */
+router.post('/upload', verifyToken, requireAdmin, upload.single('imageFile'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image file uploaded.' });
+    }
+    const relativeUrl = `/uploads/categories/${req.file.filename}`;
+    return res.status(200).json({
+      success: true,
+      message: 'Category image uploaded successfully!',
+      url: relativeUrl,
+      filename: req.file.filename
+    });
+  } catch (error) {
+    console.error('Category image upload error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Image upload failed.' });
+  }
+});
+
+/**
+ * 2. GET /api/categories
+ * Returns all categories with product counts
  */
 router.get('/', async (req, res) => {
   try {
-    let isAdmin = false;
-
-    // Check token if present
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        const user = await queryGet('SELECT userType, accountStatus FROM users WHERE id = ?', [decoded.id]);
-        if (user && user.userType === 'Admin' && user.accountStatus === 'Active') {
-          isAdmin = true;
-        }
-      } catch (err) {}
-    }
-
-    const includeInactive = req.query.includeInactive === 'true' || isAdmin;
-    const statusWhere = includeInactive ? '' : "WHERE c.status = 'Active'";
-
     const sql = `
       SELECT 
         c.*,
@@ -53,9 +101,8 @@ router.get('/', async (req, res) => {
         SUM(CASE WHEN (p.showOnDistributorPortal = 1 OR p.targetVisibility IN ('Distributor', 'Both')) THEN 1 ELSE 0 END) as distributorProductCount
       FROM categories c
       LEFT JOIN products p ON LOWER(TRIM(p.category)) = LOWER(TRIM(c.name))
-      ${statusWhere}
       GROUP BY c.id
-      ORDER BY c.displayOrder ASC, c.name ASC
+      ORDER BY c.id DESC
     `;
 
     const categories = await queryAll(sql);
@@ -72,48 +119,38 @@ router.get('/', async (req, res) => {
 });
 
 /**
- * 2. POST /api/categories
- * Create new Category (Admin Only)
+ * 3. POST /api/categories
+ * Create new Category (Admin Only: Name and Image only)
  */
 router.post('/', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const {
-      name,
-      slug: customSlug,
-      imageUrl = '',
-      icon = 'Package',
-      description = '',
-      status = 'Active',
-      displayOrder = 0
-    } = req.body;
+    const { name, imageUrl = '' } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: 'Category Name is required.' });
     }
 
     const trimmedName = name.trim();
-    const finalSlug = (customSlug && customSlug.trim()) ? slugify(customSlug) : slugify(trimmedName);
 
-    // Check duplicate name
-    const existingName = await queryGet('SELECT id FROM categories WHERE LOWER(name) = LOWER(?)', [trimmedName]);
+    // Check duplicate name (case-insensitive)
+    const existingName = await queryGet('SELECT id FROM categories WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [trimmedName]);
     if (existingName) {
       return res.status(409).json({
         success: false,
-        message: `Category with name "${trimmedName}" already exists.`
+        message: `Category "${trimmedName}" already exists.`
       });
     }
 
-    // Check duplicate slug
-    const existingSlug = await queryGet('SELECT id FROM categories WHERE slug = ?', [finalSlug]);
-    if (existingSlug) {
-      return res.status(409).json({
-        success: false,
-        message: `Category with slug "${finalSlug}" already exists.`
-      });
+    // Auto-generate safe slug
+    let baseSlug = slugify(trimmedName) || 'cat';
+    let finalSlug = baseSlug;
+    let counter = 1;
+    while (await queryGet('SELECT id FROM categories WHERE slug = ?', [finalSlug])) {
+      counter++;
+      finalSlug = `${baseSlug}-${counter}`;
     }
 
     const now = new Date().toISOString();
-    const validStatus = status === 'Inactive' ? 'Inactive' : 'Active';
 
     const result = await queryRun(
       `INSERT INTO categories (
@@ -123,10 +160,10 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
         trimmedName,
         finalSlug,
         imageUrl ? imageUrl.trim() : '',
-        icon || 'Package',
-        description ? description.trim() : '',
-        validStatus,
-        Number(displayOrder) || 0,
+        'Tag',
+        '',
+        'Active',
+        0,
         now,
         now
       ]
@@ -146,8 +183,8 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
 });
 
 /**
- * 3. PUT /api/categories/:id
- * Edit existing Category (Admin Only)
+ * 4. PUT /api/categories/:id
+ * Edit Category (Admin Only: Name and Image)
  */
 router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -157,16 +194,7 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Category not found.' });
     }
 
-    const {
-      name,
-      slug: customSlug,
-      imageUrl,
-      icon,
-      description,
-      status,
-      displayOrder,
-      syncProducts = true
-    } = req.body;
+    const { name, imageUrl } = req.body;
 
     const trimmedName = name !== undefined ? name.trim() : existing.name;
     if (!trimmedName) {
@@ -175,7 +203,7 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
 
     // If name changed, check uniqueness
     if (trimmedName.toLowerCase() !== existing.name.toLowerCase()) {
-      const duplicate = await queryGet('SELECT id FROM categories WHERE LOWER(name) = LOWER(?) AND id != ?', [trimmedName, id]);
+      const duplicate = await queryGet('SELECT id FROM categories WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) AND id != ?', [trimmedName, id]);
       if (duplicate) {
         return res.status(409).json({
           success: false,
@@ -184,36 +212,39 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
       }
     }
 
-    const finalSlug = customSlug ? slugify(customSlug) : (trimmedName !== existing.name ? slugify(trimmedName) : existing.slug);
-    const validStatus = status !== undefined ? (status === 'Inactive' ? 'Inactive' : 'Active') : existing.status;
+    // Auto-update slug if name changed
+    let finalSlug = existing.slug;
+    if (trimmedName.toLowerCase() !== existing.name.toLowerCase()) {
+      let baseSlug = slugify(trimmedName) || 'cat';
+      finalSlug = baseSlug;
+      let counter = 1;
+      while (await queryGet('SELECT id FROM categories WHERE slug = ? AND id != ?', [finalSlug, id])) {
+        counter++;
+        finalSlug = `${baseSlug}-${counter}`;
+      }
+    }
+
+    const newImageUrl = imageUrl !== undefined ? imageUrl.trim() : existing.imageUrl;
     const now = new Date().toISOString();
 
     await queryRun(
       `UPDATE categories SET
         name = ?,
         slug = ?,
-        imageUrl = COALESCE(?, imageUrl),
-        icon = COALESCE(?, icon),
-        description = COALESCE(?, description),
-        status = ?,
-        displayOrder = COALESCE(?, displayOrder),
+        imageUrl = ?,
         updatedDate = ?
        WHERE id = ?`,
       [
         trimmedName,
         finalSlug,
-        imageUrl !== undefined ? imageUrl.trim() : existing.imageUrl,
-        icon !== undefined ? icon : existing.icon,
-        description !== undefined ? description.trim() : existing.description,
-        validStatus,
-        displayOrder !== undefined ? Number(displayOrder) : existing.displayOrder,
+        newImageUrl,
         now,
         id
       ]
     );
 
     // If category name changed, synchronize existing products assigned to this category
-    if (syncProducts && trimmedName !== existing.name) {
+    if (trimmedName.toLowerCase() !== existing.name.toLowerCase()) {
       await queryRun('UPDATE products SET category = ? WHERE LOWER(TRIM(category)) = LOWER(TRIM(?))', [trimmedName, existing.name]);
     }
 
@@ -239,35 +270,6 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
 });
 
 /**
- * 4. PATCH /api/categories/:id/status
- * 1-Click Fast Toggle Active / Inactive (Admin Only)
- */
-router.patch('/:id/status', verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const existing = await queryGet('SELECT * FROM categories WHERE id = ?', [id]);
-    if (!existing) {
-      return res.status(404).json({ success: false, message: 'Category not found.' });
-    }
-
-    const { status } = req.body;
-    const newStatus = status ? status : (existing.status === 'Active' ? 'Inactive' : 'Active');
-    const now = new Date().toISOString();
-
-    await queryRun('UPDATE categories SET status = ?, updatedDate = ? WHERE id = ?', [newStatus, now, id]);
-
-    return res.status(200).json({
-      success: true,
-      message: `Category "${existing.name}" is now ${newStatus}.`,
-      status: newStatus
-    });
-  } catch (error) {
-    console.error('Failed to toggle category status:', error);
-    return res.status(500).json({ success: false, message: error.message || 'Failed to toggle category status.' });
-  }
-});
-
-/**
  * 5. DELETE /api/categories/:id
  * Delete Category (Admin Only)
  */
@@ -287,7 +289,7 @@ router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `Category "${existing.name}" has been deleted. ${assignedCount > 0 ? `(${assignedCount} product(s) were under this category)` : ''}`,
+      message: `Category "${existing.name}" deleted successfully.${assignedCount > 0 ? ` (${assignedCount} product(s) were under this category)` : ''}`,
       affectedProducts: assignedCount
     });
   } catch (error) {

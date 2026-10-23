@@ -39,41 +39,47 @@ export const DistributorPortal = () => {
   const [myOrders, setMyOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
 
-  // Top 5 Circular Categories matching design
-  const circularCategories = [
-    {
-      id: 'Charging',
-      name: 'Charging',
-      image: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=300&q=80',
-      icon: Zap
-    },
-    {
-      id: 'Power',
-      name: 'Power',
-      image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=300&q=80',
-      icon: Battery
-    },
-    {
-      id: 'Cables',
-      name: 'Cables',
-      image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=300&q=80',
-      icon: Cable
-    },
-    {
-      id: 'Audio',
-      name: 'Audio',
-      image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=300&q=80',
-      icon: Headphones
-    },
-    {
-      id: 'Protection',
-      name: 'Protection',
-      image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=300&q=80',
-      icon: ShieldCheck
-    }
-  ];
+  const [dbCategories, setDbCategories] = useState([]);
 
-  const filterTabs = ['All', 'Charging', 'Power', 'Cables', 'Audio', 'Protection'];
+  const getCategoryImageUrl = (url) => {
+    if (!url) return 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=300&q=80';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `http://localhost:5001${url}`;
+  };
+
+  const fetchCategories = () => {
+    api.categories.getAll()
+      .then(res => {
+        if (res && res.success && Array.isArray(res.categories)) {
+          setDbCategories(res.categories);
+        }
+      })
+      .catch(console.error);
+  };
+
+  useEffect(() => {
+    fetchCategories();
+    const handleCategorySync = () => fetchCategories();
+    window.addEventListener('mws_categories_updated', handleCategorySync);
+    return () => window.removeEventListener('mws_categories_updated', handleCategorySync);
+  }, []);
+
+  // Circular Categories loaded dynamically from DB (with fallback defaults)
+  const circularCategories = dbCategories.length > 0
+    ? dbCategories.map(cat => ({
+        id: cat.name,
+        name: cat.name,
+        image: getCategoryImageUrl(cat.imageUrl)
+      }))
+    : [
+        { id: 'Charging', name: 'Charging', image: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=300&q=80' },
+        { id: 'Power', name: 'Power', image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=300&q=80' },
+        { id: 'Cables', name: 'Cables', image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=300&q=80' },
+        { id: 'Audio', name: 'Audio', image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=300&q=80' },
+        { id: 'Protection', name: 'Protection', image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=300&q=80' }
+      ];
+
+  const filterTabs = ['All', ...circularCategories.map(c => c.name)];
 
   // Fetch Distributor Wholesale Products
   const fetchProducts = () => {
