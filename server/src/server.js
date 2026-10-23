@@ -9,6 +9,7 @@ import productRoutes from './routes/productRoutes.js';
 import adRoutes from './routes/adRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js';
 import { seedDatabase } from './database/seed.js';
 
 dotenv.config();
@@ -36,6 +37,7 @@ app.use('/uploads', express.static(uploadsPath));
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/categories', categoryRoutes);
 app.use('/api/advertisements', adRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/notifications', notificationRoutes);

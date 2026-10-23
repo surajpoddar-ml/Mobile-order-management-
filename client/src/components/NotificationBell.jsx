@@ -28,10 +28,8 @@ export const NotificationBell = () => {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
 
-  // If no user is logged in, don't show the notification bell
-  if (!user) return null;
-
   const fetchNotifications = async (isSilent = false) => {
+    if (!user) return;
     if (!isSilent) setLoading(true);
     try {
       const res = await api.notifications.getAll();
@@ -47,6 +45,12 @@ export const NotificationBell = () => {
   };
 
   useEffect(() => {
+    if (!user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
     fetchNotifications();
 
     // Auto-polling every 15 seconds
@@ -62,7 +66,7 @@ export const NotificationBell = () => {
       clearInterval(interval);
       window.removeEventListener('mws_notifications_refresh', handleRefresh);
     };
-  }, []);
+  }, [user]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -195,6 +199,9 @@ export const NotificationBell = () => {
     if (filter === 'unread') return !n.isRead;
     return true;
   });
+
+  // If no user is logged in, don't show the notification bell
+  if (!user) return null;
 
   return (
     <div style={{ position: 'relative' }} ref={dropdownRef}>

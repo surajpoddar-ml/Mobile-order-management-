@@ -264,6 +264,141 @@ export const initDb = async () => {
     )
   `);
 
+  // Categories table for master Category Management
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
+      imageUrl TEXT,
+      icon TEXT DEFAULT 'Package',
+      description TEXT,
+      status TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Inactive')),
+      displayOrder INTEGER DEFAULT 0,
+      createdDate TEXT NOT NULL,
+      updatedDate TEXT NOT NULL
+    )
+  `);
+
+  // Seed default categories if empty
+  try {
+    const existingCatCount = await queryGet('SELECT COUNT(*) as count FROM categories');
+    if (!existingCatCount || existingCatCount.count === 0) {
+      const defaultCategories = [
+        {
+          name: 'Charging',
+          slug: 'charging',
+          icon: 'Zap',
+          imageUrl: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=600&q=80',
+          description: 'High-speed fast wall adapters, GaN power blocks, and wireless charging stations.',
+          status: 'Active',
+          displayOrder: 1
+        },
+        {
+          name: 'Power',
+          slug: 'power',
+          icon: 'Battery',
+          imageUrl: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80',
+          description: 'High capacity power banks, MagSafe magnetic batteries, and portable power stations.',
+          status: 'Active',
+          displayOrder: 2
+        },
+        {
+          name: 'Cables',
+          slug: 'cables',
+          icon: 'Cable',
+          imageUrl: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80',
+          description: 'Ultra-durable silicon and braided Type-C, Lightning, and Micro USB cables.',
+          status: 'Active',
+          displayOrder: 3
+        },
+        {
+          name: 'Audio',
+          slug: 'audio',
+          icon: 'Headphones',
+          imageUrl: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=600&q=80',
+          description: 'True Wireless (TWS) earbuds, active noise cancelling headphones, and neckbands.',
+          status: 'Active',
+          displayOrder: 4
+        },
+        {
+          name: 'Protection',
+          slug: 'protection',
+          icon: 'Shield',
+          imageUrl: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=600&q=80',
+          description: 'Edge-to-edge 9H tempered glass, privacy screen guards, and shockproof cases.',
+          status: 'Active',
+          displayOrder: 5
+        },
+        {
+          name: 'Displays',
+          slug: 'displays',
+          icon: 'Smartphone',
+          imageUrl: 'https://images.unsplash.com/photo-1597733336794-12d05021d510?auto=format&fit=crop&w=600&q=80',
+          description: 'Premium OEM OLED and IPS touch screen replacement assemblies.',
+          status: 'Active',
+          displayOrder: 6
+        },
+        {
+          name: 'Batteries',
+          slug: 'batteries',
+          icon: 'BatteryCharging',
+          imageUrl: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=600&q=80',
+          description: 'High-density zero-cycle lithium-ion replacement battery cells.',
+          status: 'Active',
+          displayOrder: 7
+        },
+        {
+          name: 'Chargers',
+          slug: 'chargers',
+          icon: 'Zap',
+          imageUrl: 'https://images.unsplash.com/photo-1622445262464-84b1456045b6?auto=format&fit=crop&w=600&q=80',
+          description: 'Multi-port USB-C and USB-A smart adapters with Power Delivery.',
+          status: 'Active',
+          displayOrder: 8
+        },
+        {
+          name: 'Connectors',
+          slug: 'connectors',
+          icon: 'Cpu',
+          imageUrl: 'https://images.unsplash.com/photo-1597733336794-12d05021d510?auto=format&fit=crop&w=600&q=80',
+          description: 'Micro-soldering connectors, charging sub-boards, and flex ribbon cables.',
+          status: 'Active',
+          displayOrder: 9
+        }
+      ];
+
+      const now = new Date().toISOString();
+      for (const cat of defaultCategories) {
+        await queryRun(
+          `INSERT OR IGNORE INTO categories (name, slug, icon, imageUrl, description, status, displayOrder, createdDate, updatedDate)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [cat.name, cat.slug, cat.icon, cat.imageUrl, cat.description, cat.status, cat.displayOrder, now, now]
+        );
+      }
+      console.log('[INIT DB] Initial default categories seeded.');
+    }
+
+    // Also auto-sync any category from products that isn't in categories table
+    const productCategoriesInDb = await queryAll('SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != ""');
+    const now = new Date().toISOString();
+    for (const row of productCategoriesInDb) {
+      const catName = row.category.trim();
+      if (!catName) continue;
+      const slug = catName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const existing = await queryGet('SELECT id FROM categories WHERE LOWER(name) = LOWER(?)', [catName]);
+      if (!existing) {
+        await queryRun(
+          `INSERT INTO categories (name, slug, icon, imageUrl, description, status, displayOrder, createdDate, updatedDate)
+           VALUES (?, ?, 'Package', '', ?, 'Active', 10, ?, ?)`,
+          [catName, slug, `${catName} category products and spare parts`, now, now]
+        );
+      }
+    }
+  } catch (err) {
+    console.error('Category table init/sync notice:', err.message);
+  }
+
   console.log('Database tables verified and ready.');
 };
 

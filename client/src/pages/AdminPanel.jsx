@@ -6,7 +6,8 @@ import {
   Search, Eye, Trash2, Check, X, PauseCircle, PlayCircle, RefreshCw, Layers,
   Film, Image as ImageIcon, Upload, Plus, ExternalLink, Sparkles,
   LayoutDashboard, Package, Menu, Edit, ArrowLeft, AlertCircle,
-  ShoppingCart, Truck, FileText, QrCode, Calculator, Percent, Tag, EyeOff, Info, ArrowRightLeft, ToggleLeft, ToggleRight
+  ShoppingCart, Truck, FileText, QrCode, Calculator, Percent, Tag, EyeOff, Info, ArrowRightLeft, ToggleLeft, ToggleRight,
+  FolderTree, Battery, BatteryCharging, Cable, Headphones, Shield, Smartphone, Cpu, Zap
 } from 'lucide-react';
 
 export const AdminPanel = () => {
@@ -95,16 +96,83 @@ export const AdminPanel = () => {
     orderIndex: 0
   });
 
-  // Categories list for quick select
-  const productCategories = [
-    'Displays',
-    'Batteries',
-    'Chargers',
-    'USB cables',
-    'Earphones',
-    'Mobile connectors',
-    'Other mobile accessories'
+  // Category management & taxonomy state
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [categorySearchTerm, setCategorySearchTerm] = useState('');
+  const [categoryStatusFilter, setCategoryStatusFilter] = useState('All'); // 'All' | 'Active' | 'Inactive'
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [deletingCategoryId, setDeletingCategoryId] = useState(null);
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    slug: '',
+    icon: 'Tag',
+    imageUrl: '',
+    description: '',
+    status: 'Active',
+    displayOrder: 0
+  });
+
+  const categoryIconMap = {
+    Zap,
+    Battery,
+    BatteryCharging,
+    Cable,
+    Headphones,
+    Shield,
+    Smartphone,
+    Cpu,
+    Tag,
+    Package,
+    Layers,
+    Sparkles,
+    FolderTree
+  };
+
+  const getCategoryIconComponent = (iconName) => {
+    return categoryIconMap[iconName] || Tag;
+  };
+
+  const AVAILABLE_CATEGORY_ICONS = [
+    { id: 'Zap', label: 'Charging / Fast Charge' },
+    { id: 'Battery', label: 'Battery / Power' },
+    { id: 'BatteryCharging', label: 'Power Supply' },
+    { id: 'Cable', label: 'Cables & USB' },
+    { id: 'Headphones', label: 'Audio & Sound' },
+    { id: 'Shield', label: 'Cases & Protection' },
+    { id: 'Smartphone', label: 'Displays & Screens' },
+    { id: 'Cpu', label: 'Hardware & Chips' },
+    { id: 'Tag', label: 'Accessories' },
+    { id: 'Package', label: 'Bundles & Kits' },
+    { id: 'Layers', label: 'Modules & Parts' },
+    { id: 'Sparkles', label: 'Featured & Deals' },
+    { id: 'FolderTree', label: 'Taxonomy Group' }
   ];
+
+  // Dynamic categories list from database (with fallback to defaults)
+  const activeCategoryList = (Array.isArray(categories) && categories.length > 0)
+    ? categories.filter(c => c && c.status === 'Active').map(c => c.name)
+    : [
+        'Charging',
+        'Power',
+        'Cables',
+        'Audio',
+        'Protection',
+        'Displays',
+        'Batteries',
+        'Chargers',
+        'Connectors',
+        'Other mobile accessories'
+      ];
+
+  const allCategoryList = (Array.isArray(categories) && categories.length > 0)
+    ? Array.from(new Set(categories.map(c => c && c.name).filter(Boolean)))
+    : activeCategoryList;
+
+  // Backward compatibility alias for any existing reference
+  const productCategories = allCategoryList;
 
   const notify = (msg) => {
     setActionMsg(msg);
@@ -119,8 +187,8 @@ export const AdminPanel = () => {
         api.admin.getMetrics(),
         api.admin.getUsers({ userType: typeFilter, accountStatus: statusFilter, search: searchTerm })
       ]);
-      if (mRes.success) setMetrics(mRes.metrics);
-      if (uRes.success) setUsers(uRes.users);
+      if (mRes && mRes.success && mRes.metrics) setMetrics(mRes.metrics);
+      if (uRes && uRes.success && Array.isArray(uRes.users)) setUsers(uRes.users);
     } catch (err) {
       console.error('Error loading admin user data:', err);
     } finally {
@@ -133,7 +201,7 @@ export const AdminPanel = () => {
     setLoadingProducts(true);
     try {
       const res = await api.products.getVisibleProducts('Admin');
-      if (res.success) setAllProducts(res.products || []);
+      if (res && res.success && Array.isArray(res.products)) setAllProducts(res.products);
     } catch (err) {
       console.error('Failed to load products:', err);
     } finally {
@@ -146,7 +214,7 @@ export const AdminPanel = () => {
     setLoadingAds(true);
     try {
       const res = await api.advertisements.getAll();
-      if (res.success) setAdvertisements(res.advertisements || []);
+      if (res && res.success && Array.isArray(res.advertisements)) setAdvertisements(res.advertisements);
     } catch (err) {
       console.error('Failed to load ads:', err);
     } finally {
@@ -159,13 +227,136 @@ export const AdminPanel = () => {
     setLoadingOrders(true);
     try {
       const res = await api.orders.getAllAdmin();
-      if (res.success) setOrders(res.orders || []);
+      if (res && res.success && Array.isArray(res.orders)) setOrders(res.orders);
     } catch (err) {
       console.error('Failed to load orders in admin:', err);
     } finally {
       setLoadingOrders(false);
     }
   };
+
+  // Load categories catalog
+  const loadCategoryData = async () => {
+    setLoadingCategories(true);
+    try {
+      const res = await api.categories.getAll(true);
+      if (res && res.success && Array.isArray(res.categories)) setCategories(res.categories);
+    } catch (err) {
+      console.error('Failed to load categories:', err);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const slugify = (text) => {
+    return (text || '')
+      .toString()
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]+/g, '')
+      .replace(/--+/g, '-');
+  };
+
+  const openNewCategoryModal = () => {
+    setEditingCategory(null);
+    setCategoryForm({
+      name: '',
+      slug: '',
+      icon: 'Tag',
+      imageUrl: '',
+      description: '',
+      status: 'Active',
+      displayOrder: (categories.length || 0) + 1
+    });
+    setCategoryModalOpen(true);
+  };
+
+  const openEditCategoryModal = (cat) => {
+    setEditingCategory(cat);
+    setCategoryForm({
+      name: cat.name || '',
+      slug: cat.slug || '',
+      icon: cat.icon || 'Tag',
+      imageUrl: cat.imageUrl || '',
+      description: cat.description || '',
+      status: cat.status || 'Active',
+      displayOrder: cat.displayOrder ?? 0
+    });
+    setCategoryModalOpen(true);
+  };
+
+  const handleSaveCategory = async (e) => {
+    if (e) e.preventDefault();
+    if (!categoryForm.name.trim()) {
+      alert('Category Name is required.');
+      return;
+    }
+
+    setSavingCategory(true);
+    try {
+      const payload = {
+        name: categoryForm.name.trim(),
+        slug: categoryForm.slug?.trim() || slugify(categoryForm.name),
+        icon: categoryForm.icon || 'Tag',
+        imageUrl: categoryForm.imageUrl?.trim() || '',
+        description: categoryForm.description?.trim() || '',
+        status: categoryForm.status || 'Active',
+        displayOrder: Number(categoryForm.displayOrder) || 0
+      };
+
+      if (editingCategory) {
+        const res = await api.categories.update(editingCategory.id, payload);
+        notify(res.message || 'Category updated successfully');
+      } else {
+        const res = await api.categories.create(payload);
+        notify(res.message || 'Category created successfully');
+      }
+
+      setCategoryModalOpen(false);
+      await loadCategoryData();
+      await loadProductData(); // Sync products in case category name was changed
+      window.dispatchEvent(new Event('mws_categories_updated'));
+    } catch (err) {
+      alert(err.message || 'Failed to save category');
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const handleToggleCategoryStatus = async (cat) => {
+    const nextStatus = cat.status === 'Active' ? 'Inactive' : 'Active';
+    try {
+      const res = await api.categories.toggleStatus(cat.id, nextStatus);
+      notify(res.message || `Category status updated to ${nextStatus}`);
+      await loadCategoryData();
+      window.dispatchEvent(new Event('mws_categories_updated'));
+    } catch (err) {
+      alert(err.message || 'Failed to update category status');
+    }
+  };
+
+  const handleDeleteCategory = async (cat) => {
+    const prodCount = cat.productCount || 0;
+    const confirmMsg = prodCount > 0
+      ? `Warning: Category "${cat.name}" is assigned to ${prodCount} product(s).\n\nDeleting this category will keep the products but remove this category from the taxonomy.\n\nAre you sure you want to delete "${cat.name}"?`
+      : `Are you sure you want to permanently delete category "${cat.name}"?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setDeletingCategoryId(cat.id);
+    try {
+      const res = await api.categories.delete(cat.id);
+      notify(res.message || 'Category deleted successfully');
+      await loadCategoryData();
+      window.dispatchEvent(new Event('mws_categories_updated'));
+    } catch (err) {
+      alert(err.message || 'Failed to delete category');
+    } finally {
+      setDeletingCategoryId(null);
+    }
+  };
+
 
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     try {
@@ -254,6 +445,16 @@ export const AdminPanel = () => {
   }, []);
 
   useEffect(() => {
+    loadCategoryData();
+    const handleCategorySync = () => loadCategoryData();
+    window.addEventListener('mws_categories_updated', handleCategorySync);
+    return () => window.removeEventListener('mws_categories_updated', handleCategorySync);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'categories' || activeTab === 'products' || activeTab === 'overview') {
+      loadCategoryData();
+    }
     if (activeTab === 'products' || activeTab === 'overview') {
       loadProductData();
     }
@@ -706,17 +907,20 @@ export const AdminPanel = () => {
   };
 
   // Filtered users for specific tabs
-  let displayUsers = users;
+  const safeUsers = Array.isArray(users) ? users : [];
+  let displayUsers = safeUsers;
   if (activeTab === 'pending') {
-    displayUsers = users.filter(u => u.userType === 'Distributor' && u.accountStatus === 'Pending');
+    displayUsers = safeUsers.filter(u => u && u.userType === 'Distributor' && u.accountStatus === 'Pending');
   } else if (activeTab === 'distributors') {
-    displayUsers = users.filter(u => u.userType === 'Distributor');
+    displayUsers = safeUsers.filter(u => u && u.userType === 'Distributor');
   } else if (activeTab === 'customers') {
-    displayUsers = users.filter(u => u.userType === 'Customer');
+    displayUsers = safeUsers.filter(u => u && u.userType === 'Customer');
   }
 
   // Filtered products for Product Management Dual-Portal tab
-  const filteredProducts = allProducts.filter(p => {
+  const safeProducts = Array.isArray(allProducts) ? allProducts : [];
+  const filteredProducts = safeProducts.filter(p => {
+    if (!p) return false;
     // Visibility filter
     const isCustomer = p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true || p.targetVisibility === 'Customer' || p.targetVisibility === 'Both';
     const isDistributor = p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true || p.targetVisibility === 'Distributor' || p.targetVisibility === 'Both';
@@ -746,6 +950,22 @@ export const AdminPanel = () => {
     }
 
     return true;
+  });
+
+  // Filtered categories for Category Management tab
+  const safeCategories = Array.isArray(categories) ? categories : [];
+  const filteredCategories = safeCategories.filter(cat => {
+    if (!cat) return false;
+    const matchesSearch =
+      !categorySearchTerm ||
+      cat.name?.toLowerCase().includes(categorySearchTerm.toLowerCase()) ||
+      cat.slug?.toLowerCase().includes(categorySearchTerm.toLowerCase()) ||
+      cat.description?.toLowerCase().includes(categorySearchTerm.toLowerCase());
+
+    const matchesStatus =
+      categoryStatusFilter === 'All' || cat.status === categoryStatusFilter;
+
+    return matchesSearch && matchesStatus;
   });
 
   // Common UI Styles
@@ -805,13 +1025,14 @@ export const AdminPanel = () => {
   // Sidebar Menu Items Definition
   const navMenuItems = [
     { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard, badge: null, color: 'var(--primary)' },
-    { id: 'orders', label: 'Orders', icon: ShoppingCart, badge: orders.length, color: '#2563eb' },
-    { id: 'pending', label: 'Pending Approvals', icon: Clock, badge: metrics.distributors.pending, color: 'var(--status-pending)' },
-    { id: 'distributors', label: 'Distributors', icon: Building2, badge: metrics.distributors.approved, color: 'var(--distributor-accent)' },
-    { id: 'customers', label: 'Customers', icon: Users, badge: metrics.customers.active, color: 'var(--customer-accent)' },
-    { id: 'products', label: 'Product Management', icon: Package, badge: allProducts.length, color: '#0d9488' },
-    { id: 'advertisements', label: 'Ad Board & Media', icon: Film, badge: advertisements.length, color: '#ea580c' },
-    { id: 'all', label: 'All User Accounts', icon: Search, badge: users.length, color: '#6366f1' },
+    { id: 'orders', label: 'Orders', icon: ShoppingCart, badge: orders?.length ?? 0, color: '#2563eb' },
+    { id: 'pending', label: 'Pending Approvals', icon: Clock, badge: metrics?.distributors?.pending ?? 0, color: 'var(--status-pending)' },
+    { id: 'distributors', label: 'Distributors', icon: Building2, badge: metrics?.distributors?.approved ?? 0, color: 'var(--distributor-accent)' },
+    { id: 'customers', label: 'Customers', icon: Users, badge: metrics?.customers?.active ?? 0, color: 'var(--customer-accent)' },
+    { id: 'products', label: 'Product Management', icon: Package, badge: allProducts?.length ?? 0, color: '#0d9488' },
+    { id: 'categories', label: 'Categories', icon: FolderTree, badge: categories?.length ?? 0, color: '#8b5cf6' },
+    { id: 'advertisements', label: 'Ad Board & Media', icon: Film, badge: advertisements?.length ?? 0, color: '#ea580c' },
+    { id: 'all', label: 'All User Accounts', icon: Search, badge: users?.length ?? 0, color: '#6366f1' },
   ];
 
   return (
@@ -1156,11 +1377,12 @@ export const AdminPanel = () => {
               marginBottom: '28px'
             }}>
               {[
-                { label: 'Total Orders', value: orders.length, color: '#2563eb', bg: 'rgba(37, 99, 235, 0.08)', Icon: ShoppingCart, tab: 'orders' },
-                { label: 'Pending Approvals', value: metrics.distributors.pending, color: 'var(--status-pending)', bg: 'var(--status-pending-bg)', Icon: Clock, tab: 'pending' },
-                { label: 'Verified Distributors', value: metrics.distributors.approved, color: 'var(--distributor-accent)', bg: 'var(--distributor-light)', Icon: Building2, tab: 'distributors' },
-                { label: 'Active Customers', value: metrics.customers.active, color: 'var(--customer-accent)', bg: 'var(--customer-light)', Icon: Users, tab: 'customers' },
-                { label: 'Active Catalog Products', value: allProducts.length, color: '#0d9488', bg: 'rgba(13, 148, 136, 0.08)', Icon: Package, tab: 'products' },
+                { label: 'Total Orders', value: orders?.length ?? 0, color: '#2563eb', bg: 'rgba(37, 99, 235, 0.08)', Icon: ShoppingCart, tab: 'orders' },
+                { label: 'Pending Approvals', value: metrics?.distributors?.pending ?? 0, color: 'var(--status-pending)', bg: 'var(--status-pending-bg)', Icon: Clock, tab: 'pending' },
+                { label: 'Verified Distributors', value: metrics?.distributors?.approved ?? 0, color: 'var(--distributor-accent)', bg: 'var(--distributor-light)', Icon: Building2, tab: 'distributors' },
+                { label: 'Active Customers', value: metrics?.customers?.active ?? 0, color: 'var(--customer-accent)', bg: 'var(--customer-light)', Icon: Users, tab: 'customers' },
+                { label: 'Active Catalog Products', value: allProducts?.length ?? 0, color: '#0d9488', bg: 'rgba(13, 148, 136, 0.08)', Icon: Package, tab: 'products' },
+                { label: 'Catalog Categories', value: categories?.length ?? 0, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.08)', Icon: FolderTree, tab: 'categories' },
               ].map(card => (
                 <div
                   key={card.label}
@@ -1214,6 +1436,9 @@ export const AdminPanel = () => {
                 </button>
                 <button onClick={openNewProductModal} className="btn btn-secondary" style={{ padding: '10px 18px', fontSize: '0.88rem' }}>
                   <Plus size={16} /> Post New Product
+                </button>
+                <button onClick={() => setActiveTab('categories')} className="btn btn-secondary" style={{ padding: '10px 16px', fontSize: '0.88rem' }}>
+                  <FolderTree size={16} /> Categories ({categories.length})
                 </button>
                 <button onClick={() => setActiveTab('advertisements')} className="btn btn-secondary" style={{ padding: '10px 16px', fontSize: '0.88rem' }}>
                   <Film size={16} /> Manage Ads
@@ -2193,6 +2418,416 @@ export const AdminPanel = () => {
         )}
 
         {/* ======================================================== */}
+        {/* ========= VIEW: MASTER CATEGORY MANAGEMENT ============= */}
+        {/* ======================================================== */}
+        {activeTab === 'categories' && (
+          <div>
+            {/* Header with Add Category button */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '16px',
+              marginBottom: '20px'
+            }}>
+              <div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                  <FolderTree size={14} /> Catalog Authority Control
+                </div>
+                <h1 style={{ fontSize: 'clamp(1.4rem, 3.5vw, 1.85rem)', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                  Category Management
+                </h1>
+                <p style={{ color: 'var(--text-body)', fontSize: '0.88rem', margin: '4px 0 0 0' }}>
+                  Organize catalog taxonomy, manage display icons and cover images, control portal activation, and associate products with categories.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  onClick={loadCategoryData}
+                  className="btn btn-secondary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <RefreshCw size={13} className={loadingCategories ? 'spin' : ''} /> Refresh
+                </button>
+                <button
+                  onClick={openNewCategoryModal}
+                  className="btn btn-primary"
+                  style={{
+                    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                    border: 'none',
+                    boxShadow: '0 4px 14px rgba(124, 58, 237, 0.28)',
+                    padding: '10px 20px',
+                    fontSize: '0.90rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <Plus size={16} /> Add New Category
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Metrics KPI Strip */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+              gap: '14px',
+              marginBottom: '22px'
+            }}>
+              <div className="glass-panel" style={{ padding: '16px 20px', background: '#ffffff', border: '1.5px solid var(--border-medium)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase' }}>Total Categories</span>
+                  <FolderTree size={16} color="#7c3aed" />
+                </div>
+                <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#7c3aed' }}>{categories.length}</div>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '16px 20px', background: '#ffffff', border: '1.5px solid var(--border-medium)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>Active in Portals</span>
+                  <CheckCircle size={16} color="#059669" />
+                </div>
+                <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#059669' }}>
+                  {categories.filter(c => c.status === 'Active').length}
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '16px 20px', background: '#ffffff', border: '1.5px solid var(--border-medium)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Inactive / Draft</span>
+                  <PauseCircle size={16} color="#64748b" />
+                </div>
+                <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#64748b' }}>
+                  {categories.filter(c => c.status === 'Inactive').length}
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '16px 20px', background: '#ffffff', border: '1.5px solid var(--border-medium)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase' }}>Assigned Products</span>
+                  <Package size={16} color="#2563eb" />
+                </div>
+                <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#2563eb' }}>
+                  {categories.reduce((acc, c) => acc + (c.productCount || 0), 0)}
+                </div>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="glass-panel" style={{
+              padding: '16px 20px',
+              background: '#ffffff',
+              border: '1.5px solid var(--border-medium)',
+              marginBottom: '20px',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '12px',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', flex: 1, minWidth: '280px' }}>
+                <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <input
+                    type="text"
+                    placeholder="Search categories by name, slug, or keywords..."
+                    value={categorySearchTerm}
+                    onChange={e => setCategorySearchTerm(e.target.value)}
+                    style={{ ...inputStyle, paddingLeft: '34px', fontSize: '0.84rem' }}
+                  />
+                </div>
+
+                <div style={{ minWidth: '150px' }}>
+                  <select
+                    value={categoryStatusFilter}
+                    onChange={e => setCategoryStatusFilter(e.target.value)}
+                    style={{ ...selectStyle, width: '100%', fontSize: '0.84rem' }}
+                  >
+                    <option value="All">All Statuses</option>
+                    <option value="Active">Active Only</option>
+                    <option value="Inactive">Inactive Only</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#64748b' }}>
+                Showing {filteredCategories.length} of {categories.length} categories
+              </div>
+            </div>
+
+            {/* Categories Table View */}
+            <div className="glass-panel" style={{
+              background: '#ffffff',
+              borderRadius: 'var(--radius-lg)',
+              border: '1.5px solid var(--border-medium)',
+              overflow: 'hidden',
+              boxShadow: 'var(--shadow-card)'
+            }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '780px' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
+                      <th style={{ padding: '12px 18px', fontSize: '0.74rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Category & Details
+                      </th>
+                      <th style={{ padding: '12px 14px', fontSize: '0.74rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Visual Icon
+                      </th>
+                      <th style={{ padding: '12px 14px', fontSize: '0.74rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
+                        Order
+                      </th>
+                      <th style={{ padding: '12px 14px', fontSize: '0.74rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Products
+                      </th>
+                      <th style={{ padding: '12px 14px', fontSize: '0.74rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
+                        Status & Activation
+                      </th>
+                      <th style={{ padding: '12px 18px', fontSize: '0.74rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCategories.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ padding: '48px 24px', textAlign: 'center' }}>
+                          <FolderTree size={36} color="#94a3b8" style={{ margin: '0 auto 12px auto' }} />
+                          <div style={{ fontSize: '1rem', fontWeight: 800, color: '#1e293b', marginBottom: '4px' }}>
+                            No Categories Found
+                          </div>
+                          <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '0 0 16px 0' }}>
+                            {categorySearchTerm || categoryStatusFilter !== 'All'
+                              ? 'Try adjusting your search terms or filters.'
+                              : 'No categories have been configured yet.'}
+                          </p>
+                          <button onClick={openNewCategoryModal} className="btn btn-primary btn-sm" style={{ background: '#7c3aed' }}>
+                            <Plus size={14} /> Add First Category
+                          </button>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredCategories.map((cat, idx) => {
+                        const IconComponent = getCategoryIconComponent(cat.icon);
+                        const isInactive = cat.status === 'Inactive';
+                        const productCount = cat.productCount || 0;
+
+                        return (
+                          <tr
+                            key={cat.id || idx}
+                            style={{
+                              borderBottom: '1px solid #f1f5f9',
+                              background: isInactive ? 'rgba(248, 250, 252, 0.7)' : '#ffffff',
+                              transition: 'background 0.15s ease'
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = isInactive ? '#f1f5f9' : '#f8fafc'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = isInactive ? 'rgba(248, 250, 252, 0.7)' : '#ffffff'; }}
+                          >
+                            {/* Category Thumbnail, Name, Slug, Description */}
+                            <td style={{ padding: '14px 18px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                <div style={{
+                                  width: '46px',
+                                  height: '46px',
+                                  borderRadius: '12px',
+                                  background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(99, 102, 241, 0.15))',
+                                  border: '1px solid rgba(124, 58, 237, 0.2)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  overflow: 'hidden',
+                                  flexShrink: 0
+                                }}>
+                                  {cat.imageUrl ? (
+                                    <img
+                                      src={cat.imageUrl}
+                                      alt={cat.name}
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                      onError={e => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                  ) : (
+                                    <IconComponent size={22} color="#7c3aed" />
+                                  )}
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {cat.name}
+                                    {cat.slug && (
+                                      <span style={{
+                                        fontSize: '0.70rem',
+                                        fontFamily: 'var(--font-mono)',
+                                        color: '#6366f1',
+                                        background: 'rgba(99, 102, 241, 0.08)',
+                                        padding: '1px 6px',
+                                        borderRadius: '4px',
+                                        fontWeight: 600
+                                      }}>
+                                        /{cat.slug}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px', maxWidth: '380px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {cat.description || 'No description provided'}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Icon Identifier */}
+                            <td style={{ padding: '14px 14px' }}>
+                              <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                padding: '4px 10px',
+                                borderRadius: '20px',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                color: '#475569'
+                              }}>
+                                <IconComponent size={14} color="#7c3aed" />
+                                <span>{cat.icon || 'Tag'}</span>
+                              </div>
+                            </td>
+
+                            {/* Display Order */}
+                            <td style={{ padding: '14px 14px', textAlign: 'center' }}>
+                              <span style={{
+                                fontSize: '0.78rem',
+                                fontWeight: 800,
+                                color: '#0f172a',
+                                background: '#f1f5f9',
+                                padding: '3px 8px',
+                                borderRadius: '6px'
+                              }}>
+                                #{cat.displayOrder ?? idx + 1}
+                              </span>
+                            </td>
+
+                            {/* Products count & link */}
+                            <td style={{ padding: '14px 14px' }}>
+                              <div>
+                                <span style={{
+                                  fontSize: '0.82rem',
+                                  fontWeight: 800,
+                                  color: productCount > 0 ? '#0f766e' : '#94a3b8',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px'
+                                }}>
+                                  <Package size={13} />
+                                  {productCount} {productCount === 1 ? 'Product' : 'Products'}
+                                </span>
+                                {productCount > 0 && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                                    <span style={{ fontSize: '0.70rem', color: '#64748b' }}>
+                                      {cat.customerProductCount || 0} Retail • {cat.distributorProductCount || 0} Wholesale
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setProductCategoryFilter(cat.name);
+                                        setActiveTab('products');
+                                      }}
+                                      style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#2563eb',
+                                        fontSize: '0.70rem',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        padding: 0,
+                                        textDecoration: 'underline'
+                                      }}
+                                    >
+                                      View
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Status with 1-Click Toggle */}
+                            <td style={{ padding: '14px 14px', textAlign: 'center' }}>
+                              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleCategoryStatus(cat)}
+                                  title={`Click to ${isInactive ? 'activate' : 'deactivate'} category`}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '4px 10px',
+                                    borderRadius: '20px',
+                                    border: isInactive ? '1px solid #cbd5e1' : '1px solid rgba(16, 185, 129, 0.3)',
+                                    background: isInactive ? '#f1f5f9' : 'rgba(16, 185, 129, 0.1)',
+                                    color: isInactive ? '#64748b' : '#059669',
+                                    fontSize: '0.76rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                >
+                                  {isInactive ? (
+                                    <>
+                                      <ToggleLeft size={16} color="#94a3b8" />
+                                      <span>Inactive</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ToggleRight size={16} color="#059669" />
+                                      <span>Active</span>
+                                    </>
+                                  )}
+                                </button>
+                                <span style={{ fontSize: '0.66rem', color: '#94a3b8' }}>
+                                  {isInactive ? 'Hidden from creation' : 'Live in catalog'}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Actions (Edit / Delete) */}
+                            <td style={{ padding: '14px 18px', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => openEditCategoryModal(cat)}
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ padding: '6px 12px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                                  title="Edit Category Details"
+                                >
+                                  <Edit size={13} /> Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={deletingCategoryId === cat.id}
+                                  onClick={() => handleDeleteCategory(cat)}
+                                  className="btn btn-danger btn-sm"
+                                  style={{ padding: '6px 10px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  title="Delete Category"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
         {/* =========== VIEW 3: AD BOARD & MEDIA MANAGEMENT ======== */}
         {/* ======================================================== */}
         {activeTab === 'advertisements' && (
@@ -2838,15 +3473,39 @@ export const AdminPanel = () => {
 
                   {/* Category */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
-                      Category *
-                    </label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>
+                        Category *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProductModalOpen(false);
+                          setActiveTab('categories');
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#7c3aed',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          padding: 0
+                        }}
+                        title="Manage product categories"
+                      >
+                        <FolderTree size={12} /> Manage Categories
+                      </button>
+                    </div>
                     <select
                       value={productForm.category}
                       onChange={e => setProductForm({ ...productForm, category: e.target.value })}
                       style={{ ...inputStyle, cursor: 'pointer' }}
                     >
-                      {productCategories.map(cat => (
+                      {Array.from(new Set([...activeCategoryList, productForm.category].filter(Boolean))).map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
                       ))}
                     </select>
@@ -3538,6 +4197,260 @@ export const AdminPanel = () => {
                   }}
                 >
                   {savingProduct ? 'Saving Configuration...' : editingProduct ? 'Save Product Changes' : 'Publish Product to Portals'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* ============== MODAL: ADD / EDIT CATEGORY ============= */}
+      {/* ======================================================== */}
+      {categoryModalOpen && (
+        <div style={modalOverlay}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: 'var(--radius-xl)',
+            maxWidth: '620px',
+            width: '100%',
+            padding: '28px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            border: '1px solid var(--border-subtle)',
+            maxHeight: '92vh',
+            overflowY: 'auto'
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', paddingBottom: '14px', borderBottom: '1.5px solid var(--border-subtle)' }}>
+              <div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                  <FolderTree size={14} /> Catalog Authority Taxonomy
+                </div>
+                <h3 style={{ fontSize: '1.30rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                  {editingCategory ? `Edit Category: ${editingCategory.name}` : 'Create New Catalog Category'}
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', margin: '4px 0 0 0' }}>
+                  Define the category title, URL slug, custom icon, cover image, and portal activation status.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCategoryModalOpen(false)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCategory}>
+              {/* Category Name & Slug */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: '14px',
+                marginBottom: '16px'
+              }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                    Category Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Fast Chargers & Adapters"
+                    value={categoryForm.name}
+                    onChange={e => {
+                      const newName = e.target.value;
+                      const currentAutoSlug = slugify(categoryForm.name);
+                      const shouldAutoUpdateSlug = !categoryForm.slug || categoryForm.slug === currentAutoSlug;
+                      setCategoryForm({
+                        ...categoryForm,
+                        name: newName,
+                        slug: shouldAutoUpdateSlug ? slugify(newName) : categoryForm.slug
+                      });
+                    }}
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                    Slug (URL Identifier)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. fast-chargers"
+                    value={categoryForm.slug}
+                    onChange={e => setCategoryForm({ ...categoryForm, slug: slugify(e.target.value) })}
+                    style={{ ...inputStyle, fontFamily: 'var(--font-mono)', fontSize: '0.84rem' }}
+                  />
+                </div>
+              </div>
+
+              {/* Status & Display Order */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '14px',
+                marginBottom: '18px'
+              }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                    Status & Activation *
+                  </label>
+                  <select
+                    value={categoryForm.status}
+                    onChange={e => setCategoryForm({ ...categoryForm, status: e.target.value })}
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  >
+                    <option value="Active">Active (Live in catalogs & product forms)</option>
+                    <option value="Inactive">Inactive (Deactivated / Hidden from creation)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                    Display Order
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={categoryForm.displayOrder}
+                    onChange={e => setCategoryForm({ ...categoryForm, displayOrder: e.target.value })}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              {/* Select Category Icon */}
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '8px', color: '#1e293b' }}>
+                  Category Icon
+                </label>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                  gap: '8px',
+                  maxHeight: '160px',
+                  overflowY: 'auto',
+                  padding: '8px',
+                  background: '#f8fafc',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  {AVAILABLE_CATEGORY_ICONS.map(item => {
+                    const IconComp = getCategoryIconComponent(item.id);
+                    const isSelected = (categoryForm.icon || 'Tag') === item.id;
+
+                    return (
+                      <button
+                        type="button"
+                        key={item.id}
+                        onClick={() => setCategoryForm({ ...categoryForm, icon: item.id })}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '7px 10px',
+                          borderRadius: '8px',
+                          border: isSelected ? '2px solid #7c3aed' : '1px solid #e2e8f0',
+                          background: isSelected ? 'rgba(124, 58, 237, 0.1)' : '#ffffff',
+                          color: isSelected ? '#7c3aed' : '#334155',
+                          fontSize: '0.78rem',
+                          fontWeight: isSelected ? 800 : 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <IconComp size={16} color={isSelected ? '#7c3aed' : '#64748b'} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.id}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Cover Image URL with Live Thumbnail Preview */}
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                  Cover / Thumbnail Image URL
+                </label>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    placeholder="https://images.unsplash.com/... (Direct image link)"
+                    value={categoryForm.imageUrl}
+                    onChange={e => setCategoryForm({ ...categoryForm, imageUrl: e.target.value })}
+                    style={{ ...inputStyle, flex: 1 }}
+                  />
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '10px',
+                    background: '#f1f5f9',
+                    border: '1.5px solid #cbd5e1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    flexShrink: 0
+                  }}>
+                    {categoryForm.imageUrl ? (
+                      <img
+                        src={categoryForm.imageUrl}
+                        alt="Preview"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={e => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    ) : (
+                      React.createElement(getCategoryIconComponent(categoryForm.icon), { size: 20, color: '#94a3b8' })
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                  Description (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Short description of products found in this category..."
+                  value={categoryForm.description}
+                  onChange={e => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                  style={textareaStyle}
+                />
+              </div>
+
+              {/* Modal Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
+                <button
+                  type="button"
+                  onClick={() => setCategoryModalOpen(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: '10px 18px', fontSize: '0.88rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingCategory}
+                  className="btn btn-primary"
+                  style={{
+                    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                    border: 'none',
+                    boxShadow: '0 4px 12px rgba(124, 58, 237, 0.28)',
+                    padding: '10px 24px',
+                    fontSize: '0.90rem',
+                    fontWeight: 700
+                  }}
+                >
+                  {savingCategory ? 'Saving Category...' : editingCategory ? 'Save Changes' : 'Create Category'}
                 </button>
               </div>
             </form>

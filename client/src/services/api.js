@@ -189,6 +189,39 @@ export const api = {
       })
   },
 
+  // Master Category Management (Admin Authority + Public Discovery)
+  categories: {
+    getAll: (includeInactive = false) => {
+      const query = includeInactive ? '?includeInactive=true' : '';
+      return request(`/categories${query}`, {
+        method: 'GET'
+      });
+    },
+
+    create: (payload) =>
+      request('/categories', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+
+    update: (id, payload) =>
+      request(`/categories/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      }),
+
+    toggleStatus: (id, status) =>
+      request(`/categories/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+      }),
+
+    delete: (id) =>
+      request(`/categories/${id}`, {
+        method: 'DELETE'
+      })
+  },
+
   // Orders Management (Customer & Distributor ordering + Admin authority)
   orders: {
     create: (payload) =>

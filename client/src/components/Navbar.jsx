@@ -40,11 +40,11 @@ export const Navbar = () => {
   const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
-  // Check if currently on Admin Dashboard / Logged in as Admin
-  const isAdmin = user?.userType === 'Admin' || currentRoute === '/admin' || currentRoute === '/admin-access' || currentRoute === '/portal/admin';
+  // Check if currently on Admin Dashboard route
+  const isOnAdminDashboard = currentRoute === '/admin' || currentRoute === '/admin-access' || currentRoute === '/portal/admin';
 
   // If viewing Admin Panel, render ONLY the required admin controls (no consumer shopping cart, search, wishlist, or category bar)
-  if (isAdmin) {
+  if (isOnAdminDashboard) {
     return (
       <header style={{
         position: 'sticky',

@@ -44,10 +44,9 @@ export const AuthProvider = ({ children }) => {
         const response = await api.auth.getMe();
         if (response.success && response.user) {
           setUser(response.user);
-          // Only redirect if on a public page (landing, login)
+          // Only redirect if specifically on the /login page
           const currentPath = window.location.pathname;
-          const isPublic = PUBLIC_ROUTES.includes(currentPath) || currentPath === '/';
-          if (isPublic) {
+          if (currentPath === '/login') {
             if (response.user.userType === 'Customer') navigate('/portal/customer');
             else if (response.user.userType === 'Distributor') navigate('/portal/distributor');
             else if (response.user.userType === 'Admin') navigate('/admin');

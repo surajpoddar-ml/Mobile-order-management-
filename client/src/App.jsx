@@ -48,27 +48,14 @@ function AppContent() {
 
     // ---- Auth: /login ----
     if (path === '/login') {
-      // If already logged in, redirect to proper portal
-      if (user) {
-        if (user.userType === 'Customer') { navigate('/portal/customer'); return null; }
-        if (user.userType === 'Distributor') { navigate('/portal/distributor'); return null; }
-        if (user.userType === 'Admin') { navigate('/admin'); return null; }
-      }
       return <AuthPage prefillData={prefillDemo} />;
     }
 
     // ---- Default: Landing Page ----
-    // If user is already logged in, redirect to their portal
-    if (user) {
-      if (user.userType === 'Customer') { navigate('/portal/customer'); return null; }
-      if (user.userType === 'Distributor') { navigate('/portal/distributor'); return null; }
-      if (user.userType === 'Admin') { navigate('/admin'); return null; }
-    }
-
     return <LandingPage />;
   };
 
-  const isAdmin = user?.userType === 'Admin' || currentRoute === '/admin' || currentRoute === '/admin-access' || currentRoute === '/portal/admin';
+  const isOnAdminDashboard = currentRoute === '/admin' || currentRoute === '/admin-access' || currentRoute === '/portal/admin';
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -78,7 +65,7 @@ function AppContent() {
         {renderView()}
       </main>
 
-      {!isAdmin ? (
+      {!isOnAdminDashboard ? (
         <footer style={{
           borderTop: '1px solid var(--border-subtle)',
           background: 'rgba(11, 15, 25, 0.98)',
