@@ -16,7 +16,11 @@ import {
   Clock,
   ExternalLink,
   Trash2,
-  Sparkles
+  Sparkles,
+  Tag,
+  Package,
+  Eye,
+  RefreshCw
 } from 'lucide-react';
 
 export const NotificationBell = () => {
@@ -58,13 +62,15 @@ export const NotificationBell = () => {
       fetchNotifications(true);
     }, 15000);
 
-    // Event listener for immediate refresh after user actions (order placed, proof submitted, status changed)
+    // Event listener for immediate refresh after user actions (order placed, proof submitted, status changed, products changed)
     const handleRefresh = () => fetchNotifications(true);
     window.addEventListener('mws_notifications_refresh', handleRefresh);
+    window.addEventListener('mws_products_updated', handleRefresh);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('mws_notifications_refresh', handleRefresh);
+      window.removeEventListener('mws_products_updated', handleRefresh);
     };
   }, [user]);
 
@@ -185,6 +191,31 @@ export const NotificationBell = () => {
           icon: AlertCircle,
           color: '#dc2626',
           bg: 'rgba(220, 38, 38, 0.1)'
+        };
+      case 'product_created':
+      case 'product_new':
+        return {
+          icon: Sparkles,
+          color: '#10b981',
+          bg: 'rgba(16, 185, 129, 0.12)'
+        };
+      case 'product_updated':
+        return {
+          icon: Tag,
+          color: '#2563eb',
+          bg: 'rgba(37, 99, 235, 0.12)'
+        };
+      case 'product_stock':
+        return {
+          icon: Package,
+          color: '#f59e0b',
+          bg: 'rgba(245, 158, 11, 0.12)'
+        };
+      case 'product_visibility':
+        return {
+          icon: Eye,
+          color: '#8b5cf6',
+          bg: 'rgba(139, 92, 246, 0.12)'
         };
       default:
         return {

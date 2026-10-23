@@ -1,6 +1,7 @@
 import express from 'express';
 import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
+import { notifyProductEvent } from '../services/notificationService.js';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
@@ -316,6 +317,13 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
 
     const newProduct = await queryGet('SELECT * FROM products WHERE id = ?', [result.lastID]);
 
+    // Dispatch real-time notifications to Customer, Distributor, and Admin
+    try {
+      await notifyProductEvent({ product: newProduct, eventType: 'created' });
+    } catch (notifErr) {
+      console.error('[ProductRoutes] Notification error on product creation:', notifErr.message);
+    }
+
     return res.status(201).json({
       success: true,
       message: `Product "${name.trim()}" created successfully! Portal status: Customer (${showCust ? 'Active' : 'Hidden'}), Distributor (${showDist ? 'Active' : 'Hidden'}).`,
@@ -462,6 +470,13 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
 
     const updated = await queryGet('SELECT * FROM products WHERE id = ?', [id]);
 
+    // Dispatch real-time notifications on product update
+    try {
+      await notifyProductEvent({ product: updated, eventType: 'updated' });
+    } catch (notifErr) {
+      console.error('[ProductRoutes] Notification error on product update:', notifErr.message);
+    }
+
     return res.status(200).json({
       success: true,
       message: `Product "${updated.name}" updated successfully.`,
@@ -499,6 +514,14 @@ router.patch('/:id/visibility', verifyToken, requireAdmin, async (req, res) => {
     );
 
     const updated = await queryGet('SELECT * FROM products WHERE id = ?', [id]);
+
+    // Dispatch notifications on visibility change
+    try {
+      await notifyProductEvent({ product: updated, eventType: 'visibility_changed' });
+    } catch (notifErr) {
+      console.error('[ProductRoutes] Notification error on visibility change:', notifErr.message);
+    }
+
     return res.status(200).json({
       success: true,
       message: `Visibility updated for "${existing.name}": Customer (${showCust ? 'ON' : 'OFF'}), Distributor (${showDist ? 'ON' : 'OFF'})`,
@@ -523,6 +546,14 @@ router.patch('/:id/stock', verifyToken, requireAdmin, async (req, res) => {
 
     const newStock = existing.inStock ? 0 : 1;
     await queryRun('UPDATE products SET inStock = ? WHERE id = ?', [newStock, id]);
+    const updated = await queryGet('SELECT * FROM products WHERE id = ?', [id]);
+
+    // Dispatch notifications on stock status toggle
+    try {
+      await notifyProductEvent({ product: updated, eventType: 'stock_changed' });
+    } catch (notifErr) {
+      console.error('[ProductRoutes] Notification error on stock toggle:', notifErr.message);
+    }
 
     return res.status(200).json({
       success: true,
@@ -550,6 +581,13 @@ router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
     }
 
     await queryRun('DELETE FROM products WHERE id = ?', [id]);
+
+    // Dispatch notifications on product deletion
+    try {
+      await notifyProductEvent({ product: existing, eventType: 'deleted' });
+    } catch (notifErr) {
+      console.error('[ProductRoutes] Notification error on delete:', notifErr.message);
+    }
 
     return res.status(200).json({
       success: true,

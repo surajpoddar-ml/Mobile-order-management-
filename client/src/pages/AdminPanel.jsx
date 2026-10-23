@@ -24,6 +24,37 @@ export const AdminPanel = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [actionMsg, setActionMsg] = useState('');
 
+  // Sync activeTab with URL query parameter e.g. /admin?tab=products
+  useEffect(() => {
+    const syncTabFromUrl = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'advertisements', 'categories'].includes(tab)) {
+          setActiveTab(tab);
+        }
+      } catch (e) {}
+    };
+
+    syncTabFromUrl();
+
+    const handleRouteChange = (e) => {
+      try {
+        const path = e.detail?.path || '';
+        if (path.includes('?')) {
+          const params = new URLSearchParams(path.split('?')[1]);
+          const tab = params.get('tab');
+          if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'advertisements', 'categories'].includes(tab)) {
+            setActiveTab(tab);
+          }
+        }
+      } catch (err) {}
+    };
+
+    window.addEventListener('mws_route_change', handleRouteChange);
+    return () => window.removeEventListener('mws_route_change', handleRouteChange);
+  }, []);
+
   // Orders management state
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
