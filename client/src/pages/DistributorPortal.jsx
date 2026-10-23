@@ -19,8 +19,11 @@ import {
   Truck,
   TrendingUp,
   FileText,
-  MapPin
+  MapPin,
+  Gift,
+  QrCode
 } from 'lucide-react';
+import { RewardsSection } from '../components/rewards/RewardsSection';
 
 export const DistributorPortal = () => {
   const { user } = useAuth();
@@ -282,6 +285,28 @@ export const DistributorPortal = () => {
             >
               <Package size={15} />
               Wholesale Orders {myOrders.length > 0 && `(${myOrders.length})`}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('rewards')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 20px',
+                borderRadius: 'var(--radius-full)',
+                border: 'none',
+                background: activeTab === 'rewards' ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'transparent',
+                color: activeTab === 'rewards' ? '#ffffff' : '#475569',
+                fontSize: '0.86rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: activeTab === 'rewards' ? '0 2px 8px rgba(245, 158, 11, 0.3)' : 'none'
+              }}
+            >
+              <Gift size={15} />
+              <span>My Rewards</span>
             </button>
           </div>
         </div>
@@ -911,6 +936,13 @@ export const DistributorPortal = () => {
               ))}
             </div>
           )}
+        </section>
+      )}
+
+      {/* ====== 5. MY REWARDS VIEW ====== */}
+      {activeTab === 'rewards' && (
+        <section style={{ maxWidth: '1240px', margin: '30px auto 80px', padding: '0 20px' }}>
+          <RewardsSection userType="Distributor" />
         </section>
       )}
     </div>

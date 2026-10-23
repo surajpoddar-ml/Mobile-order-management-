@@ -20,7 +20,8 @@ import {
   Headphones,
   Tag,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  Gift
 } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 
@@ -561,6 +562,34 @@ export const Navbar = () => {
             >
               <User size={20} color="#1e293b" />
               <span className="hide-on-mobile">Login / Register</span>
+            </button>
+          )}
+
+          {/* Rewards Shortcut Button (Customer / Distributor) */}
+          {user && (user.userType === 'Customer' || user.userType === 'Distributor') && (
+            <button
+              onClick={() => {
+                const target = user.userType === 'Distributor' ? '/distributor?tab=rewards' : '/customer?tab=rewards';
+                navigate(target);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '6px 12px',
+                borderRadius: '20px',
+                border: '1.5px solid #fde68a',
+                background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                color: '#b45309',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title="My Rewards & Points"
+            >
+              <Gift size={14} color="#d97706" />
+              <span className="hide-on-mobile">Rewards</span>
             </button>
           )}
 

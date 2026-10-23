@@ -10,6 +10,7 @@ import adRoutes from './routes/adRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
+import rewardRoutes from './routes/rewardRoutes.js';
 import { seedDatabase } from './database/seed.js';
 
 dotenv.config();
@@ -41,6 +42,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/advertisements', adRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/rewards', rewardRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

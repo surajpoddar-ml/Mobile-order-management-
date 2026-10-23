@@ -296,6 +296,89 @@ export const api = {
       request(`/notifications/${id}`, {
         method: 'DELETE'
       })
+  },
+
+  // QR-Based Points, Rewards & Cash Redemption System
+  rewards: {
+    getSettings: () =>
+      request('/rewards/settings', { method: 'GET' }),
+
+    getMySummary: () =>
+      request('/rewards/my-summary', { method: 'GET' }),
+
+    scanAndClaim: (token) =>
+      request('/rewards/scan-and-claim', {
+        method: 'POST',
+        body: JSON.stringify({ token })
+      }),
+
+    getMyHistory: () =>
+      request('/rewards/my-history', { method: 'GET' }),
+
+    submitRedemption: (payload) =>
+      request('/rewards/redeem', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+
+    getMyRedemptions: () =>
+      request('/rewards/my-redemptions', { method: 'GET' }),
+
+    // Admin reward endpoints
+    admin: {
+      getDashboard: () =>
+        request('/rewards/admin/dashboard', { method: 'GET' }),
+
+      getTokens: ({ status = 'All', search = '', limit = 150, offset = 0 } = {}) => {
+        const params = new URLSearchParams();
+        if (status && status !== 'All') params.append('status', status);
+        if (search) params.append('search', search);
+        params.append('limit', limit);
+        params.append('offset', offset);
+        return request(`/rewards/admin/tokens?${params.toString()}`, { method: 'GET' });
+      },
+
+      generateTokens: (payload) =>
+        request('/rewards/admin/tokens/generate', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        }),
+
+      updateTokenStatus: (id, status) =>
+        request(`/rewards/admin/tokens/${id}/status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status })
+        }),
+
+      deleteToken: (id) =>
+        request(`/rewards/admin/tokens/${id}`, { method: 'DELETE' }),
+
+      getRedemptions: ({ status = 'All', search = '' } = {}) => {
+        const params = new URLSearchParams();
+        if (status && status !== 'All') params.append('status', status);
+        if (search) params.append('search', search);
+        return request(`/rewards/admin/redemptions?${params.toString()}`, { method: 'GET' });
+      },
+
+      updateRedemptionStatus: (id, payload) =>
+        request(`/rewards/admin/redemptions/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload)
+        }),
+
+      getUsers: ({ userType = 'All', search = '' } = {}) => {
+        const params = new URLSearchParams();
+        if (userType && userType !== 'All') params.append('userType', userType);
+        if (search) params.append('search', search);
+        return request(`/rewards/admin/users?${params.toString()}`, { method: 'GET' });
+      },
+
+      updateSettings: (payload) =>
+        request('/rewards/admin/settings', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        })
+    }
   }
 };
 

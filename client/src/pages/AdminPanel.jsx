@@ -7,8 +7,10 @@ import {
   Film, Image as ImageIcon, Upload, Plus, ExternalLink, Sparkles,
   LayoutDashboard, Package, Menu, Edit, ArrowLeft, AlertCircle,
   ShoppingCart, Truck, FileText, QrCode, Calculator, Percent, Tag, EyeOff, Info, ArrowRightLeft, ToggleLeft, ToggleRight,
-  FolderTree, Battery, BatteryCharging, Cable, Headphones, Shield, Smartphone, Cpu, Zap
+  FolderTree, Battery, BatteryCharging, Cable, Headphones, Shield, Smartphone, Cpu, Zap, Wallet
 } from 'lucide-react';
+import { AdminCreateOffers } from '../components/rewards/AdminCreateOffers';
+import { AdminRewardsPayouts } from '../components/rewards/AdminRewardsPayouts';
 
 export const AdminPanel = () => {
   const { user, navigate, logout } = useAuth();
@@ -30,7 +32,7 @@ export const AdminPanel = () => {
       try {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get('tab');
-        if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'advertisements', 'categories'].includes(tab)) {
+        if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'advertisements', 'categories', 'create-offers', 'rewards-payouts'].includes(tab)) {
           setActiveTab(tab);
         }
       } catch (e) {}
@@ -44,7 +46,7 @@ export const AdminPanel = () => {
         if (path.includes('?')) {
           const params = new URLSearchParams(path.split('?')[1]);
           const tab = params.get('tab');
-          if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'advertisements', 'categories'].includes(tab)) {
+          if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'advertisements', 'categories', 'create-offers', 'rewards-payouts'].includes(tab)) {
             setActiveTab(tab);
           }
         }
@@ -1043,6 +1045,8 @@ export const AdminPanel = () => {
   const navMenuItems = [
     { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard, badge: null, color: 'var(--primary)' },
     { id: 'orders', label: 'Orders', icon: ShoppingCart, badge: orders?.length ?? 0, color: '#2563eb' },
+    { id: 'create-offers', label: 'Create Offers', icon: QrCode, badge: null, color: '#f59e0b' },
+    { id: 'rewards-payouts', label: 'Rewards & Payouts', icon: Wallet, badge: null, color: '#10b981' },
     { id: 'pending', label: 'Pending Approvals', icon: Clock, badge: metrics?.distributors?.pending ?? 0, color: 'var(--status-pending)' },
     { id: 'distributors', label: 'Distributors', icon: Building2, badge: metrics?.distributors?.approved ?? 0, color: 'var(--distributor-accent)' },
     { id: 'customers', label: 'Customers', icon: Users, badge: metrics?.customers?.active ?? 0, color: 'var(--customer-accent)' },
@@ -2684,6 +2688,20 @@ export const AdminPanel = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* ============ VIEW: CREATE OFFERS (QR CODES) ============ */}
+        {/* ======================================================== */}
+        {activeTab === 'create-offers' && (
+          <AdminCreateOffers />
+        )}
+
+        {/* ======================================================== */}
+        {/* ============ VIEW: REWARDS & PAYOUTS MANAGEMENT ======== */}
+        {/* ======================================================== */}
+        {activeTab === 'rewards-payouts' && (
+          <AdminRewardsPayouts />
         )}
 
         {/* ======================================================== */}

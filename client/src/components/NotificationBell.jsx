@@ -20,7 +20,9 @@ import {
   Tag,
   Package,
   Eye,
-  RefreshCw
+  RefreshCw,
+  Gift,
+  Wallet
 } from 'lucide-react';
 
 export const NotificationBell = () => {
@@ -216,6 +218,19 @@ export const NotificationBell = () => {
           icon: Eye,
           color: '#8b5cf6',
           bg: 'rgba(139, 92, 246, 0.12)'
+        };
+      case 'reward_earned':
+        return {
+          icon: Gift,
+          color: '#f59e0b',
+          bg: 'rgba(245, 158, 11, 0.12)'
+        };
+      case 'reward_payout':
+      case 'reward_redemption':
+        return {
+          icon: Wallet,
+          color: '#10b981',
+          bg: 'rgba(16, 185, 129, 0.12)'
         };
       default:
         return {

@@ -71,6 +71,13 @@ export const initDb = async () => {
     )
   `);
 
+  try {
+    await queryRun('ALTER TABLE users ADD COLUMN pointsBalance INTEGER DEFAULT 0');
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE users ADD COLUMN totalPointsEarned INTEGER DEFAULT 0');
+  } catch (e) {}
+
   // Products table (foundation for Product Visibility role checks)
   await queryRun(`
     CREATE TABLE IF NOT EXISTS products (
@@ -279,6 +286,90 @@ export const initDb = async () => {
       updatedDate TEXT NOT NULL
     )
   `);
+
+  // QR Offer Tokens table
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS qr_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token TEXT UNIQUE NOT NULL,
+      points INTEGER NOT NULL,
+      title TEXT DEFAULT 'MWS Eagle Rewards',
+      description TEXT,
+      status TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Inactive', 'Claimed', 'Expired')),
+      createdByAdminId INTEGER,
+      createdDate TEXT NOT NULL,
+      expiryDate TEXT,
+      claimedByUserId INTEGER,
+      claimedByRole TEXT,
+      claimedAt TEXT,
+      claimIp TEXT
+    )
+  `);
+
+  // Point Ledger Transactions table
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS point_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId INTEGER NOT NULL,
+      userType TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('earn_qr', 'redeem_request', 'redeem_refund', 'admin_adjustment')),
+      points INTEGER NOT NULL,
+      balanceAfter INTEGER NOT NULL,
+      referenceId TEXT,
+      description TEXT NOT NULL,
+      createdDate TEXT NOT NULL
+    )
+  `);
+
+  // Cash Redemption Requests table
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS redemption_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      requestNumber TEXT UNIQUE NOT NULL,
+      userId INTEGER NOT NULL,
+      userType TEXT NOT NULL CHECK(userType IN ('Customer', 'Distributor')),
+      points INTEGER NOT NULL,
+      cashAmount REAL NOT NULL,
+      conversionRate REAL NOT NULL DEFAULT 1.0,
+      fullName TEXT NOT NULL,
+      phoneNumber TEXT NOT NULL,
+      address TEXT,
+      bankName TEXT NOT NULL,
+      accountHolderName TEXT NOT NULL,
+      accountNumber TEXT NOT NULL,
+      ifscCode TEXT NOT NULL,
+      upiId TEXT,
+      status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending', 'Approved', 'Processing', 'Paid', 'Rejected')),
+      adminNotes TEXT,
+      transactionReference TEXT,
+      rejectionReason TEXT,
+      createdDate TEXT NOT NULL,
+      updatedDate TEXT NOT NULL,
+      processedDate TEXT,
+      processedByAdminId INTEGER
+    )
+  `);
+
+  // System Settings table (for configurable rates and thresholds)
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updatedDate TEXT
+    )
+  `);
+
+  // Seed default reward system settings if not present
+  try {
+    const rateSetting = await queryGet('SELECT value FROM system_settings WHERE key = "points_to_cash_rate"');
+    if (!rateSetting) {
+      await queryRun('INSERT INTO system_settings (key, value, updatedDate) VALUES ("points_to_cash_rate", "1.0", ?)', [new Date().toISOString()]);
+    }
+    const minRedeemSetting = await queryGet('SELECT value FROM system_settings WHERE key = "min_redemption_points"');
+    if (!minRedeemSetting) {
+      await queryRun('INSERT INTO system_settings (key, value, updatedDate) VALUES ("min_redemption_points", "50", ?)', [new Date().toISOString()]);
+    }
+  } catch (e) {}
 
   // Seed default categories if empty
   try {
