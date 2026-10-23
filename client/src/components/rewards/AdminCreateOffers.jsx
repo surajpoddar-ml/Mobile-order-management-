@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import { PrintQRCodesModal } from './PrintQRCodesModal';
+import { downloadAllAsZip, downloadSingleCard } from '../../utils/qrCardGenerator';
 
 export const AdminCreateOffers = () => {
   // Generation Form State
@@ -34,6 +35,10 @@ export const AdminCreateOffers = () => {
   const [expiryDate, setExpiryDate] = useState('');
   const [generating, setGenerating] = useState(false);
   const [formMsg, setFormMsg] = useState({ type: '', text: '' });
+
+  // Download ZIP State
+  const [zipLoading, setZipLoading] = useState(false);
+  const [zipProgress, setZipProgress] = useState({ current: 0, total: 0 });
 
   // List & Filter State
   const [tokens, setTokens] = useState([]);
@@ -88,11 +93,19 @@ export const AdminCreateOffers = () => {
       return setFormMsg({ type: 'error', text: 'Please specify a valid point value greater than 0.' });
     }
 
+    const parsedCount = parseInt(count, 10);
+    if (!parsedCount || parsedCount < 1) {
+      return setFormMsg({ type: 'error', text: 'Please enter a valid count of QR codes to generate (minimum 1).' });
+    }
+    if (parsedCount > 1000) {
+      return setFormMsg({ type: 'error', text: 'Batch count cannot exceed 1,000 QR codes at once.' });
+    }
+
     setGenerating(true);
     try {
       const payload = {
         points: finalPoints,
-        count: parseInt(count, 10) || 1,
+        count: parsedCount,
         title: title.trim() || 'MWS Eagle Rewards',
         description: description.trim(),
         expiryDate: expiryDate || null
@@ -114,6 +127,24 @@ export const AdminCreateOffers = () => {
       setFormMsg({ type: 'error', text: err.message || 'Failed to generate tokens.' });
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleDownloadZip = async (targetTokens, filename = 'MWS-Eagle-QR-Cards.zip') => {
+    if (!Array.isArray(targetTokens) || targetTokens.length === 0) {
+      return alert('No QR tokens available to download.');
+    }
+    setZipLoading(true);
+    setZipProgress({ current: 0, total: targetTokens.length });
+    try {
+      await downloadAllAsZip(targetTokens, filename, (current, total) => {
+        setZipProgress({ current, total });
+      });
+    } catch (err) {
+      console.error('Download ZIP error:', err);
+      alert('Failed to generate cards ZIP: ' + (err.message || 'Unknown error'));
+    } finally {
+      setZipLoading(false);
     }
   };
 
@@ -231,7 +262,38 @@ export const AdminCreateOffers = () => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => {
+              const activeOnes = tokens.filter((t) => t.status === 'Active');
+              handleDownloadZip(activeOnes, 'MWS-Eagle-Active-QR-Cards.zip');
+            }}
+            disabled={zipLoading || tokens.filter((t) => t.status === 'Active').length === 0}
+            style={{
+              padding: '10px 18px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+              color: '#ffffff',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: zipLoading || tokens.filter((t) => t.status === 'Active').length === 0 ? 'not-allowed' : 'pointer',
+              opacity: zipLoading || tokens.filter((t) => t.status === 'Active').length === 0 ? 0.6 : 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)'
+            }}
+          >
+            <Download size={16} />
+            <span>
+              {zipLoading
+                ? `Packaging (${zipProgress.current}/${zipProgress.total})...`
+                : `Download All Active Cards (${tokens.filter((t) => t.status === 'Active').length}) as ZIP`}
+            </span>
+          </button>
+
           <button
             type="button"
             onClick={handlePrintAllActive}
@@ -437,31 +499,56 @@ export const AdminCreateOffers = () => {
               marginBottom: '20px'
             }}
           >
-            {/* Batch Quantity */}
+            {/* Batch Quantity with Manual Input and Presets */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
-                Batch Quantity (No. of Unique QR Codes)
-              </label>
-              <select
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>
+                  Quantity (Enter Number of QRs) *
+                </label>
+                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>Up to 1,000 / batch</span>
+              </div>
+              <input
+                type="number"
+                min="1"
+                max="1000"
+                placeholder="Type quantity (e.g. 5, 25, 100)"
                 value={count}
                 onChange={(e) => setCount(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '10px 12px',
+                  padding: '9px 12px',
                   borderRadius: '10px',
                   border: '1.5px solid #cbd5e1',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
                   outline: 'none',
-                  backgroundColor: '#ffffff'
+                  backgroundColor: '#ffffff',
+                  marginBottom: '6px'
                 }}
-              >
-                <option value="1">1 QR Code (Single Card)</option>
-                <option value="5">5 QR Codes</option>
-                <option value="10">10 QR Codes</option>
-                <option value="25">25 QR Codes (Batch Sheet)</option>
-                <option value="50">50 QR Codes</option>
-              </select>
+              />
+              {/* Quick Preset Buttons */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600 }}>Presets:</span>
+                {[1, 5, 10, 25, 50, 100, 250, 500].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setCount(num)}
+                    style={{
+                      padding: '2px 7px',
+                      borderRadius: '6px',
+                      border: parseInt(count, 10) === num ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                      backgroundColor: parseInt(count, 10) === num ? '#eff6ff' : '#ffffff',
+                      color: parseInt(count, 10) === num ? '#2563eb' : '#64748b',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Campaign Title */}
@@ -667,6 +754,34 @@ export const AdminCreateOffers = () => {
               Search
             </button>
           </form>
+
+          {/* Download Visible Cards as ZIP */}
+          <button
+            type="button"
+            onClick={() => handleDownloadZip(tokens, `MWS-Eagle-QR-Cards-${statusFilter.toLowerCase()}.zip`)}
+            disabled={zipLoading || tokens.length === 0}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: '1.5px solid #059669',
+              backgroundColor: '#ecfdf5',
+              color: '#059669',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: zipLoading || tokens.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: zipLoading || tokens.length === 0 ? 0.6 : 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Download size={14} />
+            <span>
+              {zipLoading
+                ? `Packaging (${zipProgress.current}/${zipProgress.total})...`
+                : `Download Visible (${tokens.length}) as ZIP`}
+            </span>
+          </button>
         </div>
 
         {/* Tokens List Table */}
@@ -843,6 +958,23 @@ export const AdminCreateOffers = () => {
                             }}
                           >
                             <Printer size={14} />
+                          </button>
+
+                          {/* Download Single Branded Card PNG */}
+                          <button
+                            type="button"
+                            onClick={() => downloadSingleCard(tok)}
+                            title="Download Branded Card (PNG)"
+                            style={{
+                              padding: '6px',
+                              borderRadius: '8px',
+                              border: '1px solid #cbd5e1',
+                              backgroundColor: '#ffffff',
+                              color: '#059669',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Download size={14} />
                           </button>
 
                           {/* Toggle Active / Inactive if unclaimed */}

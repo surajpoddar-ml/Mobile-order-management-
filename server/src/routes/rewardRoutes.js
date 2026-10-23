@@ -15,7 +15,7 @@ const getRewardSettings = async () => {
   const minRow = await queryGet('SELECT value FROM system_settings WHERE key = "min_redemption_points"');
   return {
     rate: rateRow ? parseFloat(rateRow.value) || 1.0 : 1.0,
-    minPoints: minRow ? parseInt(minRow.value, 10) || 50 : 50
+    minPoints: minRow ? parseInt(minRow.value, 10) || 10 : 10
   };
 };
 
@@ -478,7 +478,7 @@ router.post('/admin/tokens/generate', verifyToken, requireAdmin, async (req, res
       return res.status(400).json({ success: false, message: 'Please specify a valid point value greater than 0.' });
     }
 
-    const totalCount = Math.max(1, Math.min(100, parseInt(count, 10) || 1));
+    const totalCount = Math.max(1, Math.min(1000, parseInt(count, 10) || 1));
     const now = new Date().toISOString();
     const generatedTokens = [];
 

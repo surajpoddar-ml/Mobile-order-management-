@@ -359,6 +359,11 @@ export const initDb = async () => {
     )
   `);
 
+  // Ensure updatedDate column exists if table was created in an older migration
+  try {
+    await queryRun('ALTER TABLE system_settings ADD COLUMN updatedDate TEXT');
+  } catch (e) {}
+
   // Seed default reward system settings if not present
   try {
     const rateSetting = await queryGet('SELECT value FROM system_settings WHERE key = "points_to_cash_rate"');
@@ -367,7 +372,7 @@ export const initDb = async () => {
     }
     const minRedeemSetting = await queryGet('SELECT value FROM system_settings WHERE key = "min_redemption_points"');
     if (!minRedeemSetting) {
-      await queryRun('INSERT INTO system_settings (key, value, updatedDate) VALUES ("min_redemption_points", "50", ?)', [new Date().toISOString()]);
+      await queryRun('INSERT INTO system_settings (key, value, updatedDate) VALUES ("min_redemption_points", "10", ?)', [new Date().toISOString()]);
     }
   } catch (e) {}
 

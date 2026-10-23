@@ -36,7 +36,7 @@ export const AdminRewardsPayouts = () => {
     totalPayoutsPaidAmount: 0,
     totalUsersWithPoints: 0,
     totalOutstandingUserBalance: 0,
-    settings: { rate: 1.0, minPoints: 50 }
+    settings: { rate: 1.0, minPoints: 10 }
   });
 
   // Redemptions state
@@ -53,7 +53,7 @@ export const AdminRewardsPayouts = () => {
 
   // Configurable Settings State
   const [rateInput, setRateInput] = useState('1.0');
-  const [minPointsInput, setMinPointsInput] = useState('50');
+  const [minPointsInput, setMinPointsInput] = useState('10');
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState({ type: '', text: '' });
 

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 
-export const RedemptionModal = ({ isOpen, onClose, currentPoints = 0, conversionRate = 1.0, minPoints = 50, onRedeemSuccess }) => {
+export const RedemptionModal = ({ isOpen, onClose, currentPoints = 0, conversionRate = 1.0, minPoints = 10, onRedeemSuccess }) => {
   const [points, setPoints] = useState('');
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -342,7 +342,7 @@ export const RedemptionModal = ({ isOpen, onClose, currentPoints = 0, conversion
 
                 {/* Quick Points Preset Chips */}
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '10px' }}>
-                  {[50, 100, 200, 500].map((preset) => (
+                  {[10, 20, 50, 100, 200, 500].map((preset) => (
                     <button
                       key={preset}
                       type="button"

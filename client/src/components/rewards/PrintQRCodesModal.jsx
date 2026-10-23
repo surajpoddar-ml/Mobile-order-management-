@@ -10,10 +10,13 @@ import {
   Check,
   Copy
 } from 'lucide-react';
+import { downloadAllAsZip, downloadSingleCard } from '../../utils/qrCardGenerator';
 
 export const PrintQRCodesModal = ({ isOpen, onClose, tokens = [] }) => {
   const [qrImages, setQrImages] = useState({}); // { [tokenId]: dataUrl }
   const [copiedId, setCopiedId] = useState(null);
+  const [zipLoading, setZipLoading] = useState(false);
+  const [zipProgress, setZipProgress] = useState({ current: 0, total: 0 });
 
   useEffect(() => {
     if (!isOpen || !Array.isArray(tokens) || tokens.length === 0) return;
@@ -50,15 +53,24 @@ export const PrintQRCodesModal = ({ isOpen, onClose, tokens = [] }) => {
     window.print();
   };
 
+  const handleDownloadAllZip = async () => {
+    if (!tokens || tokens.length === 0) return;
+    setZipLoading(true);
+    setZipProgress({ current: 0, total: tokens.length });
+    try {
+      await downloadAllAsZip(tokens, `MWS-Eagle-${tokens.length}-QR-Cards.zip`, (cur, tot) => {
+        setZipProgress({ current: cur, total: tot });
+      });
+    } catch (err) {
+      console.error('ZIP Error:', err);
+      alert('Failed to package cards: ' + (err.message || 'Unknown error'));
+    } finally {
+      setZipLoading(false);
+    }
+  };
+
   const handleDownloadSingle = (token) => {
-    const dataUrl = qrImages[token.id];
-    if (!dataUrl) return;
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `MWS-Eagle-QR-${token.points}pts-${token.token}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    downloadSingleCard(token);
   };
 
   const handleCopyToken = (token) => {
@@ -139,6 +151,34 @@ export const PrintQRCodesModal = ({ isOpen, onClose, tokens = [] }) => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={handleDownloadAllZip}
+              disabled={zipLoading}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                cursor: zipLoading ? 'not-allowed' : 'pointer',
+                opacity: zipLoading ? 0.7 : 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 4px 10px rgba(5, 150, 105, 0.3)'
+              }}
+            >
+              <Download size={15} />
+              <span>
+                {zipLoading
+                  ? `Zipping (${zipProgress.current}/${zipProgress.total})...`
+                  : `Download All (${tokens.length}) as ZIP`}
+              </span>
+            </button>
+
             <button
               type="button"
               onClick={handlePrint}
@@ -313,7 +353,7 @@ export const PrintQRCodesModal = ({ isOpen, onClose, tokens = [] }) => {
                         borderRadius: '8px',
                         border: '1px solid #cbd5e1',
                         background: '#ffffff',
-                        color: '#334155',
+                        color: '#059669',
                         fontSize: '0.72rem',
                         fontWeight: 700,
                         cursor: 'pointer',
@@ -322,10 +362,10 @@ export const PrintQRCodesModal = ({ isOpen, onClose, tokens = [] }) => {
                         justifyContent: 'center',
                         gap: '4px'
                       }}
-                      title="Download PNG"
+                      title="Download Branded Card PNG"
                     >
                       <Download size={12} />
-                      <span>PNG</span>
+                      <span>Card PNG</span>
                     </button>
 
                     <button
