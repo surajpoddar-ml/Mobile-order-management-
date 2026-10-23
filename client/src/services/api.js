@@ -172,6 +172,17 @@ export const api = {
         body: JSON.stringify(payload)
       }),
 
+    toggleVisibility: (id, payload) =>
+      request(`/products/${id}/visibility`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload)
+      }),
+
+    toggleStock: (id) =>
+      request(`/products/${id}/stock`, {
+        method: 'PATCH'
+      }),
+
     delete: (id) =>
       request(`/products/${id}`, {
         method: 'DELETE'

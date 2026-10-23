@@ -457,16 +457,30 @@ export const seedDatabase = async () => {
   ];
 
   for (const prod of sampleProducts) {
+    const showCust = prod.targetVisibility === 'Customer' || prod.targetVisibility === 'Both' ? 1 : 0;
+    const showDist = prod.targetVisibility === 'Distributor' || prod.targetVisibility === 'Both' ? 1 : 0;
+    const cOrig = prod.originalPrice || (prod.customerPrice ? Math.round(prod.customerPrice * 1.25) : 0);
+    const cPrice = prod.customerPrice || 0;
+    const cDisc = cOrig > cPrice && cOrig > 0 ? Math.round(((cOrig - cPrice) / cOrig) * 100) : 0;
+
+    const dOrig = prod.originalPrice || (prod.distributorPrice ? Math.round(prod.distributorPrice * 1.35) : 0);
+    const dPrice = prod.distributorPrice || 0;
+    const dDisc = dOrig > dPrice && dOrig > 0 ? Math.round(((dOrig - dPrice) / dOrig) * 100) : 0;
+
     await queryRun(
       `INSERT INTO products (
-        name, category, sku, customerPrice, distributorPrice, originalPrice, badge, rating, reviewCount, targetVisibility, description, imageUrl, inStock
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        name, category, brand, sku, customerPrice, distributorPrice, originalPrice, badge, rating, reviewCount, targetVisibility, description, imageUrl, inStock,
+        showOnCustomerPortal, customerPricingMode, customerOriginalPrice, customerDiscount,
+        showOnDistributorPortal, distributorPricingMode, distributorOriginalPrice, distributorDiscount,
+        productStatus, specifications
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         prod.name,
         prod.category,
+        'MWS Eagle',
         prod.sku,
-        prod.customerPrice,
-        prod.distributorPrice,
+        cPrice,
+        dPrice,
         prod.originalPrice,
         prod.badge,
         prod.rating,
@@ -474,7 +488,17 @@ export const seedDatabase = async () => {
         prod.targetVisibility,
         prod.description,
         prod.imageUrl,
-        prod.inStock
+        prod.inStock,
+        showCust,
+        'auto',
+        cOrig,
+        cDisc,
+        showDist,
+        'auto',
+        dOrig,
+        dDisc,
+        'Active',
+        '• OEM Grade Quality\n• Tested Before Packaging\n• 6-Month Replacement Guarantee'
       ]
     );
   }

@@ -6,7 +6,7 @@ import {
   Search, Eye, Trash2, Check, X, PauseCircle, PlayCircle, RefreshCw, Layers,
   Film, Image as ImageIcon, Upload, Plus, ExternalLink, Sparkles,
   LayoutDashboard, Package, Menu, Edit, ArrowLeft, AlertCircle,
-  ShoppingCart, Truck, FileText, QrCode
+  ShoppingCart, Truck, FileText, QrCode, Calculator, Percent, Tag, EyeOff, Info, ArrowRightLeft, ToggleLeft, ToggleRight
 } from 'lucide-react';
 
 export const AdminPanel = () => {
@@ -48,19 +48,36 @@ export const AdminPanel = () => {
   const [allProducts, setAllProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productFilterVisibility, setProductFilterVisibility] = useState('All');
+  const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [productCategoryFilter, setProductCategoryFilter] = useState('All');
+  const [productStockFilter, setProductStockFilter] = useState('All');
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [savingProduct, setSavingProduct] = useState(false);
   const [productForm, setProductForm] = useState({
     name: '',
     category: 'Displays',
+    brand: 'MWS Eagle',
     sku: '',
-    customerPrice: 0,
-    distributorPrice: 0,
-    targetVisibility: 'Both', // 'Customer' | 'Distributor' | 'Both'
     description: '',
+    specifications: '',
     imageUrl: '',
-    inStock: 1
+    badge: 'Bestseller',
+    inStock: 1,
+    productStatus: 'Active',
+    // Customer Portal Pricing & Visibility
+    showOnCustomerPortal: true,
+    customerPricingMode: 'auto', // 'auto' | 'manual'
+    customerOriginalPrice: 2000,
+    customerDiscount: 10,
+    customerPrice: 1800,
+    // Distributor Portal Pricing & Visibility
+    showOnDistributorPortal: true,
+    distributorPricingMode: 'auto', // 'auto' | 'manual'
+    distributorOriginalPrice: 1500,
+    distributorDiscount: 25,
+    distributorPrice: 1125,
+    targetVisibility: 'Both'
   });
 
   // Advertisement Board State
@@ -115,7 +132,7 @@ export const AdminPanel = () => {
   const loadProductData = async () => {
     setLoadingProducts(true);
     try {
-      const res = await api.products.getVisibleProducts();
+      const res = await api.products.getVisibleProducts('Admin');
       if (res.success) setAllProducts(res.products || []);
     } catch (err) {
       console.error('Failed to load products:', err);
@@ -314,60 +331,199 @@ export const AdminPanel = () => {
     }
   };
 
-  // Product CRUD actions (Admin Authority)
+  // Standard Pricing Helpers
+  const calcFinalPrice = (orig, disc) => {
+    const o = Math.max(0, parseFloat(orig) || 0);
+    const d = Math.max(0, Math.min(100, parseFloat(disc) || 0));
+    const finalP = o - (o * (d / 100));
+    return Math.max(0, Math.round(finalP * 100) / 100);
+  };
+
+  const calcDiscountPercent = (orig, finalPrice) => {
+    const o = Math.max(0, parseFloat(orig) || 0);
+    const f = Math.max(0, parseFloat(finalPrice) || 0);
+    if (o <= 0 || f >= o) return 0;
+    return Math.max(0, Math.min(100, Math.round(((o - f) / o) * 1000) / 10));
+  };
+
+  // Product CRUD actions (Admin Dual-Portal Authority)
   const openNewProductModal = () => {
     setEditingProduct(null);
+    const defaultCustOrig = 2000;
+    const defaultCustDisc = 10;
+    const defaultDistOrig = 1500;
+    const defaultDistDisc = 25;
+
     setProductForm({
       name: '',
-      category: 'Displays',
+      category: 'Chargers',
+      brand: 'MWS Eagle',
       sku: `PRD-${Date.now().toString().slice(-5)}`,
-      customerPrice: 19.99,
-      distributorPrice: 8.50,
-      targetVisibility: 'Both',
-      description: '',
-      imageUrl: '',
-      inStock: 1
+      description: 'High-speed fast charging adapter with smart IC overload protection.',
+      specifications: '• Input: 100-240V AC 50/60Hz\n• Output: 5V/3A, 9V/2.22A, 12V/1.67A (20W Max)\n• Material: Fireproof PC Shell\n• Warranty: 6 Months Official Warranty',
+      imageUrl: 'https://images.unsplash.com/photo-1622445262464-84b1456045b6?auto=format&fit=crop&w=600&q=80',
+      badge: 'Bestseller',
+      inStock: 1,
+      productStatus: 'Active',
+      // Customer Portal Section
+      showOnCustomerPortal: true,
+      customerPricingMode: 'auto',
+      customerOriginalPrice: defaultCustOrig,
+      customerDiscount: defaultCustDisc,
+      customerPrice: calcFinalPrice(defaultCustOrig, defaultCustDisc),
+      // Distributor Portal Section
+      showOnDistributorPortal: true,
+      distributorPricingMode: 'auto',
+      distributorOriginalPrice: defaultDistOrig,
+      distributorDiscount: defaultDistDisc,
+      distributorPrice: calcFinalPrice(defaultDistOrig, defaultDistDisc),
+      targetVisibility: 'Both'
     });
     setProductModalOpen(true);
   };
 
   const openEditProductModal = (prod) => {
     setEditingProduct(prod);
+
+    const custOrig = prod.customerOriginalPrice !== undefined && prod.customerOriginalPrice !== null && prod.customerOriginalPrice > 0
+      ? Number(prod.customerOriginalPrice)
+      : (prod.originalPrice || prod.customerPrice || 0);
+    const custPrice = prod.customerPrice !== undefined ? Number(prod.customerPrice) : 0;
+    const custDisc = prod.customerDiscount !== undefined && prod.customerDiscount !== null
+      ? Number(prod.customerDiscount)
+      : calcDiscountPercent(custOrig, custPrice);
+
+    const distOrig = prod.distributorOriginalPrice !== undefined && prod.distributorOriginalPrice !== null && prod.distributorOriginalPrice > 0
+      ? Number(prod.distributorOriginalPrice)
+      : (prod.originalPrice || (prod.distributorPrice ? Math.round(prod.distributorPrice * 1.35) : 0));
+    const distPrice = prod.distributorPrice !== undefined ? Number(prod.distributorPrice) : 0;
+    const distDisc = prod.distributorDiscount !== undefined && prod.distributorDiscount !== null
+      ? Number(prod.distributorDiscount)
+      : calcDiscountPercent(distOrig, distPrice);
+
+    const showCust = prod.showOnCustomerPortal !== undefined && prod.showOnCustomerPortal !== null
+      ? (prod.showOnCustomerPortal === 1 || prod.showOnCustomerPortal === true)
+      : (prod.targetVisibility === 'Customer' || prod.targetVisibility === 'Both');
+
+    const showDist = prod.showOnDistributorPortal !== undefined && prod.showOnDistributorPortal !== null
+      ? (prod.showOnDistributorPortal === 1 || prod.showOnDistributorPortal === true)
+      : (prod.targetVisibility === 'Distributor' || prod.targetVisibility === 'Both');
+
     setProductForm({
-      name: prod.name,
-      category: prod.category,
-      sku: prod.sku,
-      customerPrice: prod.customerPrice !== undefined ? prod.customerPrice : 0,
-      distributorPrice: prod.distributorPrice !== undefined ? prod.distributorPrice : 0,
-      targetVisibility: prod.targetVisibility,
+      name: prod.name || '',
+      category: prod.category || 'Displays',
+      brand: prod.brand || 'MWS Eagle',
+      sku: prod.sku || '',
       description: prod.description || '',
+      specifications: prod.specifications || '',
       imageUrl: prod.imageUrl || '',
-      inStock: prod.inStock === 0 ? 0 : 1
+      badge: prod.badge || '',
+      inStock: prod.inStock === 0 ? 0 : 1,
+      productStatus: prod.productStatus || 'Active',
+      // Customer Portal Section
+      showOnCustomerPortal: showCust,
+      customerPricingMode: prod.customerPricingMode || 'auto',
+      customerOriginalPrice: custOrig,
+      customerDiscount: custDisc,
+      customerPrice: custPrice,
+      // Distributor Portal Section
+      showOnDistributorPortal: showDist,
+      distributorPricingMode: prod.distributorPricingMode || 'auto',
+      distributorOriginalPrice: distOrig,
+      distributorDiscount: distDisc,
+      distributorPrice: distPrice,
+      targetVisibility: (showCust && showDist) ? 'Both' : (showCust ? 'Customer' : (showDist ? 'Distributor' : 'None'))
     });
     setProductModalOpen(true);
   };
 
   const handleSaveProduct = async (e) => {
     e.preventDefault();
-    if (!productForm.name || !productForm.sku) {
-      return alert('Product Name and SKU are required.');
+
+    // 1. Common Validation
+    if (!productForm.name || !productForm.name.trim()) {
+      return alert('Product Name is required.');
     }
+    if (!productForm.sku || !productForm.sku.trim()) {
+      return alert('SKU / Product Code is required.');
+    }
+    if (!productForm.category || !productForm.category.trim()) {
+      return alert('Category is required.');
+    }
+
+    // 2. Validate Customer Pricing
+    const custOrig = Math.max(0, parseFloat(productForm.customerOriginalPrice) || 0);
+    const custDisc = parseFloat(productForm.customerDiscount) || 0;
+    const custFinal = parseFloat(productForm.customerPrice) || 0;
+
+    if (custOrig < 0) {
+      return alert('Customer Original Price cannot be negative.');
+    }
+    if (custDisc < 0 || custDisc > 100) {
+      return alert('Customer Discount must be between 0% and 100%.');
+    }
+    if (custFinal < 0) {
+      return alert('Customer Final Price cannot be negative.');
+    }
+
+    // 3. Validate Distributor Pricing
+    const distOrig = Math.max(0, parseFloat(productForm.distributorOriginalPrice) || 0);
+    const distDisc = parseFloat(productForm.distributorDiscount) || 0;
+    const distFinal = parseFloat(productForm.distributorPrice) || 0;
+
+    if (distOrig < 0) {
+      return alert('Distributor Original Price cannot be negative.');
+    }
+    if (distDisc < 0 || distDisc > 100) {
+      return alert('Distributor Discount must be between 0% and 100%.');
+    }
+    if (distFinal < 0) {
+      return alert('Distributor Final Price cannot be negative.');
+    }
+
+    // Calculate final prices based on active pricing mode
+    const finalCustPrice = productForm.customerPricingMode === 'auto'
+      ? calcFinalPrice(custOrig, custDisc)
+      : custFinal;
+
+    const finalDistPrice = productForm.distributorPricingMode === 'auto'
+      ? calcFinalPrice(distOrig, distDisc)
+      : distFinal;
+
+    const payload = {
+      ...productForm,
+      name: productForm.name.trim(),
+      sku: productForm.sku.trim(),
+      category: productForm.category.trim(),
+      brand: (productForm.brand || 'MWS Eagle').trim(),
+      customerOriginalPrice: custOrig,
+      customerDiscount: custDisc,
+      customerPrice: finalCustPrice,
+      distributorOriginalPrice: distOrig,
+      distributorDiscount: distDisc,
+      distributorPrice: finalDistPrice,
+      showOnCustomerPortal: Boolean(productForm.showOnCustomerPortal),
+      showOnDistributorPortal: Boolean(productForm.showOnDistributorPortal),
+      targetVisibility: (productForm.showOnCustomerPortal && productForm.showOnDistributorPortal)
+        ? 'Both'
+        : (productForm.showOnCustomerPortal ? 'Customer' : (productForm.showOnDistributorPortal ? 'Distributor' : 'None'))
+    };
 
     setSavingProduct(true);
     try {
       if (editingProduct) {
-        const res = await api.products.update(editingProduct.id, productForm);
+        const res = await api.products.update(editingProduct.id, payload);
         if (res.success) {
-          notify(`Product "${productForm.name}" updated successfully!`);
+          notify(`Product "${payload.name}" updated successfully across portals!`);
           setProductModalOpen(false);
           localStorage.setItem('mws_products_last_update', Date.now().toString());
           window.dispatchEvent(new Event('mws_products_updated'));
           loadProductData();
         }
       } else {
-        const res = await api.products.create(productForm);
+        const res = await api.products.create(payload);
         if (res.success) {
-          notify(`Product "${productForm.name}" created and published to: ${productForm.targetVisibility} Portal!`);
+          notify(`Product "${payload.name}" created! Portals: Customer (${payload.showOnCustomerPortal ? 'Active' : 'Hidden'}), Distributor (${payload.showOnDistributorPortal ? 'Active' : 'Hidden'})`);
           setProductModalOpen(false);
           localStorage.setItem('mws_products_last_update', Date.now().toString());
           window.dispatchEvent(new Event('mws_products_updated'));
@@ -381,6 +537,46 @@ export const AdminPanel = () => {
     }
   };
 
+  // Fast 1-Click Visibility Toggle for Customer or Distributor Portal
+  const handleTogglePortalVisibility = async (prod, portalType) => {
+    const isCustomer = portalType === 'customer';
+    const currentVal = isCustomer
+      ? (prod.showOnCustomerPortal === 1 || prod.showOnCustomerPortal === true)
+      : (prod.showOnDistributorPortal === 1 || prod.showOnDistributorPortal === true);
+    const newVal = !currentVal;
+
+    // Optimistic UI update
+    setAllProducts(prev => prev.map(p => {
+      if (p.id === prod.id) {
+        return {
+          ...p,
+          showOnCustomerPortal: isCustomer ? (newVal ? 1 : 0) : p.showOnCustomerPortal,
+          showOnDistributorPortal: !isCustomer ? (newVal ? 1 : 0) : p.showOnDistributorPortal
+        };
+      }
+      return p;
+    }));
+
+    notify(`${isCustomer ? 'Customer Portal' : 'Distributor Portal'} visibility toggled to: ${newVal ? 'ON' : 'OFF'}`);
+
+    try {
+      const payload = isCustomer
+        ? { showOnCustomerPortal: newVal }
+        : { showOnDistributorPortal: newVal };
+      const res = await api.products.toggleVisibility(prod.id, payload);
+      if (res.success) {
+        localStorage.setItem('mws_products_last_update', Date.now().toString());
+        window.dispatchEvent(new Event('mws_products_updated'));
+      } else {
+        alert(res.message || 'Failed to toggle portal visibility.');
+        loadProductData();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to toggle portal visibility.');
+      loadProductData();
+    }
+  };
+
   // Fast 1-Click Stock Toggle
   const handleToggleStock = async (prod) => {
     const newStock = prod.inStock ? 0 : 1;
@@ -389,7 +585,7 @@ export const AdminPanel = () => {
     notify(`Stock status updating to: ${newStock ? 'In Stock' : 'Out of Stock'}...`);
 
     try {
-      const res = await api.products.update(prod.id, { inStock: newStock });
+      const res = await api.products.toggleStock(prod.id);
       if (res.success) {
         notify(`Product "${prod.name}" is now marked ${newStock ? 'IN STOCK' : 'OUT OF STOCK'}.`);
         localStorage.setItem('mws_products_last_update', Date.now().toString());
@@ -519,10 +715,38 @@ export const AdminPanel = () => {
     displayUsers = users.filter(u => u.userType === 'Customer');
   }
 
-  // Filtered products for Product Authority tab
-  const filteredProducts = productFilterVisibility === 'All'
-    ? allProducts
-    : allProducts.filter(p => p.targetVisibility === productFilterVisibility);
+  // Filtered products for Product Management Dual-Portal tab
+  const filteredProducts = allProducts.filter(p => {
+    // Visibility filter
+    const isCustomer = p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true || p.targetVisibility === 'Customer' || p.targetVisibility === 'Both';
+    const isDistributor = p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true || p.targetVisibility === 'Distributor' || p.targetVisibility === 'Both';
+
+    if (productFilterVisibility === 'Both' && (!isCustomer || !isDistributor)) return false;
+    if (productFilterVisibility === 'Customer' && !isCustomer) return false;
+    if (productFilterVisibility === 'Distributor' && !isDistributor) return false;
+    if (productFilterVisibility === 'CustomerOnly' && (!isCustomer || isDistributor)) return false;
+    if (productFilterVisibility === 'DistributorOnly' && (!isDistributor || isCustomer)) return false;
+    if (productFilterVisibility === 'Hidden' && (isCustomer || isDistributor)) return false;
+
+    // Category filter
+    if (productCategoryFilter !== 'All' && p.category !== productCategoryFilter) return false;
+
+    // Stock status filter
+    if (productStockFilter === 'InStock' && (p.inStock === 0 || p.inStock === false)) return false;
+    if (productStockFilter === 'OutOfStock' && (p.inStock !== 0 && p.inStock !== false)) return false;
+
+    // Search term filter
+    if (productSearchTerm.trim()) {
+      const q = productSearchTerm.toLowerCase().trim();
+      const matchName = (p.name || '').toLowerCase().includes(q);
+      const matchSku = (p.sku || '').toLowerCase().includes(q);
+      const matchBrand = (p.brand || '').toLowerCase().includes(q);
+      const matchCategory = (p.category || '').toLowerCase().includes(q);
+      if (!matchName && !matchSku && !matchBrand && !matchCategory) return false;
+    }
+
+    return true;
+  });
 
   // Common UI Styles
   const selectStyle = {
@@ -1529,10 +1753,10 @@ export const AdminPanel = () => {
                   <Package size={14} /> Catalog Authority Control
                 </div>
                 <h1 style={{ fontSize: 'clamp(1.4rem, 3.5vw, 1.85rem)', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                  Product Management & Role Visibility
+                  Product Management — Single Record, Dual Portals
                 </h1>
                 <p style={{ color: 'var(--text-body)', fontSize: '0.88rem', margin: '4px 0 0 0' }}>
-                  Post new mobile spares and configure whether they appear in the <strong>Customer Portal</strong>, <strong>Distributor Portal</strong>, or <strong>Both</strong>.
+                  Create and manage a single product record with completely independent pricing and visibility controls for the <strong>Customer Portal</strong> (Retail) and <strong>Distributor Portal</strong> (Wholesale B2B).
                 </p>
               </div>
 
@@ -1542,48 +1766,163 @@ export const AdminPanel = () => {
                 style={{
                   background: 'linear-gradient(135deg, #0d9488, #0f766e)',
                   padding: '11px 22px',
-                  fontSize: '0.92rem'
+                  fontSize: '0.92rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 14px rgba(13, 148, 136, 0.3)'
                 }}
               >
-                <Plus size={18} /> Post New Product
+                <Plus size={18} /> Create New Product
               </button>
             </div>
 
-            {/* Filter Tabs for Visibility */}
+            {/* Quick Metrics Bar for Dual Portal Catalog */}
             <div style={{
-              display: 'flex',
-              gap: '8px',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              marginBottom: '18px'
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '12px',
+              marginBottom: '20px'
             }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-body)', marginRight: '6px' }}>
-                Filter Portal Visibility:
-              </span>
-              {[
-                { id: 'All', label: `All Products (${allProducts.length})` },
-                { id: 'Customer', label: `Customer Only (${allProducts.filter(p => p.targetVisibility === 'Customer').length})`, color: 'var(--customer-accent)' },
-                { id: 'Distributor', label: `Distributor Only (${allProducts.filter(p => p.targetVisibility === 'Distributor').length})`, color: 'var(--distributor-accent)' },
-                { id: 'Both', label: `Both Portals (${allProducts.filter(p => p.targetVisibility === 'Both').length})`, color: 'var(--primary)' },
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setProductFilterVisibility(tab.id)}
-                  style={{
-                    padding: '7px 14px',
-                    borderRadius: 'var(--radius-full)',
-                    border: '1px solid var(--border-medium)',
-                    background: productFilterVisibility === tab.id ? '#1e293b' : '#ffffff',
-                    color: productFilterVisibility === tab.id ? '#ffffff' : 'var(--text-main)',
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.16s'
-                  }}
-                >
-                  {tab.label}
-                </button>
-              ))}
+              <div style={{ background: '#ffffff', border: '1px solid var(--border-medium)', borderRadius: '12px', padding: '14px 16px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Catalog Products</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>{allProducts.length}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '2px' }}>Single master product records</div>
+              </div>
+
+              <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '12px', padding: '14px 16px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#047857', textTransform: 'uppercase' }}>Customer Portal Active</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#065f46', marginTop: '4px' }}>
+                  {allProducts.filter(p => p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true || p.targetVisibility === 'Customer' || p.targetVisibility === 'Both').length}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#059669', marginTop: '2px' }}>Retail pricing applied</div>
+              </div>
+
+              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '14px 16px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0369a1', textTransform: 'uppercase' }}>Distributor Portal Active</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#075985', marginTop: '4px' }}>
+                  {allProducts.filter(p => p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true || p.targetVisibility === 'Distributor' || p.targetVisibility === 'Both').length}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#0284c7', marginTop: '2px' }}>Wholesale B2B pricing applied</div>
+              </div>
+
+              <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '12px', padding: '14px 16px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4338ca', textTransform: 'uppercase' }}>Both Portals Live</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#3730a3', marginTop: '4px' }}>
+                  {allProducts.filter(p => (p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true) && (p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true)).length}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#4f46e5', marginTop: '2px' }}>Shared product, separate pricing</div>
+              </div>
+
+              <div style={{ background: '#ffffff', border: '1px solid var(--border-medium)', borderRadius: '12px', padding: '14px 16px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Inventory Health</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#10b981', marginTop: '4px' }}>
+                  {allProducts.filter(p => p.inStock !== 0 && p.inStock !== false).length}
+                  <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#ef4444', marginLeft: '6px' }}>
+                    ({allProducts.filter(p => p.inStock === 0 || p.inStock === false).length} OOS)
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '2px' }}>In Stock vs Out of Stock</div>
+              </div>
+            </div>
+
+            {/* Search and Filter Strip */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--border-medium)',
+              padding: '16px',
+              marginBottom: '18px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                {/* Search Bar */}
+                <div style={{ position: 'relative', flex: '1 1 260px' }}>
+                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    placeholder="Search by product name, SKU, brand, or category..."
+                    value={productSearchTerm}
+                    onChange={e => setProductSearchTerm(e.target.value)}
+                    style={{
+                      ...inputStyle,
+                      paddingLeft: '36px',
+                      fontSize: '0.84rem'
+                    }}
+                  />
+                  {productSearchTerm && (
+                    <button
+                      onClick={() => setProductSearchTerm('')}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Filter */}
+                <div style={{ minWidth: '160px' }}>
+                  <select
+                    value={productCategoryFilter}
+                    onChange={e => setProductCategoryFilter(e.target.value)}
+                    style={{ ...selectStyle, width: '100%', fontSize: '0.84rem' }}
+                  >
+                    <option value="All">All Categories</option>
+                    {productCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Stock Filter */}
+                <div style={{ minWidth: '140px' }}>
+                  <select
+                    value={productStockFilter}
+                    onChange={e => setProductStockFilter(e.target.value)}
+                    style={{ ...selectStyle, width: '100%', fontSize: '0.84rem' }}
+                  >
+                    <option value="All">All Stock</option>
+                    <option value="InStock">In Stock Only</option>
+                    <option value="OutOfStock">Out of Stock Only</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Portal Visibility Filter Pills */}
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', paddingTop: '4px', borderTop: '1px solid var(--border-subtle)' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-body)', marginRight: '6px' }}>
+                  Portal Visibility Filter:
+                </span>
+                {[
+                  { id: 'All', label: `All (${allProducts.length})` },
+                  { id: 'Both', label: `Both Portals (${allProducts.filter(p => (p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true) && (p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true)).length})`, color: '#4f46e5' },
+                  { id: 'Customer', label: `Customer Portal Active (${allProducts.filter(p => p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true || p.targetVisibility === 'Customer' || p.targetVisibility === 'Both').length})`, color: '#059669' },
+                  { id: 'Distributor', label: `Distributor Portal Active (${allProducts.filter(p => p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true || p.targetVisibility === 'Distributor' || p.targetVisibility === 'Both').length})`, color: '#0284c7' },
+                  { id: 'CustomerOnly', label: `Customer Only (${allProducts.filter(p => (p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true) && (p.showOnDistributorPortal === 0 || p.showOnDistributorPortal === false)).length})`, color: '#059669' },
+                  { id: 'DistributorOnly', label: `Distributor Only (${allProducts.filter(p => (p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true) && (p.showOnCustomerPortal === 0 || p.showOnCustomerPortal === false)).length})`, color: '#0284c7' },
+                  { id: 'Hidden', label: `Hidden from Both (${allProducts.filter(p => (p.showOnCustomerPortal === 0 || p.showOnCustomerPortal === false) && (p.showOnDistributorPortal === 0 || p.showOnDistributorPortal === false)).length})`, color: '#dc2626' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setProductFilterVisibility(tab.id)}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 'var(--radius-full)',
+                      border: productFilterVisibility === tab.id ? '1px solid #1e293b' : '1px solid var(--border-medium)',
+                      background: productFilterVisibility === tab.id ? '#1e293b' : '#ffffff',
+                      color: productFilterVisibility === tab.id ? '#ffffff' : (tab.color || 'var(--text-main)'),
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Products Table Card */}
@@ -1598,123 +1937,254 @@ export const AdminPanel = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.86rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid var(--border-subtle)', background: 'var(--bg-app-2)', color: 'var(--text-body)' }}>
-                      {['SKU', 'PRODUCT NAME', 'CATEGORY', 'CUSTOMER PRICE', 'DEALER PRICE', 'TARGET VISIBILITY', 'STOCK STATUS', 'ACTIONS'].map(h => (
-                        <th key={h} style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                          {h}
-                        </th>
-                      ))}
+                      <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PRODUCT & CODE</th>
+                      <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(16, 185, 129, 0.04)', color: '#047857' }}>
+                        CUSTOMER PORTAL (RETAIL)
+                      </th>
+                      <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(2, 132, 199, 0.04)', color: '#0284c7' }}>
+                        DISTRIBUTOR PORTAL (B2B)
+                      </th>
+                      <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>B2B MARGIN GAP</th>
+                      <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>STOCK</th>
+                      <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loadingProducts ? (
-                      <tr><td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading product catalog...</td></tr>
+                      <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading product catalog...</td></tr>
                     ) : filteredProducts.length === 0 ? (
-                      <tr><td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No products found under this filter.</td></tr>
-                    ) : filteredProducts.map(p => (
-                      <tr
-                        key={p.id}
-                        style={{ borderBottom: '1px solid var(--border-subtle)' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                      >
-                        {/* SKU */}
-                        <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
-                          {p.sku}
-                        </td>
+                      <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No products found matching current filters.</td></tr>
+                    ) : filteredProducts.map(p => {
+                      const showCust = p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true || p.targetVisibility === 'Customer' || p.targetVisibility === 'Both';
+                      const showDist = p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true || p.targetVisibility === 'Distributor' || p.targetVisibility === 'Both';
+                      const custPrice = Number(p.customerPrice || 0);
+                      const custOrig = Number(p.customerOriginalPrice || p.originalPrice || custPrice);
+                      const custDisc = Number(p.customerDiscount || 0);
+                      const distPrice = Number(p.distributorPrice || 0);
+                      const distOrig = Number(p.distributorOriginalPrice || p.originalPrice || distPrice);
+                      const distDisc = Number(p.distributorDiscount || 0);
+                      const priceGap = Math.max(0, custPrice - distPrice);
+                      const priceGapPercent = custPrice > 0 ? Math.round((priceGap / custPrice) * 100) : 0;
 
-                        {/* Name & desc */}
-                        <td style={{ padding: '12px 14px', maxWidth: '240px' }}>
-                          <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{p.name}</div>
-                          {p.description && (
-                            <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {p.description}
+                      return (
+                        <tr
+                          key={p.id}
+                          style={{ borderBottom: '1px solid var(--border-subtle)' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-app)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          {/* Product Image & Info */}
+                          <td style={{ padding: '12px 14px', minWidth: '240px', maxWidth: '320px' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                              <div style={{
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '8px',
+                                background: '#f1f5f9',
+                                overflow: 'hidden',
+                                flexShrink: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: '1px solid #e2e8f0'
+                              }}>
+                                <img
+                                  src={p.imageUrl || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=120&q=80'}
+                                  alt={p.name}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={e => { e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=120&q=80'; }}
+                                />
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.88rem', lineHeight: 1.3 }}>
+                                  {p.name}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.74rem', color: '#475569', fontWeight: 600 }}>
+                                    {p.sku}
+                                  </span>
+                                  <span style={{ fontSize: '0.68rem', background: '#f1f5f9', color: '#334155', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                                    {p.category}
+                                  </span>
+                                  {p.brand && (
+                                    <span style={{ fontSize: '0.68rem', background: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                                      {p.brand}
+                                    </span>
+                                  )}
+                                  {p.badge && (
+                                    <span style={{ fontSize: '0.66rem', background: '#fef3c7', color: '#b45309', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                                      {p.badge}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                          )}
-                        </td>
+                          </td>
 
-                        {/* Category */}
-                        <td style={{ padding: '12px 14px' }}>
-                          <span className="badge" style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', fontSize: '0.72rem' }}>
-                            {p.category}
-                          </span>
-                        </td>
+                          {/* Customer Portal Column */}
+                          <td style={{ padding: '12px 14px', background: 'rgba(16, 185, 129, 0.02)' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {/* 1-Click Visibility Toggle */}
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePortalVisibility(p, 'customer')}
+                                title="Click to toggle visibility on Customer Portal"
+                                style={{
+                                  alignSelf: 'flex-start',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '2px 8px',
+                                  borderRadius: 'var(--radius-full)',
+                                  border: showCust ? '1px solid #10b981' : '1px solid #cbd5e1',
+                                  background: showCust ? '#ecfdf5' : '#f8fafc',
+                                  color: showCust ? '#047857' : '#64748b',
+                                  fontSize: '0.70rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: showCust ? '#10b981' : '#94a3b8' }} />
+                                {showCust ? 'Live on Customer' : 'Hidden from Customer'}
+                              </button>
 
-                        {/* Customer Price */}
-                        <td style={{ padding: '12px 14px', fontWeight: 700, color: p.customerPrice > 0 ? '#059669' : '#94a3b8' }}>
-                          {p.customerPrice > 0 ? `₹${Number(p.customerPrice).toLocaleString()}` : 'N/A (Wholesale)'}
-                        </td>
+                              {/* Price Details */}
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '2px' }}>
+                                <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#059669' }}>
+                                  ₹{custPrice.toLocaleString()}
+                                </span>
+                                {custOrig > custPrice && (
+                                  <span style={{ fontSize: '0.78rem', color: '#94a3b8', textDecoration: 'line-through' }}>
+                                    ₹{custOrig.toLocaleString()}
+                                  </span>
+                                )}
+                                {custDisc > 0 && (
+                                  <span style={{ fontSize: '0.70rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '1px 4px', borderRadius: '3px' }}>
+                                    -{custDisc}%
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: '0.68rem', color: '#64748b', fontStyle: 'italic' }}>
+                                Mode: {p.customerPricingMode === 'manual' ? 'Manual Set Price' : 'Auto Discount'}
+                              </span>
+                            </div>
+                          </td>
 
-                        {/* Distributor Price */}
-                        <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0284c7' }}>
-                          ₹{Number(p.distributorPrice).toLocaleString()}
-                        </td>
+                          {/* Distributor Portal Column */}
+                          <td style={{ padding: '12px 14px', background: 'rgba(2, 132, 199, 0.02)' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {/* 1-Click Visibility Toggle */}
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePortalVisibility(p, 'distributor')}
+                                title="Click to toggle visibility on Distributor Portal"
+                                style={{
+                                  alignSelf: 'flex-start',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '2px 8px',
+                                  borderRadius: 'var(--radius-full)',
+                                  border: showDist ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                                  background: showDist ? '#f0f9ff' : '#f8fafc',
+                                  color: showDist ? '#0369a1' : '#64748b',
+                                  fontSize: '0.70rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: showDist ? '#0284c7' : '#94a3b8' }} />
+                                {showDist ? 'Live on Distributor' : 'Hidden from Distributor'}
+                              </button>
 
-                        {/* Target Visibility */}
-                        <td style={{ padding: '12px 14px' }}>
-                          <span className={`badge badge-${p.targetVisibility === 'Customer' ? 'customer' : p.targetVisibility === 'Distributor' ? 'distributor' : 'admin'}`}>
-                            {p.targetVisibility === 'Customer' && 'Customer Portal Only'}
-                            {p.targetVisibility === 'Distributor' && 'Distributor Portal Only'}
-                            {p.targetVisibility === 'Both' && 'Both Portals'}
-                          </span>
-                        </td>
+                              {/* Price Details */}
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '2px' }}>
+                                <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0284c7' }}>
+                                  ₹{distPrice.toLocaleString()}
+                                </span>
+                                {distOrig > distPrice && (
+                                  <span style={{ fontSize: '0.78rem', color: '#94a3b8', textDecoration: 'line-through' }}>
+                                    ₹{distOrig.toLocaleString()}
+                                  </span>
+                                )}
+                                {distDisc > 0 && (
+                                  <span style={{ fontSize: '0.70rem', fontWeight: 700, color: '#0284c7', background: '#e0f2fe', padding: '1px 4px', borderRadius: '3px' }}>
+                                    -{distDisc}% B2B
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: '0.68rem', color: '#64748b', fontStyle: 'italic' }}>
+                                Mode: {p.distributorPricingMode === 'manual' ? 'Manual Set Price' : 'Auto Discount'}
+                              </span>
+                            </div>
+                          </td>
 
-                        {/* Stock Status with 1-Click Quick Toggle */}
-                        <td style={{ padding: '12px 14px' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStock(p)}
-                            title={`Click to switch status: currently ${p.inStock ? 'In Stock' : 'Out of Stock'}`}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              padding: '5px 12px',
-                              borderRadius: 'var(--radius-full)',
-                              border: p.inStock ? '1px solid #10b981' : '1px solid #ef4444',
-                              background: p.inStock ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                              color: p.inStock ? '#047857' : '#b91c1c',
-                              fontSize: '0.74rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              whiteSpace: 'nowrap'
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.04)'}
-                            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                          >
-                            <span style={{
-                              width: '7px',
-                              height: '7px',
-                              borderRadius: '50%',
-                              background: p.inStock ? '#10b981' : '#ef4444'
-                            }} />
-                            {p.inStock ? 'In Stock' : 'Out of Stock'}
-                          </button>
-                        </td>
+                          {/* B2B Margin Gap Column */}
+                          <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: 700, color: '#4338ca', fontSize: '0.86rem' }}>
+                              ₹{priceGap.toLocaleString()}
+                            </div>
+                            <div style={{ fontSize: '0.70rem', color: '#6366f1', fontWeight: 600 }}>
+                              {priceGapPercent}% Wholesale Margin
+                            </div>
+                          </td>
 
-                        {/* Actions */}
-                        <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                          <div style={{ display: 'flex', gap: '6px' }}>
+                          {/* Stock Status with 1-Click Toggle */}
+                          <td style={{ padding: '12px 14px' }}>
                             <button
-                              onClick={() => openEditProductModal(p)}
-                              title="Edit Product"
-                              className="btn btn-secondary btn-sm"
-                              style={{ padding: '5px 8px' }}
+                              type="button"
+                              onClick={() => handleToggleStock(p)}
+                              title={`Click to switch status: currently ${p.inStock ? 'In Stock' : 'Out of Stock'}`}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '5px 12px',
+                                borderRadius: 'var(--radius-full)',
+                                border: p.inStock ? '1px solid #10b981' : '1px solid #ef4444',
+                                background: p.inStock ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                                color: p.inStock ? '#047857' : '#b91c1c',
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                whiteSpace: 'nowrap'
+                              }}
                             >
-                              <Edit size={13} /> Edit
+                              <span style={{
+                                width: '7px',
+                                height: '7px',
+                                borderRadius: '50%',
+                                background: p.inStock ? '#10b981' : '#ef4444'
+                              }} />
+                              {p.inStock ? 'In Stock' : 'Out of Stock'}
                             </button>
-                            <button
-                              onClick={() => handleDeleteProduct(p)}
-                              title="Delete Product"
-                              className="btn btn-danger btn-sm"
-                              style={{ padding: '5px 8px' }}
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+
+                          {/* Actions */}
+                          <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                onClick={() => openEditProductModal(p)}
+                                title="Edit Dual-Portal Product"
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '6px 10px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Edit size={13} /> Edit Product
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProduct(p)}
+                                title="Delete Product"
+                                className="btn btn-danger btn-sm"
+                                style={{ padding: '6px 8px' }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -2254,219 +2724,805 @@ export const AdminPanel = () => {
           <div style={{
             background: '#ffffff',
             borderRadius: 'var(--radius-xl)',
-            maxWidth: '560px',
+            maxWidth: '860px',
             width: '100%',
             padding: '28px',
-            boxShadow: 'var(--shadow-lg)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             border: '1px solid var(--border-subtle)',
-            maxHeight: '90vh',
+            maxHeight: '92vh',
             overflowY: 'auto'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '22px', paddingBottom: '16px', borderBottom: '1.5px solid var(--border-subtle)' }}>
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                  {editingProduct ? 'Edit Product Details' : 'Post New Product to Marketplace'}
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 800, color: '#0d9488', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                  <Layers size={13} /> Dual-Portal Product Management
+                </div>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                  {editingProduct ? `Edit: ${editingProduct.name}` : 'Create Single Product for Both Portals'}
                 </h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: '2px 0 0 0' }}>
-                  Set pricing and designate visibility to Customers, Distributors, or Both.
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', margin: '4px 0 0 0' }}>
+                  Manage common product attributes in one record while independently configuring <strong>Customer (Retail)</strong> and <strong>Distributor (B2B)</strong> pricing and portal visibility.
                 </p>
               </div>
-              <button onClick={() => setProductModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-                <X size={20} />
+              <button
+                type="button"
+                onClick={() => setProductModalOpen(false)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSaveProduct}>
-              {/* Product Name */}
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, marginBottom: '6px', color: '#1f2937' }}>
-                  Product Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Ultra-Tough 9H Tempered Glass Screen Protector"
-                  value={productForm.name}
-                  onChange={e => setProductForm({ ...productForm, name: e.target.value })}
-                  style={inputStyle}
-                />
-              </div>
-
-              {/* SKU & Category */}
+              {/* ======================================================== */}
+              {/* SECTION 1: COMMON PRODUCT INFORMATION */}
+              {/* ======================================================== */}
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '12px',
-                marginBottom: '14px'
+                background: '#ffffff',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: '14px',
+                padding: '20px',
+                marginBottom: '20px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
               }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, marginBottom: '6px', color: '#1f2937' }}>
-                    SKU Code *
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
+                  <Package size={18} color="#0f766e" />
+                  <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+                    1. Common Product Information
+                  </span>
+                  <span style={{ fontSize: '0.72rem', background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontWeight: 600, marginLeft: 'auto' }}>
+                    Shared across both portals
+                  </span>
+                </div>
+
+                {/* Product Name */}
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                    Product Name *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="PRD-SCR-101"
-                    value={productForm.sku}
-                    onChange={e => setProductForm({ ...productForm, sku: e.target.value })}
-                    style={{ ...inputStyle, fontFamily: 'var(--font-mono)' }}
+                    placeholder="e.g. Ultra-Fast 65W GaN Dual-Port Charger (Type-C + USB-A)"
+                    value={productForm.name}
+                    onChange={e => setProductForm({ ...productForm, name: e.target.value })}
+                    style={inputStyle}
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, marginBottom: '6px', color: '#1f2937' }}>
-                    Category *
+                {/* SKU, Brand & Category */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '12px',
+                  marginBottom: '14px'
+                }}>
+                  {/* SKU */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>
+                        Product Code / SKU *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setProductForm({ ...productForm, sku: `MWS-${Date.now().toString().slice(-6)}` })}
+                        style={{ background: 'none', border: 'none', color: '#0d9488', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                      >
+                        Generate SKU
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      placeholder="MWS-CHG-65W"
+                      value={productForm.sku}
+                      onChange={e => setProductForm({ ...productForm, sku: e.target.value })}
+                      style={{ ...inputStyle, fontFamily: 'var(--font-mono)' }}
+                    />
+                  </div>
+
+                  {/* Brand */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                      Brand / Manufacturer
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. MWS Eagle, OEM, Samsung"
+                      value={productForm.brand}
+                      onChange={e => setProductForm({ ...productForm, brand: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Category */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                      Category *
+                    </label>
+                    <select
+                      value={productForm.category}
+                      onChange={e => setProductForm({ ...productForm, category: e.target.value })}
+                      style={{ ...inputStyle, cursor: 'pointer' }}
+                    >
+                      {productCategories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Image URL with live preview thumbnail */}
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                    Product Image URL
                   </label>
-                  <select
-                    value={productForm.category}
-                    onChange={e => setProductForm({ ...productForm, category: e.target.value })}
-                    style={{ ...inputStyle, cursor: 'pointer' }}
-                  >
-                    {productCategories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      placeholder="https://images.unsplash.com/... (Direct image link)"
+                      value={productForm.imageUrl}
+                      onChange={e => setProductForm({ ...productForm, imageUrl: e.target.value })}
+                      style={{ ...inputStyle, flex: 1 }}
+                    />
+                    <div style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '8px',
+                      border: '1.5px solid #cbd5e1',
+                      overflow: 'hidden',
+                      background: '#f8fafc',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {productForm.imageUrl ? (
+                        <img
+                          src={productForm.imageUrl}
+                          alt="Preview"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={e => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <ImageIcon size={18} color="#94a3b8" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description & Specifications */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gap: '12px',
+                  marginBottom: '14px'
+                }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                      Description
+                    </label>
+                    <textarea
+                      rows="3"
+                      placeholder="Short summary of key benefits, materials, and usage..."
+                      value={productForm.description}
+                      onChange={e => setProductForm({ ...productForm, description: e.target.value })}
+                      style={textareaStyle}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                      Specifications / Key Features
+                    </label>
+                    <textarea
+                      rows="3"
+                      placeholder="• Pin Configuration: Type-C PD 3.0&#10;• Power Output: 65W Super Fast Charging&#10;• Warranty: 6 Months Official Replacement"
+                      value={productForm.specifications}
+                      onChange={e => setProductForm({ ...productForm, specifications: e.target.value })}
+                      style={textareaStyle}
+                    />
+                  </div>
+                </div>
+
+                {/* Badge, Stock & Product Status */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '12px'
+                }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                      Badge Label (Optional)
+                    </label>
+                    <select
+                      value={productForm.badge}
+                      onChange={e => setProductForm({ ...productForm, badge: e.target.value })}
+                      style={{ ...inputStyle, cursor: 'pointer' }}
+                    >
+                      <option value="">None</option>
+                      <option value="Bestseller">Bestseller</option>
+                      <option value="New!">New Arrival</option>
+                      <option value="Hot Deal">Hot Deal</option>
+                      <option value="Wholesale Special">Wholesale Special</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                      Stock / Inventory Status
+                    </label>
+                    <select
+                      value={productForm.inStock}
+                      onChange={e => setProductForm({ ...productForm, inStock: Number(e.target.value) })}
+                      style={{ ...inputStyle, cursor: 'pointer' }}
+                    >
+                      <option value={1}>In Stock (Available for Orders)</option>
+                      <option value={0}>Out of Stock</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
+                      Product Lifecycle Status
+                    </label>
+                    <select
+                      value={productForm.productStatus}
+                      onChange={e => setProductForm({ ...productForm, productStatus: e.target.value })}
+                      style={{ ...inputStyle, cursor: 'pointer' }}
+                    >
+                      <option value="Active">Active (Published)</option>
+                      <option value="Draft">Draft (Unpublished)</option>
+                      <option value="Archived">Archived</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              {/* TARGET VISIBILITY - CRITICAL CONTROL */}
+              {/* ======================================================== */}
+              {/* SECTION 2: CUSTOMER PORTAL PRICING & VISIBILITY */}
+              {/* ======================================================== */}
+              <div style={{
+                background: '#f0fdf4',
+                border: '2px solid #86efac',
+                borderRadius: '14px',
+                padding: '20px',
+                marginBottom: '20px',
+                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.06)'
+              }}>
+                {/* Header & Toggle */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px', paddingBottom: '12px', borderBottom: '1px solid #bbf7d0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#10b981', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <ShoppingCart size={15} />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '1rem', fontWeight: 800, color: '#065f46' }}>
+                        2. Customer Portal Pricing (Retail)
+                      </span>
+                      <div style={{ fontSize: '0.74rem', color: '#047857' }}>
+                        Controls retail customer pricing and launch visibility
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Show on Customer Portal Toggle Switch */}
+                  <label style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 14px',
+                    borderRadius: 'var(--radius-full)',
+                    background: productForm.showOnCustomerPortal ? '#059669' : '#e2e8f0',
+                    color: productForm.showOnCustomerPortal ? '#ffffff' : '#64748b',
+                    fontSize: '0.80rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    transition: 'all 0.2s'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={productForm.showOnCustomerPortal}
+                      onChange={e => setProductForm({ ...productForm, showOnCustomerPortal: e.target.checked })}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    Show on Customer Portal
+                  </label>
+                </div>
+
+                {/* Customer Pricing Mode Switcher */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#065f46', marginBottom: '8px' }}>
+                    Customer Pricing Mode:
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPrice = calcFinalPrice(productForm.customerOriginalPrice, productForm.customerDiscount);
+                        setProductForm({ ...productForm, customerPricingMode: 'auto', customerPrice: newPrice });
+                      }}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        border: productForm.customerPricingMode === 'auto' ? '2px solid #059669' : '1.5px solid #cbd5e1',
+                        background: productForm.customerPricingMode === 'auto' ? '#ffffff' : 'rgba(255,255,255,0.6)',
+                        color: productForm.customerPricingMode === 'auto' ? '#047857' : '#64748b',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        boxShadow: productForm.customerPricingMode === 'auto' ? '0 2px 6px rgba(5, 150, 105, 0.15)' : 'none'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800 }}>
+                        <Calculator size={14} /> Automatic Calculation Mode
+                      </div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#059669', opacity: 0.9 }}>
+                        Original Price - Discount % = Final Price
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setProductForm({ ...productForm, customerPricingMode: 'manual' })}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        border: productForm.customerPricingMode === 'manual' ? '2px solid #059669' : '1.5px solid #cbd5e1',
+                        background: productForm.customerPricingMode === 'manual' ? '#ffffff' : 'rgba(255,255,255,0.6)',
+                        color: productForm.customerPricingMode === 'manual' ? '#047857' : '#64748b',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        boxShadow: productForm.customerPricingMode === 'manual' ? '0 2px 6px rgba(5, 150, 105, 0.15)' : 'none'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800 }}>
+                        <Tag size={14} /> Manual Pricing Mode
+                      </div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#059669', opacity: 0.9 }}>
+                        Admin manually types final Customer selling price
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Customer Pricing Inputs */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '12px',
+                  marginBottom: '14px'
+                }}>
+                  {/* Customer Original Price */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 700, marginBottom: '6px', color: '#065f46' }}>
+                      Customer Original Price (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      required
+                      placeholder="e.g. 2000"
+                      value={productForm.customerOriginalPrice}
+                      onChange={e => {
+                        const newOrig = parseFloat(e.target.value) || 0;
+                        if (productForm.customerPricingMode === 'auto') {
+                          const newFinal = calcFinalPrice(newOrig, productForm.customerDiscount);
+                          setProductForm({ ...productForm, customerOriginalPrice: e.target.value, customerPrice: newFinal });
+                        } else {
+                          const newDisc = calcDiscountPercent(newOrig, productForm.customerPrice);
+                          setProductForm({ ...productForm, customerOriginalPrice: e.target.value, customerDiscount: newDisc });
+                        }
+                      }}
+                      style={{ ...inputStyle, borderColor: '#86efac' }}
+                    />
+                  </div>
+
+                  {/* Customer Discount (%) */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 700, marginBottom: '6px', color: '#065f46' }}>
+                      Customer Discount (%) {productForm.customerPricingMode === 'auto' ? '*' : '(Calculated)'}
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        placeholder="e.g. 10"
+                        value={productForm.customerDiscount}
+                        onChange={e => {
+                          const newDisc = parseFloat(e.target.value) || 0;
+                          if (productForm.customerPricingMode === 'auto') {
+                            const newFinal = calcFinalPrice(productForm.customerOriginalPrice, newDisc);
+                            setProductForm({ ...productForm, customerDiscount: e.target.value, customerPrice: newFinal });
+                          } else {
+                            setProductForm({ ...productForm, customerDiscount: e.target.value });
+                          }
+                        }}
+                        style={{ ...inputStyle, borderColor: '#86efac' }}
+                      />
+                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#047857' }}>%</span>
+                    </div>
+                  </div>
+
+                  {/* Customer Final Price */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 700, marginBottom: '6px', color: '#065f46' }}>
+                      Customer Final Price (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      required
+                      readOnly={productForm.customerPricingMode === 'auto'}
+                      placeholder="e.g. 1800"
+                      value={productForm.customerPrice}
+                      onChange={e => {
+                        const newPrice = parseFloat(e.target.value) || 0;
+                        const newDisc = calcDiscountPercent(productForm.customerOriginalPrice, newPrice);
+                        setProductForm({ ...productForm, customerPrice: e.target.value, customerDiscount: newDisc });
+                      }}
+                      style={{
+                        ...inputStyle,
+                        borderColor: '#86efac',
+                        background: productForm.customerPricingMode === 'auto' ? '#f0fdf4' : '#ffffff',
+                        fontWeight: 800,
+                        color: '#047857'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Live Customer Portal Preview Badge */}
+                <div style={{
+                  background: '#ffffff',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '8px'
+                }}>
+                  <div style={{ fontSize: '0.78rem', color: '#065f46', fontWeight: 600 }}>
+                    <strong>Retail Customer will see:</strong>{' '}
+                    <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#059669', marginLeft: '6px' }}>
+                      ₹{Number(productForm.customerPrice || 0).toLocaleString()}
+                    </span>
+                    {Number(productForm.customerOriginalPrice) > Number(productForm.customerPrice) && (
+                      <span style={{ fontSize: '0.82rem', color: '#94a3b8', textDecoration: 'line-through', marginLeft: '6px' }}>
+                        ₹{Number(productForm.customerOriginalPrice).toLocaleString()}
+                      </span>
+                    )}
+                    {Number(productForm.customerDiscount) > 0 && (
+                      <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '1px 6px', borderRadius: '4px', marginLeft: '6px' }}>
+                        {productForm.customerDiscount}% OFF
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: productForm.showOnCustomerPortal ? '#059669' : '#dc2626' }}>
+                    {productForm.showOnCustomerPortal ? '● Visible on Customer Portal' : '○ Hidden from Customer Portal'}
+                  </span>
+                </div>
+              </div>
+
+              {/* ======================================================== */}
+              {/* SECTION 3: DISTRIBUTOR PORTAL PRICING & VISIBILITY */}
+              {/* ======================================================== */}
+              <div style={{
+                background: '#f0f9ff',
+                border: '2px solid #7dd3fc',
+                borderRadius: '14px',
+                padding: '20px',
+                marginBottom: '20px',
+                boxShadow: '0 2px 6px rgba(2, 132, 199, 0.06)'
+              }}>
+                {/* Header & Toggle */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px', paddingBottom: '12px', borderBottom: '1px solid #bae6fd' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#0284c7', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Building2 size={15} />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '1rem', fontWeight: 800, color: '#075985' }}>
+                        3. Distributor Portal Pricing (Wholesale B2B)
+                      </span>
+                      <div style={{ fontSize: '0.74rem', color: '#0369a1' }}>
+                        Independent wholesale pricing and launch visibility
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Show on Distributor Portal Toggle Switch */}
+                  <label style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 14px',
+                    borderRadius: 'var(--radius-full)',
+                    background: productForm.showOnDistributorPortal ? '#0284c7' : '#e2e8f0',
+                    color: productForm.showOnDistributorPortal ? '#ffffff' : '#64748b',
+                    fontSize: '0.80rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    transition: 'all 0.2s'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={productForm.showOnDistributorPortal}
+                      onChange={e => setProductForm({ ...productForm, showOnDistributorPortal: e.target.checked })}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    Show on Distributor Portal
+                  </label>
+                </div>
+
+                {/* Distributor Pricing Mode Switcher */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#075985', marginBottom: '8px' }}>
+                    Distributor Pricing Mode:
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPrice = calcFinalPrice(productForm.distributorOriginalPrice, productForm.distributorDiscount);
+                        setProductForm({ ...productForm, distributorPricingMode: 'auto', distributorPrice: newPrice });
+                      }}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        border: productForm.distributorPricingMode === 'auto' ? '2px solid #0284c7' : '1.5px solid #cbd5e1',
+                        background: productForm.distributorPricingMode === 'auto' ? '#ffffff' : 'rgba(255,255,255,0.6)',
+                        color: productForm.distributorPricingMode === 'auto' ? '#0369a1' : '#64748b',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        boxShadow: productForm.distributorPricingMode === 'auto' ? '0 2px 6px rgba(2, 132, 199, 0.15)' : 'none'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800 }}>
+                        <Calculator size={14} /> Automatic Calculation Mode
+                      </div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#0284c7', opacity: 0.9 }}>
+                        Distributor Original - Discount % = Final Wholesale Price
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setProductForm({ ...productForm, distributorPricingMode: 'manual' })}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        border: productForm.distributorPricingMode === 'manual' ? '2px solid #0284c7' : '1.5px solid #cbd5e1',
+                        background: productForm.distributorPricingMode === 'manual' ? '#ffffff' : 'rgba(255,255,255,0.6)',
+                        color: productForm.distributorPricingMode === 'manual' ? '#0369a1' : '#64748b',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        boxShadow: productForm.distributorPricingMode === 'manual' ? '0 2px 6px rgba(2, 132, 199, 0.15)' : 'none'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800 }}>
+                        <Tag size={14} /> Manual Pricing Mode
+                      </div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#0284c7', opacity: 0.9 }}>
+                        Admin manually types final wholesale Distributor price
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Distributor Pricing Inputs */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '12px',
+                  marginBottom: '14px'
+                }}>
+                  {/* Distributor Original Price */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 700, marginBottom: '6px', color: '#075985' }}>
+                      Distributor Original Price (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      required
+                      placeholder="e.g. 1500"
+                      value={productForm.distributorOriginalPrice}
+                      onChange={e => {
+                        const newOrig = parseFloat(e.target.value) || 0;
+                        if (productForm.distributorPricingMode === 'auto') {
+                          const newFinal = calcFinalPrice(newOrig, productForm.distributorDiscount);
+                          setProductForm({ ...productForm, distributorOriginalPrice: e.target.value, distributorPrice: newFinal });
+                        } else {
+                          const newDisc = calcDiscountPercent(newOrig, productForm.distributorPrice);
+                          setProductForm({ ...productForm, distributorOriginalPrice: e.target.value, distributorDiscount: newDisc });
+                        }
+                      }}
+                      style={{ ...inputStyle, borderColor: '#7dd3fc' }}
+                    />
+                  </div>
+
+                  {/* Distributor Discount (%) */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 700, marginBottom: '6px', color: '#075985' }}>
+                      Distributor Discount (%) {productForm.distributorPricingMode === 'auto' ? '*' : '(Calculated)'}
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        placeholder="e.g. 25"
+                        value={productForm.distributorDiscount}
+                        onChange={e => {
+                          const newDisc = parseFloat(e.target.value) || 0;
+                          if (productForm.distributorPricingMode === 'auto') {
+                            const newFinal = calcFinalPrice(productForm.distributorOriginalPrice, newDisc);
+                            setProductForm({ ...productForm, distributorDiscount: e.target.value, distributorPrice: newFinal });
+                          } else {
+                            setProductForm({ ...productForm, distributorDiscount: e.target.value });
+                          }
+                        }}
+                        style={{ ...inputStyle, borderColor: '#7dd3fc' }}
+                      />
+                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0284c7' }}>%</span>
+                    </div>
+                  </div>
+
+                  {/* Distributor Final Price */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 700, marginBottom: '6px', color: '#075985' }}>
+                      Distributor Final Price (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      required
+                      readOnly={productForm.distributorPricingMode === 'auto'}
+                      placeholder="e.g. 1125"
+                      value={productForm.distributorPrice}
+                      onChange={e => {
+                        const newPrice = parseFloat(e.target.value) || 0;
+                        const newDisc = calcDiscountPercent(productForm.distributorOriginalPrice, newPrice);
+                        setProductForm({ ...productForm, distributorPrice: e.target.value, distributorDiscount: newDisc });
+                      }}
+                      style={{
+                        ...inputStyle,
+                        borderColor: '#7dd3fc',
+                        background: productForm.distributorPricingMode === 'auto' ? '#f0f9ff' : '#ffffff',
+                        fontWeight: 800,
+                        color: '#0284c7'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Live Distributor Portal Preview Badge */}
+                <div style={{
+                  background: '#ffffff',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '8px'
+                }}>
+                  <div style={{ fontSize: '0.78rem', color: '#075985', fontWeight: 600 }}>
+                    <strong>Wholesale Distributor will see:</strong>{' '}
+                    <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0284c7', marginLeft: '6px' }}>
+                      ₹{Number(productForm.distributorPrice || 0).toLocaleString()}
+                    </span>
+                    {Number(productForm.distributorOriginalPrice) > Number(productForm.distributorPrice) && (
+                      <span style={{ fontSize: '0.82rem', color: '#94a3b8', textDecoration: 'line-through', marginLeft: '6px' }}>
+                        ₹{Number(productForm.distributorOriginalPrice).toLocaleString()}
+                      </span>
+                    )}
+                    {Number(productForm.distributorDiscount) > 0 && (
+                      <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#0284c7', background: '#e0f2fe', padding: '1px 6px', borderRadius: '4px', marginLeft: '6px' }}>
+                        {productForm.distributorDiscount}% OFF B2B
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: productForm.showOnDistributorPortal ? '#0284c7' : '#dc2626' }}>
+                    {productForm.showOnDistributorPortal ? '● Visible on Distributor Portal' : '○ Hidden from Distributor Portal'}
+                  </span>
+                </div>
+              </div>
+
+              {/* ======================================================== */}
+              {/* SECTION 4: STRICT SEPARATION & COMPARISON REASSURANCE */}
+              {/* ======================================================== */}
               <div style={{
                 background: '#f8fafc',
-                padding: '16px',
-                borderRadius: 'var(--radius-md)',
                 border: '1.5px solid #cbd5e1',
-                marginBottom: '16px'
-              }}>
-                <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
-                  Target Visibility Authority *
-                </label>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                  {[
-                    { id: 'Customer', label: 'Customer Only', sub: 'Retail Portal', color: '#059669', bg: '#ecfdf5', border: '#10b981' },
-                    { id: 'Distributor', label: 'Distributor Only', sub: 'Wholesale Portal', color: '#0284c7', bg: '#f0f9ff', border: '#0ea5e9' },
-                    { id: 'Both', label: 'Both Portals', sub: 'Universal Access', color: '#4f46e5', bg: '#eef2ff', border: '#6366f1' },
-                  ].map(v => {
-                    const isSelected = productForm.targetVisibility === v.id;
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => setProductForm({ ...productForm, targetVisibility: v.id })}
-                        style={{
-                          padding: '10px 6px',
-                          borderRadius: '8px',
-                          border: isSelected ? `2px solid ${v.border}` : '1.5px solid #e2e8f0',
-                          background: isSelected ? v.bg : '#ffffff',
-                          color: isSelected ? v.color : '#475569',
-                          fontWeight: 700,
-                          fontSize: '0.82rem',
-                          cursor: 'pointer',
-                          textAlign: 'center',
-                          transition: 'all 0.15s'
-                        }}
-                      >
-                        <div>{v.label}</div>
-                        <span style={{ fontSize: '0.68rem', fontWeight: 500, opacity: 0.85 }}>{v.sub}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Customer Price & Distributor Price */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '12px',
-                marginBottom: '14px'
-              }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, marginBottom: '6px', color: '#059669' }}>
-                    Customer Price (₹ INR)
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    min="0"
-                    placeholder="e.g. 299"
-                    value={productForm.customerPrice}
-                    onChange={e => setProductForm({ ...productForm, customerPrice: e.target.value })}
-                    style={inputStyle}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, marginBottom: '6px', color: '#0284c7' }}>
-                    Distributor Price (₹ INR) *
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    min="0"
-                    required
-                    placeholder="e.g. 110"
-                    value={productForm.distributorPrice}
-                    onChange={e => setProductForm({ ...productForm, distributorPrice: e.target.value })}
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
-
-              {/* Description */}
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, marginBottom: '6px', color: '#1f2937' }}>
-                  Description / Specification
-                </label>
-                <textarea
-                  rows="3"
-                  placeholder="Technical details, model compatibility, packaging..."
-                  value={productForm.description}
-                  onChange={e => setProductForm({ ...productForm, description: e.target.value })}
-                  style={textareaStyle}
-                />
-              </div>
-
-              {/* Image URL & In Stock */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '12px',
+                borderRadius: '14px',
+                padding: '16px 20px',
                 marginBottom: '22px'
               }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, marginBottom: '6px', color: '#1f2937' }}>
-                    Optional Image URL
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="https://... (image url)"
-                    value={productForm.imageUrl}
-                    onChange={e => setProductForm({ ...productForm, imageUrl: e.target.value })}
-                    style={inputStyle}
-                  />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <ShieldCheck size={18} color="#4f46e5" />
+                  <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#1e293b' }}>
+                    Role-Based Separation & Margin Contrast
+                  </span>
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, marginBottom: '6px', color: '#1f2937' }}>
-                    Inventory Status
-                  </label>
-                  <select
-                    value={productForm.inStock}
-                    onChange={e => setProductForm({ ...productForm, inStock: Number(e.target.value) })}
-                    style={{ ...inputStyle, cursor: 'pointer' }}
-                  >
-                    <option value={1}>In Stock (Ready to Order)</option>
-                    <option value={0}>Out of Stock</option>
-                  </select>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '12px',
+                  background: '#ffffff',
+                  padding: '12px',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0',
+                  fontSize: '0.80rem'
+                }}>
+                  <div>
+                    <div style={{ color: '#047857', fontWeight: 700 }}>Customer Portal Price</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
+                      ₹{Number(productForm.customerPrice || 0).toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      Discount: {productForm.customerDiscount}% | Status: {productForm.showOnCustomerPortal ? 'Published' : 'Hidden'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ color: '#0369a1', fontWeight: 700 }}>Distributor Portal Price</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0284c7', marginTop: '2px' }}>
+                      ₹{Number(productForm.distributorPrice || 0).toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      Discount: {productForm.distributorDiscount}% | Status: {productForm.showOnDistributorPortal ? 'Published' : 'Hidden'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ color: '#4338ca', fontWeight: 700 }}>Wholesale Price Delta</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#4f46e5', marginTop: '2px' }}>
+                      ₹{Math.max(0, Number(productForm.customerPrice || 0) - Number(productForm.distributorPrice || 0)).toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      B2B margin over retail
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Info size={13} color="#6366f1" />
+                  <span>
+                    Strict security guarantee: Customer Portal API never returns distributor prices. Distributor Portal API never returns customer prices.
+                  </span>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              {/* Form Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
                 <button
                   type="button"
                   onClick={() => setProductModalOpen(false)}
                   className="btn btn-secondary"
+                  style={{ padding: '10px 20px', fontSize: '0.88rem' }}
                 >
                   Cancel
                 </button>
@@ -2474,9 +3530,14 @@ export const AdminPanel = () => {
                   type="submit"
                   disabled={savingProduct}
                   className="btn btn-primary"
-                  style={{ background: 'linear-gradient(135deg, #0d9488, #0f766e)' }}
+                  style={{
+                    background: 'linear-gradient(135deg, #0d9488, #0f766e)',
+                    padding: '10px 26px',
+                    fontSize: '0.90rem',
+                    boxShadow: '0 4px 12px rgba(13, 148, 136, 0.25)'
+                  }}
                 >
-                  {savingProduct ? 'Saving...' : editingProduct ? 'Update Product' : 'Post Product'}
+                  {savingProduct ? 'Saving Configuration...' : editingProduct ? 'Save Product Changes' : 'Publish Product to Portals'}
                 </button>
               </div>
             </form>

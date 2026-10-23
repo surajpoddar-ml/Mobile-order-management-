@@ -87,7 +87,7 @@ export const initDb = async () => {
     )
   `);
 
-    try {
+  try {
     await queryRun('ALTER TABLE products ADD COLUMN imageUrl TEXT');
   } catch (e) {}
   try {
@@ -102,6 +102,93 @@ export const initDb = async () => {
   try {
     await queryRun('ALTER TABLE products ADD COLUMN reviewCount INTEGER DEFAULT 0');
   } catch (e) {}
+  try {
+    await queryRun("ALTER TABLE products ADD COLUMN brand TEXT DEFAULT 'MWS Eagle'");
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE products ADD COLUMN specifications TEXT');
+  } catch (e) {}
+  try {
+    await queryRun("ALTER TABLE products ADD COLUMN productStatus TEXT DEFAULT 'Active'");
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE products ADD COLUMN customerOriginalPrice REAL DEFAULT 0');
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE products ADD COLUMN customerDiscount REAL DEFAULT 0');
+  } catch (e) {}
+  try {
+    await queryRun("ALTER TABLE products ADD COLUMN customerPricingMode TEXT DEFAULT 'auto'");
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE products ADD COLUMN showOnCustomerPortal INTEGER DEFAULT 1');
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE products ADD COLUMN distributorOriginalPrice REAL DEFAULT 0');
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE products ADD COLUMN distributorDiscount REAL DEFAULT 0');
+  } catch (e) {}
+  try {
+    await queryRun("ALTER TABLE products ADD COLUMN distributorPricingMode TEXT DEFAULT 'auto'");
+  } catch (e) {}
+  try {
+    await queryRun('ALTER TABLE products ADD COLUMN showOnDistributorPortal INTEGER DEFAULT 1');
+  } catch (e) {}
+
+  // Backfill/migrate legacy product rows if needed
+  try {
+    await queryRun(`
+      UPDATE products 
+      SET 
+        brand = COALESCE(brand, 'MWS Eagle'),
+        productStatus = COALESCE(productStatus, 'Active'),
+        customerPricingMode = COALESCE(customerPricingMode, 'auto'),
+        distributorPricingMode = COALESCE(distributorPricingMode, 'auto'),
+        showOnCustomerPortal = CASE 
+          WHEN showOnCustomerPortal IS NOT NULL THEN showOnCustomerPortal
+          WHEN targetVisibility IN ('Customer', 'Both') THEN 1 
+          ELSE 0 
+        END,
+        showOnDistributorPortal = CASE 
+          WHEN showOnDistributorPortal IS NOT NULL THEN showOnDistributorPortal
+          WHEN targetVisibility IN ('Distributor', 'Both') THEN 1 
+          ELSE 0 
+        END,
+        customerOriginalPrice = CASE 
+          WHEN customerOriginalPrice IS NOT NULL AND customerOriginalPrice > 0 THEN customerOriginalPrice
+          WHEN originalPrice IS NOT NULL AND originalPrice > 0 THEN originalPrice
+          WHEN customerPrice IS NOT NULL AND customerPrice > 0 THEN ROUND(customerPrice * 1.25, 2)
+          ELSE 0 
+        END,
+        distributorOriginalPrice = CASE 
+          WHEN distributorOriginalPrice IS NOT NULL AND distributorOriginalPrice > 0 THEN distributorOriginalPrice
+          WHEN originalPrice IS NOT NULL AND originalPrice > 0 THEN originalPrice
+          WHEN distributorPrice IS NOT NULL AND distributorPrice > 0 THEN ROUND(distributorPrice * 1.4, 2)
+          ELSE 0 
+        END
+      WHERE customerOriginalPrice IS NULL OR customerOriginalPrice = 0 OR distributorOriginalPrice IS NULL OR distributorOriginalPrice = 0
+    `);
+
+    // Backfill discounts based on original and final prices
+    await queryRun(`
+      UPDATE products
+      SET
+        customerDiscount = CASE
+          WHEN customerDiscount IS NOT NULL AND customerDiscount > 0 THEN customerDiscount
+          WHEN customerOriginalPrice > customerPrice AND customerOriginalPrice > 0 THEN ROUND(((customerOriginalPrice - customerPrice) * 100.0) / customerOriginalPrice, 1)
+          ELSE 0
+        END,
+        distributorDiscount = CASE
+          WHEN distributorDiscount IS NOT NULL AND distributorDiscount > 0 THEN distributorDiscount
+          WHEN distributorOriginalPrice > distributorPrice AND distributorOriginalPrice > 0 THEN ROUND(((distributorOriginalPrice - distributorPrice) * 100.0) / distributorOriginalPrice, 1)
+          ELSE 0
+        END
+      WHERE customerDiscount IS NULL OR distributorDiscount IS NULL OR customerDiscount = 0 OR distributorDiscount = 0
+    `);
+  } catch (e) {
+    console.error('Migration notice:', e.message);
+  }
 
   // Advertisements table for Landing Page Board (Images and Videos uploaded by Admin)
   await queryRun(`

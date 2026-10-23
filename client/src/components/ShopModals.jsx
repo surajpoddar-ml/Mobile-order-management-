@@ -30,7 +30,9 @@ import {
   Upload,
   FileCheck,
   Eye,
-  Check
+  Check,
+  MessageCircle,
+  PhoneCall
 } from 'lucide-react';
 
 export const ShopModals = () => {
@@ -1683,36 +1685,232 @@ export const ShopModals = () => {
 
             <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <p style={{ color: 'var(--text-body)', fontSize: '0.92rem', lineHeight: 1.55, margin: 0 }}>
-                We are India's premier wholesale mobile parts and cable accessories distributor. Reach out to our wholesale support desk:
+                We are India's premier wholesale mobile parts and accessories distributor. Reach out to us via direct Call or WhatsApp:
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '10px' }}>
-                  <Phone size={18} color="#2563eb" />
-                  <div>
-                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Toll-Free & Wholesale Support</div>
-                    <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a' }}>+91 98765 43210 / +91 11-4567-8900</div>
-                  </div>
-                </div>
+              {/* Direct 1-Click Action Buttons: Call & WhatsApp */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <a
+                  href="tel:+919507677590"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '12px 14px',
+                    backgroundColor: '#2563eb',
+                    color: '#ffffff',
+                    borderRadius: '10px',
+                    fontWeight: 800,
+                    fontSize: '0.9rem',
+                    textDecoration: 'none',
+                    transition: 'all 0.18s ease',
+                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#2563eb')}
+                >
+                  <PhoneCall size={18} />
+                  <span>Call Now</span>
+                </a>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '10px' }}>
-                  <Mail size={18} color="#059669" />
+                <a
+                  href="https://wa.me/919507677590?text=Hello%20MWS%20EAGLE%2C%20I%20have%20an%20inquiry%20regarding%20mobile%20spare%20parts%20and%20orders."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '12px 14px',
+                    backgroundColor: '#25D366',
+                    color: '#ffffff',
+                    borderRadius: '10px',
+                    fontWeight: 800,
+                    fontSize: '0.9rem',
+                    textDecoration: 'none',
+                    transition: 'all 0.18s ease',
+                    boxShadow: '0 4px 12px rgba(37, 211, 102, 0.28)'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#20ba59')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#25D366')}
+                >
+                  <MessageCircle size={18} />
+                  <span>WhatsApp</span>
+                </a>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Clickable Phone Call Block */}
+                <a
+                  href="tel:+919507677590"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 14px',
+                    background: '#f8fafc',
+                    borderRadius: '10px',
+                    textDecoration: 'none',
+                    border: '1.5px solid #e2e8f0',
+                    transition: 'all 0.18s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#2563eb';
+                    e.currentTarget.style.backgroundColor = '#f0f7ff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                  }}
+                >
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#2563eb',
+                    flexShrink: 0
+                  }}>
+                    <Phone size={20} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Phone Call Support</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>+91 95076 77590</div>
+                  </div>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#2563eb' }}>Tap to Call →</span>
+                </a>
+
+                {/* Clickable WhatsApp Chat Block */}
+                <a
+                  href="https://wa.me/919507677590?text=Hello%20MWS%20EAGLE%2C%20I%20have%20an%20inquiry%20regarding%20mobile%20spare%20parts%20and%20orders."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 14px',
+                    background: '#f0fdf4',
+                    borderRadius: '10px',
+                    textDecoration: 'none',
+                    border: '1.5px solid #bbf7d0',
+                    transition: 'all 0.18s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#22c55e';
+                    e.currentTarget.style.backgroundColor = '#dcfce7';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#bbf7d0';
+                    e.currentTarget.style.backgroundColor = '#f0fdf4';
+                  }}
+                >
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    backgroundColor: 'rgba(37, 211, 102, 0.16)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#15803d',
+                    flexShrink: 0
+                  }}>
+                    <MessageCircle size={20} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.74rem', color: '#166534', fontWeight: 600 }}>Direct WhatsApp Chat</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>+91 95076 77590</div>
+                  </div>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#15803d' }}>Open WhatsApp →</span>
+                </a>
+
+                {/* Location: Khagaria, Bihar */}
+                <a
+                  href="https://maps.google.com/?q=Khagaria,+Bihar"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 14px',
+                    background: '#f8fafc',
+                    borderRadius: '10px',
+                    textDecoration: 'none',
+                    border: '1.5px solid #e2e8f0',
+                    transition: 'all 0.18s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#d97706';
+                    e.currentTarget.style.backgroundColor = '#fffbeb';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                  }}
+                >
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#d97706',
+                    flexShrink: 0
+                  }}>
+                    <MapPin size={20} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Hub & Distribution Center</div>
+                    <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0f172a' }}>Khagaria, Bihar</div>
+                  </div>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#d97706' }}>Open Map →</span>
+                </a>
+
+                {/* Wholesale Email Inquiries */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#059669',
+                    flexShrink: 0
+                  }}>
+                    <Mail size={20} />
+                  </div>
                   <div>
                     <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Wholesale & Customer Inquiries</div>
                     <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a' }}>support@mwseagle.com</div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '10px' }}>
-                  <MapPin size={18} color="#d97706" />
-                  <div>
-                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Central Logistics Hub</div>
-                    <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a' }}>MWS Parts Hub, Karol Bagh Electronics Zone, New Delhi 110005</div>
+                {/* Operating Hours */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#7c3aed',
+                    flexShrink: 0
+                  }}>
+                    <Clock size={20} />
                   </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '10px' }}>
-                  <Clock size={18} color="#7c3aed" />
                   <div>
                     <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Operating Hours</div>
                     <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a' }}>Mon – Sat: 9:30 AM to 8:00 PM IST</div>
@@ -1723,7 +1921,7 @@ export const ShopModals = () => {
               <button
                 onClick={() => setIsContactOpen(false)}
                 className="btn btn-primary"
-                style={{ width: '100%', padding: '12px', fontWeight: 700, marginTop: '8px' }}
+                style={{ width: '100%', padding: '12px', fontWeight: 700, marginTop: '4px' }}
               >
                 Close
               </button>

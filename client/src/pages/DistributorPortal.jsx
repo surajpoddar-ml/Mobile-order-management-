@@ -168,7 +168,10 @@ export const DistributorPortal = () => {
     }
   };
 
-  const calculateDiscount = (price, originalPrice) => {
+  const calculateDiscount = (price, originalPrice, discountFromDb) => {
+    if (discountFromDb !== undefined && discountFromDb !== null && Number(discountFromDb) > 0) {
+      return `${Number(discountFromDb)}% OFF`;
+    }
     if (!originalPrice || originalPrice <= price) return null;
     const discount = Math.round(((originalPrice - price) / originalPrice) * 100);
     return discount > 0 ? `${discount}% OFF` : null;
@@ -445,7 +448,7 @@ export const DistributorPortal = () => {
               }}>
                 {displayedProducts.map((p) => {
                   const wish = isWishlisted(p.id);
-                  const discountStr = calculateDiscount(p.price, p.originalPrice);
+                  const discountStr = calculateDiscount(p.price, p.originalPrice, p.discount);
                   const badgeLabel = p.badge || 'Wholesale Box';
                   const isWholesale = badgeLabel.includes('Wholesale');
                   const badgeBg = isWholesale ? '#059669' : '#0284c7';
@@ -599,6 +602,12 @@ export const DistributorPortal = () => {
                           {p.originalPrice && p.originalPrice > p.price && (
                             <span style={{ fontSize: '0.88rem', color: '#9ca3af', textDecoration: 'line-through' }}>
                               ₹{Number(p.originalPrice).toLocaleString()}
+                            </span>
+                          )}
+
+                          {discountStr && (
+                            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0284c7', background: '#e0f2fe', padding: '2px 6px', borderRadius: '4px' }}>
+                              {discountStr}
                             </span>
                           )}
 

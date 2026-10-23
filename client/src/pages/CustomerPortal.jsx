@@ -169,7 +169,10 @@ export const CustomerPortal = () => {
     }
   };
 
-  const calculateDiscount = (price, originalPrice) => {
+  const calculateDiscount = (price, originalPrice, discountFromDb) => {
+    if (discountFromDb !== undefined && discountFromDb !== null && Number(discountFromDb) > 0) {
+      return `${Number(discountFromDb)}% OFF`;
+    }
     if (!originalPrice || originalPrice <= price) return null;
     const discount = Math.round(((originalPrice - price) / originalPrice) * 100);
     return discount > 0 ? `${discount}% OFF` : null;
@@ -441,7 +444,7 @@ export const CustomerPortal = () => {
               }}>
                 {displayedProducts.map((p) => {
                   const wish = isWishlisted(p.id);
-                  const discountStr = calculateDiscount(p.price, p.originalPrice);
+                  const discountStr = calculateDiscount(p.price, p.originalPrice, p.discount);
                   const badgeLabel = p.badge || 'Bestseller';
                   const isNew = badgeLabel.toLowerCase().includes('new');
                   const badgeBg = isNew ? '#0284c7' : '#1d4ed8';
