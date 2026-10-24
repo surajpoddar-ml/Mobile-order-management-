@@ -44,9 +44,19 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rewards', rewardRoutes);
 
-// Health check endpoint
+let dbConnected = false;
+let dbError = null;
+
+// Health check endpoint with diagnostic information
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+  res.status(200).json({
+    status: dbConnected ? 'healthy' : 'database_unavailable',
+    database: {
+      connected: dbConnected,
+      error: dbError || null
+    },
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Root endpoint - automatic redirect to frontend website if visited in browser
@@ -64,22 +74,25 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Initialize database and start server
-const startServer = async () => {
-  try {
-    await seedDatabase();
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`===============================================`);
-      console.log(` MWS EAGLE — Mobile Parts Marketplace Server`);
-      console.log(` Running on:   http://0.0.0.0:${PORT}`);
-      console.log(` Health check: http://localhost:${PORT}/api/health`);
-      console.log(` Media uploads: http://localhost:${PORT}/uploads`);
-      console.log(`===============================================`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
-};
+// Start HTTP server immediately so cloud platforms can connect
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`===============================================`);
+  console.log(` MWS EAGLE — Mobile Parts Marketplace Server`);
+  console.log(` Running on:   http://0.0.0.0:${PORT}`);
+  console.log(` Health check: http://0.0.0.0:${PORT}/api/health`);
+  console.log(` Media uploads: http://0.0.0.0:${PORT}/uploads`);
+  console.log(`===============================================`);
 
-startServer();
+  // Initialize and seed database in background without crashing the web service
+  seedDatabase()
+    .then(() => {
+      dbConnected = true;
+      console.log('[DATABASE] MySQL tables initialized and seeded successfully.');
+    })
+    .catch((err) => {
+      dbError = err.message;
+      console.error('[DATABASE ERROR] Failed to connect/seed database:', err.message);
+      console.error('[DATABASE GUIDE] Ensure DATABASE_URL or DB_HOST, DB_USER, DB_PASSWORD, DB_NAME are set in your hosting dashboard.');
+    });
+});
+
