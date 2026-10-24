@@ -320,12 +320,8 @@ export const DistributorPortal = () => {
             margin: '0 auto',
             padding: '30px 20px 10px 20px'
           }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: 'clamp(20px, 4vw, 50px)',
-              flexWrap: 'wrap'
+            <div className="circular-categories-container" style={{
+              gap: 'clamp(20px, 4vw, 50px)'
             }}>
               {circularCategories.map((cat) => {
                 const isSelected = selectedCategory === cat.id;
@@ -423,13 +419,9 @@ export const DistributorPortal = () => {
               </div>
 
               {/* Filter Pills */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
+              <div className="category-scroll-strip" style={{
                 gap: '10px',
-                overflowX: 'auto',
-                paddingBottom: '8px',
-                scrollbarWidth: 'none'
+                paddingBottom: '8px'
               }}>
                 {filterTabs.map((tab) => {
                   const active = selectedCategory === tab;
@@ -471,9 +463,7 @@ export const DistributorPortal = () => {
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No inventory matches your current search or category filter.</p>
               </div>
             ) : (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+              <div className="products-responsive-grid" style={{
                 gap: '22px'
               }}>
                 {displayedProducts.map((p) => {
@@ -509,10 +499,9 @@ export const DistributorPortal = () => {
                       }}
                     >
                       {/* Image Area with Badges */}
-                      <div style={{
+                      <div className="product-card-img-wrapper" style={{
                         position: 'relative',
                         width: '100%',
-                        height: '240px',
                         background: '#f8fafc',
                         overflow: 'hidden',
                         display: 'flex',

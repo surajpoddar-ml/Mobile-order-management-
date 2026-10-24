@@ -429,7 +429,7 @@ export const AuthPage = ({ prefillData }) => {
               <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
                 Select Your Portal Role:
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
                 {/* Customer Login Tab */}
                 <button
                   type="button"
@@ -439,7 +439,7 @@ export const AuthPage = ({ prefillData }) => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '4px',
-                    padding: '12px 6px',
+                    padding: 'clamp(8px, 1.8vw, 12px) 4px',
                     borderRadius: 'var(--radius-md)',
                     border: loginRole === 'Customer' ? '2px solid #059669' : '1.5px solid #e5e7eb',
                     background: loginRole === 'Customer' ? '#ecfdf5' : '#f9fafb',
@@ -450,11 +450,11 @@ export const AuthPage = ({ prefillData }) => {
                     boxShadow: loginRole === 'Customer' ? '0 2px 8px rgba(5, 150, 105, 0.15)' : 'none'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.92rem' }}>
-                    <User size={17} color={loginRole === 'Customer' ? '#059669' : '#6b7280'} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: 'clamp(0.78rem, 2vw, 0.92rem)' }}>
+                    <User size={15} color={loginRole === 'Customer' ? '#059669' : '#6b7280'} />
                     Customer
                   </div>
-                  <span style={{ fontSize: '0.70rem', fontWeight: 500, color: '#047857' }}>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 500, color: '#047857' }}>
                     Retail Orders
                   </span>
                 </button>
@@ -468,7 +468,7 @@ export const AuthPage = ({ prefillData }) => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '4px',
-                    padding: '12px 6px',
+                    padding: 'clamp(8px, 1.8vw, 12px) 4px',
                     borderRadius: 'var(--radius-md)',
                     border: loginRole === 'Distributor' ? '2px solid #0284c7' : '1.5px solid #e5e7eb',
                     background: loginRole === 'Distributor' ? '#f0f9ff' : '#f9fafb',
@@ -479,11 +479,11 @@ export const AuthPage = ({ prefillData }) => {
                     boxShadow: loginRole === 'Distributor' ? '0 2px 8px rgba(2, 132, 199, 0.15)' : 'none'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.92rem' }}>
-                    <Building2 size={17} color={loginRole === 'Distributor' ? '#0284c7' : '#6b7280'} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: 'clamp(0.78rem, 2vw, 0.92rem)' }}>
+                    <Building2 size={15} color={loginRole === 'Distributor' ? '#0284c7' : '#6b7280'} />
                     Distributor
                   </div>
-                  <span style={{ fontSize: '0.70rem', fontWeight: 500, color: '#0369a1' }}>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 500, color: '#0369a1' }}>
                     Wholesale
                   </span>
                 </button>
@@ -497,7 +497,7 @@ export const AuthPage = ({ prefillData }) => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '4px',
-                    padding: '12px 6px',
+                    padding: 'clamp(8px, 1.8vw, 12px) 4px',
                     borderRadius: 'var(--radius-md)',
                     border: loginRole === 'Admin' ? '2px solid #4f46e5' : '1.5px solid #e5e7eb',
                     background: loginRole === 'Admin' ? '#eef2ff' : '#f9fafb',
@@ -508,11 +508,11 @@ export const AuthPage = ({ prefillData }) => {
                     boxShadow: loginRole === 'Admin' ? '0 2px 8px rgba(79, 70, 229, 0.15)' : 'none'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.92rem' }}>
-                    <ShieldCheck size={17} color={loginRole === 'Admin' ? '#4f46e5' : '#6b7280'} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: 'clamp(0.78rem, 2vw, 0.92rem)' }}>
+                    <ShieldCheck size={15} color={loginRole === 'Admin' ? '#4f46e5' : '#6b7280'} />
                     Admin
                   </div>
-                  <span style={{ fontSize: '0.70rem', fontWeight: 500, color: '#4338ca' }}>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 500, color: '#4338ca' }}>
                     Control Panel
                   </span>
                 </button>

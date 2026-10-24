@@ -167,15 +167,9 @@ export const LandingPage = () => {
       <section style={{
         maxWidth: '1240px',
         margin: '0 auto',
-        padding: '30px 20px 20px 20px'
+        padding: '20px clamp(12px, 3vw, 20px) 14px'
       }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 'clamp(20px, 4vw, 50px)',
-          flexWrap: 'wrap'
-        }}>
+        <div className="circular-categories-container">
           {circularCategories.map((cat) => {
             const isSelected = selectedCategory === cat.id;
             return (
@@ -313,14 +307,7 @@ export const LandingPage = () => {
           </div>
 
           {/* Filter Pills */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            overflowX: 'auto',
-            paddingBottom: '8px',
-            scrollbarWidth: 'none'
-          }}>
+          <div className="category-scroll-strip">
             {filterTabs.map(tab => {
               const active = selectedCategory === tab;
               return (
@@ -328,9 +315,9 @@ export const LandingPage = () => {
                   key={tab}
                   onClick={() => setSelectedCategory(tab)}
                   style={{
-                    padding: '8px 20px',
+                    padding: '7px 16px',
                     borderRadius: 'var(--radius-full)',
-                    fontSize: '0.86rem',
+                    fontSize: '0.84rem',
                     fontWeight: active ? 700 : 500,
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
@@ -338,7 +325,8 @@ export const LandingPage = () => {
                     border: active ? '1px solid #2563eb' : '1px solid var(--border-medium)',
                     background: active ? '#2563eb' : '#ffffff',
                     color: active ? '#ffffff' : 'var(--text-body)',
-                    boxShadow: active ? '0 2px 10px rgba(37, 99, 235, 0.28)' : 'var(--shadow-xs)'
+                    boxShadow: active ? '0 2px 10px rgba(37, 99, 235, 0.28)' : 'var(--shadow-xs)',
+                    flexShrink: 0
                   }}
                 >
                   {tab}
@@ -390,13 +378,9 @@ export const LandingPage = () => {
           </div>
         )}
 
-        {/* Products Grid (Identical Layout to User's Second Image) */}
+        {/* Products Grid (Responsive 2-col on mobile, full multi-col on desktop) */}
         {!loading && displayedProducts.length > 0 && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-            gap: '22px'
-          }}>
+          <div className="products-responsive-grid">
             {displayedProducts.map((p) => {
               const wish = isWishlisted(p.id);
               const discountStr = calculateDiscount(p.price, p.originalPrice);
@@ -430,16 +414,18 @@ export const LandingPage = () => {
                   }}
                 >
                   {/* Top Area: Image with Badges */}
-                  <div style={{
-                    position: 'relative',
-                    width: '100%',
-                    height: '240px',
-                    background: '#f8fafc',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
+                  <div
+                    className="product-card-img-wrapper"
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      background: '#f8fafc',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
                     {/* Badge (Bestseller, New!) */}
                     {badgeLabel && (
                       <span style={{
@@ -766,13 +752,13 @@ export const LandingPage = () => {
       </section>
 
       {/* ====== 5. TWO PORTALS SELECTOR CTA ====== */}
-      <section style={{ padding: '70px 20px' }}>
+      <section style={{ padding: 'clamp(36px, 6vw, 70px) 16px' }}>
         <div style={{
           maxWidth: '1060px',
           margin: '0 auto',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))',
-          gap: '28px'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
+          gap: '24px'
         }}>
           {/* Customer Portal Card */}
           <div className="glass-panel" style={{

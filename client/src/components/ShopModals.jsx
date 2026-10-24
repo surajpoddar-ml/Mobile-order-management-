@@ -1419,7 +1419,7 @@ export const ShopModals = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '20px'
+          padding: 'clamp(10px, 3vw, 20px)'
         }}>
           <div style={{
             background: '#ffffff',
@@ -1651,7 +1651,7 @@ export const ShopModals = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '20px'
+          padding: 'clamp(10px, 3vw, 20px)'
         }}>
           <div style={{
             background: '#ffffff',

@@ -21,7 +21,10 @@ import {
   Tag,
   CheckCircle2,
   ExternalLink,
-  Gift
+  Gift,
+  X,
+  Phone,
+  MessageCircle
 } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 
@@ -42,6 +45,7 @@ export const Navbar = () => {
 
   const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dbCategories, setDbCategories] = useState([]);
 
   useEffect(() => {
@@ -138,12 +142,13 @@ export const Navbar = () => {
               textTransform: 'uppercase',
               letterSpacing: '0.05em'
             }}>
-              <ShieldCheck size={14} /> Admin Control Panel
+              <ShieldCheck size={14} />
+              <span className="hide-on-very-small">Admin Control Panel</span>
             </div>
           </div>
 
           {/* Right: Required Admin Controls Only */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {/* Real-time Admin Notification Bell */}
             <NotificationBell />
 
@@ -154,7 +159,7 @@ export const Navbar = () => {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '7px 14px',
+                padding: '7px 12px',
                 borderRadius: '8px',
                 border: '1.5px solid #cbd5e1',
                 background: '#f8fafc',
@@ -175,7 +180,7 @@ export const Navbar = () => {
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '6px 14px',
+              padding: '6px 12px',
               background: '#f8fafc',
               border: '1px solid #e2e8f0',
               borderRadius: 'var(--radius-full)'
@@ -194,7 +199,7 @@ export const Navbar = () => {
               }}>
                 A
               </div>
-              <div style={{ lineHeight: 1.2 }}>
+              <div className="hide-on-mobile" style={{ lineHeight: 1.2 }}>
                 <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
                   {user?.fullName || 'System Super Admin'}
                 </div>
@@ -279,126 +284,54 @@ export const Navbar = () => {
       boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)'
     }}>
       {/* ================= TIER 1: BRAND LOGO + SEARCH + ACTIONS ================= */}
-      <div style={{
-        maxWidth: '1280px',
-        margin: '0 auto',
-        padding: '12px clamp(14px, 3vw, 24px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 'clamp(12px, 3vw, 24px)'
-      }}>
-        {/* Left: Brand Logo & Tagline */}
-        <div
-          onClick={() => navigate('/')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            cursor: 'pointer',
-            flexShrink: 0
-          }}
-        >
-          <img
-            src="/mws_eagle_logo.jpg"
-            alt="MWS EAGLE"
+      <div className="navbar-tier1">
+        <div className="navbar-row-top">
+          {/* Left: Brand Logo & Tagline */}
+          <div
+            onClick={() => navigate('/')}
             style={{
-              height: '42px',
-              width: 'auto',
-              objectFit: 'contain',
-              borderRadius: '6px'
-            }}
-          />
-          <div>
-            <div style={{
-              fontSize: '1.28rem',
-              fontWeight: 900,
-              letterSpacing: '0.04em',
-              color: '#0f172a',
-              lineHeight: 1.1,
-              fontFamily: 'var(--font-main)'
-            }}>
-              MWS <span style={{ color: '#2563eb' }}>EAGLE</span>
-            </div>
-            <div style={{
-              fontSize: '0.62rem',
-              fontWeight: 700,
-              letterSpacing: '0.12em',
-              color: '#64748b',
-              textTransform: 'uppercase'
-            }}>
-              PREMIUM MOBILE ACCESSORIES
-            </div>
-          </div>
-        </div>
-
-        {/* Center: Large Rounded Search Bar with Blue Action Button */}
-        <form
-          onSubmit={handleSearchSubmit}
-          style={{
-            flex: 1,
-            maxWidth: '620px',
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center'
-          }}
-        >
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search for products, model or category..."
-            style={{
-              width: '100%',
-              padding: '11px 54px 11px 20px',
-              fontSize: '0.9rem',
-              color: '#1f2937',
-              backgroundColor: '#f8fafc',
-              border: '1.5px solid #e2e8f0',
-              borderRadius: '9999px',
-              outline: 'none',
-              transition: 'border-color 0.2s, background-color 0.2s, box-shadow 0.2s'
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#2563eb';
-              e.target.style.backgroundColor = '#ffffff';
-              e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = '#e2e8f0';
-              e.target.style.backgroundColor = '#f8fafc';
-              e.target.style.boxShadow = 'none';
-            }}
-          />
-
-          {/* Blue Round Search Button at Right Edge */}
-          <button
-            type="submit"
-            style={{
-              position: 'absolute',
-              right: '4px',
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              backgroundColor: '#2563eb',
-              color: '#ffffff',
-              border: 'none',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
+              gap: '10px',
               cursor: 'pointer',
-              transition: 'background-color 0.2s'
+              flexShrink: 0
             }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#2563eb')}
-            aria-label="Search"
           >
-            <Search size={18} />
-          </button>
-        </form>
+            <img
+              src="/mws_eagle_logo.jpg"
+              alt="MWS EAGLE"
+              style={{
+                height: '38px',
+                width: 'auto',
+                objectFit: 'contain',
+                borderRadius: '6px'
+              }}
+            />
+            <div>
+              <div style={{
+                fontSize: '1.24rem',
+                fontWeight: 900,
+                letterSpacing: '0.04em',
+                color: '#0f172a',
+                lineHeight: 1.1,
+                fontFamily: 'var(--font-main)'
+              }}>
+                MWS <span style={{ color: '#2563eb' }}>EAGLE</span>
+              </div>
+              <div style={{
+                fontSize: '0.60rem',
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                color: '#64748b',
+                textTransform: 'uppercase'
+              }}>
+                PREMIUM MOBILE ACCESSORIES
+              </div>
+            </div>
+          </div>
 
-        {/* Right: User Login/Register + Wishlist + Cart */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+          {/* Right: User Login/Register + Wishlist + Cart + Mobile Hamburger */}
+          <div className="navbar-actions-group">
           {/* User Account / Login */}
           {user ? (
             <div style={{ position: 'relative' }}>
@@ -670,8 +603,84 @@ export const Navbar = () => {
               </span>
             )}
           </button>
+
+          {/* Mobile Navigation Drawer Trigger */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="mobile-menu-btn"
+            aria-label="Open Navigation Menu"
+          >
+            <Menu size={20} />
+          </button>
         </div>
       </div>
+
+      {/* Center: Full-width responsive search bar */}
+      <div className="navbar-search-wrapper">
+        <form
+          onSubmit={handleSearchSubmit}
+          style={{
+            width: '100%',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center'
+          }}
+        >
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search for products, model or category..."
+            style={{
+              width: '100%',
+              padding: '10px 52px 10px 18px',
+              fontSize: '0.9rem',
+              color: '#1f2937',
+              backgroundColor: '#f8fafc',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '9999px',
+              outline: 'none',
+              transition: 'border-color 0.2s, background-color 0.2s, box-shadow 0.2s'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = '#2563eb';
+              e.target.style.backgroundColor = '#ffffff';
+              e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = '#e2e8f0';
+              e.target.style.backgroundColor = '#f8fafc';
+              e.target.style.boxShadow = 'none';
+            }}
+          />
+
+          <button
+            type="submit"
+            style={{
+              position: 'absolute',
+              right: '4px',
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#2563eb')}
+            aria-label="Search"
+          >
+            <Search size={17} />
+          </button>
+        </form>
+      </div>
+    </div>
 
       {/* ================= TIER 2: SUB-NAVIGATION BAR (AS IN IMAGE) ================= */}
       <div style={{
@@ -844,6 +853,197 @@ export const Navbar = () => {
           </button>
         </div>
       </div>
+
+      {/* ================= MOBILE SLIDE-OUT NAVIGATION DRAWER ================= */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            justifyContent: 'flex-start',
+            animation: 'fadeIn 0.2s ease'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '85%',
+              maxWidth: '320px',
+              height: '100%',
+              background: '#ffffff',
+              boxShadow: '4px 0 25px rgba(0,0,0,0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflowY: 'auto'
+            }}
+          >
+            {/* Drawer Header */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #f1f5f9',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#f8fafc'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <img src="/mws_eagle_logo.jpg" alt="MWS EAGLE" style={{ height: '36px', borderRadius: '6px' }} />
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: '1.05rem', color: '#0f172a', lineHeight: 1.1 }}>
+                    MWS <span style={{ color: '#2563eb' }}>EAGLE</span>
+                  </div>
+                  <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#64748b' }}>
+                    MOBILE SPARES & ACCESSORIES
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '6px',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                aria-label="Close menu"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* User Session Info or Quick Sign In */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', background: '#ffffff' }}>
+              {user ? (
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Signed in as</div>
+                  <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0f172a' }}>{user.fullName}</div>
+                  <div style={{ fontSize: '0.74rem', fontWeight: 700, color: user.userType === 'Distributor' ? '#0284c7' : '#059669', marginTop: '2px' }}>
+                    {user.userType} Account
+                  </div>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      if (user.userType === 'Customer') navigate('/portal/customer');
+                      else if (user.userType === 'Distributor') navigate('/portal/distributor');
+                      else if (user.userType === 'Admin') navigate('/admin');
+                    }}
+                    className="btn btn-primary btn-sm"
+                    style={{ width: '100%', marginTop: '12px', fontWeight: 700 }}
+                  >
+                    Open {user.userType} Portal
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: '0.86rem', color: '#475569', marginBottom: '10px' }}>
+                    Sign in to track orders, save wishlist, or access wholesale prices.
+                  </div>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate('/login');
+                    }}
+                    className="btn btn-primary btn-sm"
+                    style={{ width: '100%', fontWeight: 700 }}
+                  >
+                    <User size={15} /> Sign In / Register
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Navigation Links */}
+            <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '6px 8px' }}>
+                Quick Navigation
+              </div>
+
+              <button
+                onClick={() => { setMobileMenuOpen(false); navigate('/'); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'none', border: 'none', textAlign: 'left', borderRadius: '8px', cursor: 'pointer', fontSize: '0.92rem', fontWeight: 600, color: '#1e293b' }}
+              >
+                <Layers size={18} color="#2563eb" />
+                Home Marketplace
+              </button>
+
+              <button
+                onClick={() => { setMobileMenuOpen(false); handleShopClick(); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'none', border: 'none', textAlign: 'left', borderRadius: '8px', cursor: 'pointer', fontSize: '0.92rem', fontWeight: 600, color: '#1e293b' }}
+              >
+                <Package size={18} color="#059669" />
+                Shop All Products
+              </button>
+
+              <button
+                onClick={() => { setMobileMenuOpen(false); setIsTrackOrderOpen(true); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'none', border: 'none', textAlign: 'left', borderRadius: '8px', cursor: 'pointer', fontSize: '0.92rem', fontWeight: 600, color: '#1e293b' }}
+              >
+                <Search size={18} color="#0284c7" />
+                Track Order Status
+              </button>
+
+              <button
+                onClick={() => { setMobileMenuOpen(false); setIsWishlistOpen(true); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'none', border: 'none', textAlign: 'left', borderRadius: '8px', cursor: 'pointer', fontSize: '0.92rem', fontWeight: 600, color: '#1e293b' }}
+              >
+                <Heart size={18} color="#ef4444" />
+                Wishlist ({wishlistCount})
+              </button>
+
+              <button
+                onClick={() => { setMobileMenuOpen(false); setIsContactOpen(true); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'none', border: 'none', textAlign: 'left', borderRadius: '8px', cursor: 'pointer', fontSize: '0.92rem', fontWeight: 600, color: '#1e293b' }}
+              >
+                <Phone size={18} color="#8b5cf6" />
+                Contact & Support
+              </button>
+            </div>
+
+            {/* Direct Instant Contact (Call & WhatsApp) */}
+            <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: '1px solid #f1f5f9', background: '#fafbfc' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+                Instant Contact
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <a
+                  href="tel:+919507677590"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', borderRadius: '8px', background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', fontSize: '0.84rem', fontWeight: 700 }}
+                >
+                  <Phone size={15} /> Call: +91 95076 77590
+                </a>
+                <a
+                  href="https://wa.me/919507677590?text=Hello%20MWS%20EAGLE%2C%20I%20have%20an%20inquiry%20regarding%20mobile%20spare%20parts%20and%20orders."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', borderRadius: '8px', background: 'rgba(37, 211, 102, 0.12)', color: '#16a34a', fontSize: '0.84rem', fontWeight: 700 }}
+                >
+                  <MessageCircle size={15} /> WhatsApp Support
+                </a>
+              </div>
+
+              {user && (
+                <button
+                  onClick={() => { setMobileMenuOpen(false); logout(); }}
+                  style={{ width: '100%', marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '9px', border: '1px solid #fca5a5', background: '#fef2f2', color: '#dc2626', borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  <LogOut size={14} /> Sign Out
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

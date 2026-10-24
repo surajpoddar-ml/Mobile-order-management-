@@ -1385,9 +1385,8 @@ export const AdminPanel = () => {
             </div>
 
             {/* Quick Metrics Grid */}
-            <div style={{
+            <div className="admin-metrics-grid" style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
               gap: '16px',
               marginBottom: '28px'
             }}>
@@ -1659,8 +1658,8 @@ export const AdminPanel = () => {
               overflow: 'hidden',
               boxShadow: 'var(--shadow-card)'
             }}>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.86rem' }}>
+              <div className="responsive-table-container">
+                <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.86rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid #f1f5f9', background: '#f8fafc', color: '#475569' }}>
                       {['ORDER NUMBER & DATE', 'BUYER DETAILS', 'ITEMS ORDERED', 'DELIVERY DESTINATION', 'PAYMENT & PROOF', 'ORDER STATUS', 'ACTION CONTROLS'].map(h => (
@@ -2173,8 +2172,8 @@ export const AdminPanel = () => {
               overflow: 'hidden',
               boxShadow: 'var(--shadow-card)'
             }}>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.86rem' }}>
+              <div className="responsive-table-container">
+                <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.86rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid var(--border-subtle)', background: 'var(--bg-app-2)', color: 'var(--text-body)' }}>
                       <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PRODUCT & CODE</th>
@@ -2522,7 +2521,7 @@ export const AdminPanel = () => {
               overflow: 'hidden',
               boxShadow: 'var(--shadow-card)'
             }}>
-              <div style={{ overflowX: 'auto' }}>
+              <div className="responsive-table-container">
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
@@ -3106,8 +3105,8 @@ export const AdminPanel = () => {
               overflow: 'hidden',
               boxShadow: 'var(--shadow-card)'
             }}>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+              <div className="responsive-table-container">
+                <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid var(--border-subtle)', background: 'var(--bg-app-2)', color: 'var(--text-body)' }}>
                       {['USER & ACCOUNT', 'ROLE', 'STATUS', 'BUSINESS & TAX REGISTRATION', 'REGISTERED', 'ACTIONS'].map(h => (
