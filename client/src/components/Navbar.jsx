@@ -42,6 +42,22 @@ export const Navbar = () => {
 
   const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [dbCategories, setDbCategories] = useState([]);
+
+  useEffect(() => {
+    const loadCats = () => {
+      api.categories.getAll()
+        .then(res => {
+          if (res && res.success && Array.isArray(res.categories)) {
+            setDbCategories(res.categories);
+          }
+        })
+        .catch(console.error);
+    };
+    loadCats();
+    window.addEventListener('mws_categories_updated', loadCats);
+    return () => window.removeEventListener('mws_categories_updated', loadCats);
+  }, []);
 
   // Check if currently on Admin Dashboard route
   const isOnAdminDashboard = currentRoute === '/admin' || currentRoute === '/admin-access' || currentRoute === '/portal/admin';
@@ -213,23 +229,6 @@ export const Navbar = () => {
       </header>
     );
   }
-
-  const [dbCategories, setDbCategories] = useState([]);
-
-  useEffect(() => {
-    const loadCats = () => {
-      api.categories.getAll()
-        .then(res => {
-          if (res && res.success && Array.isArray(res.categories)) {
-            setDbCategories(res.categories);
-          }
-        })
-        .catch(console.error);
-    };
-    loadCats();
-    window.addEventListener('mws_categories_updated', loadCats);
-    return () => window.removeEventListener('mws_categories_updated', loadCats);
-  }, []);
 
   const categories = [
     { id: 'All', name: 'All Products', icon: Layers },

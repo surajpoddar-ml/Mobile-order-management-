@@ -1,16 +1,24 @@
 const resolveApiOrigin = () => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
-    return envUrl.trim();
-  }
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+
+  // If running in browser on a production/remote domain (e.g. mwseagle.com)
   if (typeof window !== 'undefined' && window.location) {
     const host = window.location.hostname;
-    if (host !== 'localhost' && host !== '127.0.0.1' && !host.startsWith('192.168.')) {
-      // In production on any live domain (e.g. mwseagle.com)
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.');
+    if (!isLocal) {
+      // If envUrl is a remote URL, use it; otherwise always default to the live backend
+      if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+        return envUrl;
+      }
       return 'https://api.mwseagle.com';
     }
   }
-  return 'http://localhost:5001';
+
+  // Running locally
+  if (envUrl) {
+    return envUrl;
+  }
+  return 'http://localhost:5000';
 };
 
 export const API_ORIGIN = resolveApiOrigin().replace(/\/+$/, '');
