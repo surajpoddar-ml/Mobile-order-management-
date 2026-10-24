@@ -80,49 +80,54 @@ export const Navbar = () => {
       }}>
         <div style={{
           maxWidth: '100%',
-          padding: '12px clamp(16px, 3vw, 28px)',
+          padding: '8px clamp(10px, 2.5vw, 24px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '16px'
+          gap: '8px',
+          boxSizing: 'border-box'
         }}>
           {/* Left: Brand Logo + Admin Authority Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
             <div
               onClick={() => navigate('/admin')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
-                cursor: 'pointer'
+                gap: '8px',
+                cursor: 'pointer',
+                minWidth: 0
               }}
             >
               <img
                 src="/mws_eagle_logo.jpg"
                 alt="MWS EAGLE"
                 style={{
-                  height: '40px',
+                  height: '32px',
                   width: 'auto',
                   objectFit: 'contain',
-                  borderRadius: '6px'
+                  borderRadius: '6px',
+                  flexShrink: 0
                 }}
               />
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div style={{
-                  fontSize: '0.84rem',
+                  fontSize: '0.82rem',
                   fontWeight: 900,
                   letterSpacing: '0.04em',
                   color: '#0f172a',
-                  lineHeight: 1.15
+                  lineHeight: 1.15,
+                  whiteSpace: 'nowrap'
                 }}>
                   MWS <span style={{ color: '#2563eb' }}>EAGLE</span>
                 </div>
-                <div style={{
-                  fontSize: '0.50rem',
+                <div className="hide-on-mobile" style={{
+                  fontSize: '0.48rem',
                   fontWeight: 700,
                   letterSpacing: '0.08em',
                   color: '#64748b',
-                  textTransform: 'uppercase'
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap'
                 }}>
                   PREMIUM MOBILE ACCESSORIES
                 </div>
@@ -132,24 +137,25 @@ export const Navbar = () => {
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              padding: '4px 10px',
+              gap: '4px',
+              padding: '3px 8px',
               borderRadius: 'var(--radius-full)',
               background: 'rgba(37, 99, 235, 0.08)',
               border: '1px solid rgba(37, 99, 235, 0.2)',
               color: '#2563eb',
-              fontSize: '0.74rem',
+              fontSize: '0.70rem',
               fontWeight: 800,
               textTransform: 'uppercase',
-              letterSpacing: '0.05em'
+              letterSpacing: '0.04em',
+              flexShrink: 0
             }}>
-              <ShieldCheck size={14} />
-              <span className="hide-on-very-small">Admin Control Panel</span>
+              <ShieldCheck size={13} />
+              <span className="hide-on-mobile">Admin Panel</span>
             </div>
           </div>
 
           {/* Right: Required Admin Controls Only */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             {/* Real-time Admin Notification Bell */}
             <NotificationBell />
 
@@ -159,32 +165,34 @@ export const Navbar = () => {
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '7px 12px',
+                gap: '5px',
+                padding: '6px 10px',
                 borderRadius: '8px',
                 border: '1.5px solid #cbd5e1',
                 background: '#f8fafc',
                 color: '#334155',
-                fontSize: '0.82rem',
+                fontSize: '0.78rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                transition: 'all 0.16s ease'
+                transition: 'all 0.16s ease',
+                flexShrink: 0
               }}
               title="Preview Customer Website"
             >
               <ExternalLink size={14} />
-              <span className="hide-on-mobile">View Storefront</span>
+              <span className="hide-on-mobile">Storefront</span>
             </button>
 
             {/* Admin User Profile Pill */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              padding: '6px 12px',
+              gap: '6px',
+              padding: '4px 8px',
               background: '#f8fafc',
               border: '1px solid #e2e8f0',
-              borderRadius: 'var(--radius-full)'
+              borderRadius: 'var(--radius-full)',
+              flexShrink: 0
             }}>
               <div style={{
                 width: '26px',
@@ -216,19 +224,21 @@ export const Navbar = () => {
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '7px 14px',
+                gap: '4px',
+                padding: '6px 10px',
                 borderRadius: '8px',
-                fontSize: '0.82rem',
+                fontSize: '0.78rem',
                 fontWeight: 700,
                 color: '#dc2626',
                 border: '1px solid #fca5a5',
                 background: '#fef2f2',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                flexShrink: 0
               }}
+              title="Logout"
             >
               <LogOut size={14} />
-              <span>Logout</span>
+              <span className="hide-on-mobile">Logout</span>
             </button>
           </div>
         </div>

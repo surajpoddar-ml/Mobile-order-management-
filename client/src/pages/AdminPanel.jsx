@@ -1343,7 +1343,7 @@ export const AdminPanel = () => {
       {/* ======================================================== */}
       {/* ================= MAIN CONTENT WORKSPACE =============== */}
       {/* ======================================================== */}
-      <main style={{
+      <main className="admin-main-container" style={{
         flex: 1,
         padding: 'clamp(16px, 3vw, 32px)',
         minWidth: 0,
@@ -1356,23 +1356,23 @@ export const AdminPanel = () => {
           justifyContent: 'space-between',
           marginBottom: '20px'
         }} className="admin-mobile-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="admin-header-controls-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
             <button
               onClick={() => setMobileSidebarOpen(true)}
-              className="btn btn-secondary btn-sm"
-              style={{ padding: '8px 12px' }}
+              className="btn btn-secondary btn-sm admin-controls-menu-btn"
+              style={{ padding: '7px 11px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
               aria-label="Open navigation sidebar"
             >
-              <Menu size={18} />
-              <span style={{ fontWeight: 700, marginLeft: '4px' }}>Controls Menu</span>
+              <Menu size={17} />
+              <span style={{ fontWeight: 700 }}>Controls Menu</span>
             </button>
-            <span className="badge badge-admin" style={{ fontSize: '0.72rem' }}>
+            <span className="badge badge-admin admin-tab-badge" style={{ fontSize: '0.72rem' }}>
               {navMenuItems.find(i => i.id === activeTab)?.label}
             </span>
           </div>
 
-          <button onClick={() => { loadUserData(); loadProductData(); loadAdvertisementData(); }} className="btn btn-secondary btn-sm">
-            <RefreshCw size={13} /> Refresh
+          <button onClick={() => { loadUserData(); loadProductData(); loadAdvertisementData(); }} className="btn btn-secondary btn-sm admin-refresh-btn" style={{ padding: '7px 11px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <RefreshCw size={13} /> <span>Refresh</span>
           </button>
         </div>
 
@@ -1401,11 +1401,11 @@ export const AdminPanel = () => {
         {/* ======================================================== */}
         {activeTab === 'overview' && (
           <div>
-            <div style={{ marginBottom: '24px' }}>
-              <h1 style={{ fontSize: 'clamp(1.5rem, 3.5vw, 1.95rem)', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 6px 0' }}>
+            <div style={{ marginBottom: '22px' }} className="admin-dashboard-title-box">
+              <h1 className="admin-dashboard-title" style={{ fontSize: 'clamp(1.3rem, 3.5vw, 1.95rem)', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 6px 0', lineHeight: 1.25 }}>
                 System Operations Dashboard
               </h1>
-              <p style={{ color: 'var(--text-body)', fontSize: '0.92rem', margin: 0 }}>
+              <p className="admin-dashboard-subtitle" style={{ color: 'var(--text-body)', fontSize: '0.90rem', margin: 0, lineHeight: 1.4 }}>
                 High-level operational metrics, catalog visibility, and pending verification requests.
               </p>
             </div>
@@ -1413,8 +1413,8 @@ export const AdminPanel = () => {
             {/* Quick Metrics Grid */}
             <div className="admin-metrics-grid" style={{
               display: 'grid',
-              gap: '16px',
-              marginBottom: '28px'
+              gap: '12px',
+              marginBottom: '26px'
             }}>
               {[
                 { label: 'Total Orders', value: orders?.length ?? 0, color: '#2563eb', bg: 'rgba(37, 99, 235, 0.08)', Icon: ShoppingCart, tab: 'orders' },
@@ -1427,9 +1427,9 @@ export const AdminPanel = () => {
                 <div
                   key={card.label}
                   onClick={() => setActiveTab(card.tab)}
-                  className="glass-panel"
+                  className="glass-panel admin-metric-card"
                   style={{
-                    padding: '20px',
+                    padding: '16px',
                     background: '#ffffff',
                     border: '1.5px solid var(--border-medium)',
                     cursor: 'pointer',
@@ -1438,17 +1438,17 @@ export const AdminPanel = () => {
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: card.color, textTransform: 'uppercase' }}>{card.label}</span>
-                    <card.Icon size={18} color={card.color} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', gap: '4px' }}>
+                    <span className="admin-metric-label" style={{ fontSize: '0.76rem', fontWeight: 800, color: card.color, textTransform: 'uppercase' }}>{card.label}</span>
+                    <card.Icon size={17} color={card.color} className="admin-metric-icon" style={{ flexShrink: 0 }} />
                   </div>
-                  <div style={{ fontSize: '2.1rem', fontWeight: 900, color: card.color }}>{card.value}</div>
+                  <div className="admin-metric-value" style={{ fontSize: '2.1rem', fontWeight: 900, color: card.color }}>{card.value}</div>
                 </div>
               ))}
             </div>
 
             {/* Action Shortcuts Banner */}
-            <div style={{
+            <div className="admin-action-banner" style={{
               background: '#ffffff',
               borderRadius: 'var(--radius-lg)',
               padding: '24px',
@@ -1462,15 +1462,15 @@ export const AdminPanel = () => {
               gap: '16px'
             }}>
               <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px 0' }}>
+                <h3 className="admin-action-title" style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px 0' }}>
                   Orders & Product Authority Control
                 </h3>
-                <p style={{ color: 'var(--text-body)', fontSize: '0.86rem', margin: 0, maxWidth: '580px' }}>
+                <p className="admin-action-desc" style={{ color: 'var(--text-body)', fontSize: '0.86rem', margin: 0, maxWidth: '580px' }}>
                   Manage customer and distributor purchase orders, view delivery addresses, update shipment status, and post products for Customer, Distributor, or Both portals.
                 </p>
               </div>
 
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <div className="admin-banner-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button onClick={() => setActiveTab('orders')} className="btn btn-primary" style={{ padding: '10px 18px', fontSize: '0.88rem' }}>
                   <ShoppingCart size={16} /> View Orders ({orders.length})
                 </button>
@@ -1519,10 +1519,9 @@ export const AdminPanel = () => {
             </div>
 
             {/* Metrics cards row */}
-            <div style={{
+            <div className="admin-metrics-grid" style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: '14px',
+              gap: '12px',
               marginBottom: '20px'
             }}>
               {[
@@ -1535,18 +1534,19 @@ export const AdminPanel = () => {
               ].map(stat => (
                 <div
                   key={stat.label}
+                  className="admin-metric-card"
                   style={{
                     background: stat.bg || '#ffffff',
                     border: '1px solid ' + (stat.bg ? '#fde68a' : '#e2e8f0'),
                     borderRadius: '12px',
-                    padding: '14px 18px',
+                    padding: '14px 16px',
                     boxShadow: 'var(--shadow-xs)'
                   }}
                 >
-                  <div style={{ fontSize: '0.74rem', fontWeight: 700, color: stat.bg ? '#92400e' : '#64748b', textTransform: 'uppercase' }}>
+                  <div className="admin-metric-label" style={{ fontSize: '0.74rem', fontWeight: 700, color: stat.bg ? '#92400e' : '#64748b', textTransform: 'uppercase' }}>
                     {stat.label}
                   </div>
-                  <div style={{ fontSize: '1.45rem', fontWeight: 900, color: stat.color, marginTop: '2px' }}>
+                  <div className="admin-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: stat.color, marginTop: '2px' }}>
                     {stat.value}
                   </div>
                 </div>
