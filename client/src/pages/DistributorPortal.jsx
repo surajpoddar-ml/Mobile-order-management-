@@ -219,20 +219,34 @@ export const DistributorPortal = () => {
           gap: '16px',
           boxShadow: 'var(--shadow-card)'
         }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
-              <span className="badge badge-distributor">
-                <Building2 size={12} /> Approved Wholesale Partner
-              </span>
-              <span className="badge badge-active">
-                <CheckCircle size={12} /> {user?.accountStatus}
-              </span>
-            </div>
-            <h1 className="portal-title" style={{ fontSize: '1.55rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
-              {user?.businessName || user?.fullName}
-            </h1>
-            <div className="portal-subtitle" style={{ fontSize: '0.84rem', color: '#0284c7', fontWeight: 600, marginTop: '2px' }}>
-              PAN/VAT: {user?.panVatNumber || 'Verified B2B Dealer'} · Commercial wholesale rates in INR (₹)
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0, flex: '1 1 auto' }}>
+            <img
+              src="/mws_eagle_logo.jpg?v=3"
+              alt="MWS EAGLE"
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '10px',
+                objectFit: 'contain',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                flexShrink: 0
+              }}
+            />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                <span className="badge badge-distributor">
+                  <Building2 size={12} /> Approved Wholesale Partner
+                </span>
+                <span className="badge badge-active">
+                  <CheckCircle size={12} /> {user?.accountStatus}
+                </span>
+              </div>
+              <h1 className="portal-title" style={{ fontSize: '1.55rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
+                {user?.businessName || user?.fullName}
+              </h1>
+              <div className="portal-subtitle" style={{ fontSize: '0.84rem', color: '#0284c7', fontWeight: 600, marginTop: '2px' }}>
+                PAN/VAT: {user?.panVatNumber || 'Verified B2B Dealer'} · Commercial wholesale rates in INR (₹)
+              </div>
             </div>
           </div>
 

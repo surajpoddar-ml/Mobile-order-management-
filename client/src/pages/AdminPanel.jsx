@@ -1116,14 +1116,14 @@ export const AdminPanel = () => {
             borderBottom: '1px solid var(--border-subtle)'
           }}>
             <img
-              src="/mws_eagle_logo.jpg"
+              src="/mws_eagle_logo.jpg?v=3"
               alt="MWS EAGLE"
               style={{
                 width: '40px',
                 height: '40px',
                 borderRadius: '8px',
                 objectFit: 'contain',
-                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
                 flexShrink: 0
               }}
             />
@@ -1268,13 +1268,14 @@ export const AdminPanel = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <img
-                    src="/mws_eagle_logo.jpg"
+                    src="/mws_eagle_logo.jpg?v=3"
                     alt="MWS EAGLE"
                     style={{
                       width: '28px',
                       height: '28px',
                       borderRadius: '6px',
                       objectFit: 'contain',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
                       flexShrink: 0
                     }}
                   />
@@ -1365,6 +1366,18 @@ export const AdminPanel = () => {
           marginBottom: '20px'
         }} className="admin-mobile-header">
           <div className="admin-header-controls-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+            <img
+              src="/mws_eagle_logo.jpg?v=3"
+              alt="MWS EAGLE"
+              style={{
+                width: '30px',
+                height: '30px',
+                borderRadius: '6px',
+                objectFit: 'contain',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
+                flexShrink: 0
+              }}
+            />
             <button
               onClick={() => setMobileSidebarOpen(true)}
               className="btn btn-secondary btn-sm admin-controls-menu-btn"

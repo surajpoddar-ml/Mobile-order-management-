@@ -81,7 +81,7 @@ function AppContent() {
           <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
             {/* Brand Logo & Description */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <img src="/mws_eagle_logo.jpg" alt="MWS EAGLE" style={{ height: '44px', borderRadius: '8px' }} />
+              <img src="/mws_eagle_logo.jpg?v=3" alt="MWS EAGLE" style={{ height: '44px', borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.25)' }} />
               <div>
                 <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#ffffff', letterSpacing: '0.04em' }}>MWS EAGLE</div>
                 <div style={{ fontSize: '0.58rem', color: 'var(--text-dim)', letterSpacing: '0.06em' }}>PREMIUM MOBILE ACCESSORIES</div>

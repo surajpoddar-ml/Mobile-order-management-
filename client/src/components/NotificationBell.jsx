@@ -341,13 +341,13 @@ export const NotificationBell = () => {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <img
-                src="/mws_eagle_logo.jpg"
+                src="/mws_eagle_logo.jpg?v=3"
                 alt="MWS EAGLE"
                 style={{
                   width: '28px',
                   height: '28px',
                   borderRadius: '6px',
-                  objectFit: 'cover',
+                  objectFit: 'contain',
                   border: '1px solid #e2e8f0'
                 }}
               />

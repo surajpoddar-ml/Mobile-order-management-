@@ -264,7 +264,7 @@ export const PrintQRCodesModal = ({ isOpen, onClose, tokens = [] }) => {
                   {/* Brand Header */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                     <img
-                      src="/mws_eagle_logo.jpg"
+                      src="/mws_eagle_logo.jpg?v=3"
                       alt="MWS Eagle"
                       style={{ height: '24px', borderRadius: '4px' }}
                       onError={(e) => (e.currentTarget.style.display = 'none')}

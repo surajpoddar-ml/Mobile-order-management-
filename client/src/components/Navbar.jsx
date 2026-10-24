@@ -100,13 +100,14 @@ export const Navbar = () => {
               }}
             >
               <img
-                src="/mws_eagle_logo.jpg"
+                src="/mws_eagle_logo.jpg?v=3"
                 alt="MWS EAGLE"
                 style={{
-                  height: '32px',
+                  height: '34px',
                   width: 'auto',
                   objectFit: 'contain',
                   borderRadius: '6px',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
                   flexShrink: 0
                 }}
               />
@@ -327,13 +328,14 @@ export const Navbar = () => {
               }}
             >
               <img
-                src="/mws_eagle_logo.jpg"
+                src="/mws_eagle_logo.jpg?v=3"
                 alt="MWS EAGLE"
                 style={{
-                  height: '32px',
+                  height: '34px',
                   width: 'auto',
                   objectFit: 'contain',
                   borderRadius: '6px',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
                   flexShrink: 0
                 }}
               />
@@ -756,7 +758,18 @@ export const Navbar = () => {
               background: '#f8fafc'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <img src="/mws_eagle_logo.jpg" alt="MWS EAGLE" style={{ height: '36px', borderRadius: '6px' }} />
+                <img
+                  src="/mws_eagle_logo.jpg?v=3"
+                  alt="MWS EAGLE"
+                  style={{
+                    height: '38px',
+                    width: 'auto',
+                    borderRadius: '8px',
+                    objectFit: 'contain',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                    flexShrink: 0
+                  }}
+                />
                 <div>
                   <div style={{ fontWeight: 900, fontSize: '0.84rem', color: '#0f172a', lineHeight: 1.15 }}>
                     MWS <span style={{ color: '#2563eb' }}>EAGLE</span>

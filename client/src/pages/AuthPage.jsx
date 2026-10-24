@@ -254,7 +254,7 @@ export const AuthPage = ({ prefillData }) => {
       {/* Brand Logo & Header */}
       <div style={{ textAlign: 'center', marginBottom: '24px' }}>
         <img
-          src="/mws_eagle_logo.jpg"
+          src="/mws_eagle_logo.jpg?v=3"
           alt="MWS EAGLE"
           style={{
             height: '76px',
