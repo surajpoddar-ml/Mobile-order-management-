@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import api from '../services/api';
+import api, { getMediaUrl } from '../services/api';
 import {
   X,
   ShoppingCart,
@@ -400,7 +400,7 @@ export const ShopModals = () => {
                           }}
                         >
                           <img
-                            src={item.product.imageUrl || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=200&q=80'}
+                            src={getMediaUrl(item.product.imageUrl) || 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=200&q=80'}
                             alt={item.product.name}
                             style={{
                               width: '68px',
@@ -410,6 +410,7 @@ export const ShopModals = () => {
                               background: '#f8fafc',
                               flexShrink: 0
                             }}
+                            onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=200&q=80'; }}
                           />
                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                             <div>
@@ -1365,9 +1366,10 @@ export const ShopModals = () => {
                       }}
                     >
                       <img
-                        src={item.imageUrl || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=200&q=80'}
+                        src={getMediaUrl(item.imageUrl) || 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=200&q=80'}
                         alt={item.name}
                         style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px' }}
+                        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=200&q=80'; }}
                       />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }}>

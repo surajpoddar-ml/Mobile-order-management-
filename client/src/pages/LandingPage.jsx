@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import AdvertisementBoard from '../components/AdvertisementBoard';
 import api, { getMediaUrl } from '../services/api';
 import {
   ShieldCheck,
@@ -78,7 +77,7 @@ export const LandingPage = () => {
     : [
         { id: 'Charging', name: 'Charging', image: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=300&q=80' },
         { id: 'Power', name: 'Power', image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=300&q=80' },
-        { id: 'Cables', name: 'Cables', image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=300&q=80' },
+        { id: 'Cables', name: 'Cables', image: 'https://images.unsplash.com/photo-1588508065123-287b28e013da?auto=format&fit=crop&w=300&q=80' },
         { id: 'Audio', name: 'Audio', image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=300&q=80' },
         { id: 'Protection', name: 'Protection', image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=300&q=80' }
       ];
@@ -160,10 +159,7 @@ export const LandingPage = () => {
 
   return (
     <div style={{ overflowX: 'hidden' }}>
-      {/* ====== 1. ADVERTISEMENT BOARD (STARTS AT VERY TOP) ====== */}
-      <AdvertisementBoard />
-
-      {/* ====== 2. CIRCULAR CATEGORIES STRIP (AS IN IMAGE 2) ====== */}
+      {/* ====== 1. CIRCULAR CATEGORIES STRIP (AT TOP) ====== */}
       <section style={{
         maxWidth: '1240px',
         margin: '0 auto',
@@ -430,13 +426,13 @@ export const LandingPage = () => {
                     {badgeLabel && (
                       <span style={{
                         position: 'absolute',
-                        top: '12px',
-                        left: '12px',
+                        top: '8px',
+                        left: '8px',
                         background: badgeBg,
                         color: '#ffffff',
-                        fontSize: '0.72rem',
+                        fontSize: '0.68rem',
                         fontWeight: 700,
-                        padding: '3px 10px',
+                        padding: '2px 8px',
                         borderRadius: 'var(--radius-full)',
                         zIndex: 2,
                         boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
@@ -467,7 +463,7 @@ export const LandingPage = () => {
 
                     {/* Product Image */}
                     <img
-                      src={p.imageUrl || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80'}
+                      src={getMediaUrl(p.imageUrl) || 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80'}
                       alt={p.name}
                       style={{
                         width: '100%',
@@ -478,13 +474,13 @@ export const LandingPage = () => {
                         opacity: !isItemInStock ? 0.75 : 1
                       }}
                       onError={(e) => {
-                        e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80';
+                        e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80';
                       }}
                     />
                   </div>
 
                   {/* Card Content Area */}
-                  <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <div style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', flex: 1 }}>
                     {/* Category uppercase label */}
                     <div style={{
                       fontSize: '0.68rem',
@@ -540,12 +536,13 @@ export const LandingPage = () => {
                     <div style={{
                       display: 'flex',
                       alignItems: 'baseline',
-                      gap: '8px',
-                      marginBottom: '16px',
+                      flexWrap: 'wrap',
+                      gap: '4px 6px',
+                      marginBottom: '14px',
                       marginTop: 'auto'
                     }}>
                       <span style={{
-                        fontSize: '1.25rem',
+                        fontSize: 'clamp(1.05rem, 3.5vw, 1.22rem)',
                         fontWeight: 800,
                         color: '#111827'
                       }}>
@@ -554,7 +551,7 @@ export const LandingPage = () => {
 
                       {p.originalPrice && p.originalPrice > p.price && (
                         <span style={{
-                          fontSize: '0.88rem',
+                          fontSize: '0.80rem',
                           color: '#9ca3af',
                           textDecoration: 'line-through'
                         }}>
@@ -564,54 +561,59 @@ export const LandingPage = () => {
 
                       {discountStr && (
                         <span style={{
-                          fontSize: '0.82rem',
-                          fontWeight: 700,
-                          color: '#ef4444'
+                          fontSize: '0.74rem',
+                          fontWeight: 800,
+                          color: '#ef4444',
+                          whiteSpace: 'nowrap',
+                          background: '#fee2e2',
+                          padding: '1px 6px',
+                          borderRadius: '4px'
                         }}>
                           {discountStr}
                         </span>
                       )}
                     </div>
 
-                      {/* Buttons Row: Add to Cart (pill) + Heart Button */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button
-                          onClick={() => addToCart(p)}
-                          disabled={!isItemInStock}
-                          style={{
-                            flex: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px',
-                            background: isItemInStock ? '#2563eb' : '#94a3b8',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: 'var(--radius-full)',
-                            padding: '10px 16px',
-                            fontSize: '0.88rem',
-                            fontWeight: 700,
-                            cursor: isItemInStock ? 'pointer' : 'not-allowed',
-                            transition: 'background-color 0.2s',
-                            opacity: isItemInStock ? 1 : 0.85
-                          }}
-                          onMouseEnter={e => {
-                            if (isItemInStock) e.currentTarget.style.backgroundColor = '#1d4ed8';
-                          }}
-                          onMouseLeave={e => {
-                            if (isItemInStock) e.currentTarget.style.backgroundColor = '#2563eb';
-                          }}
-                        >
-                          <ShoppingCart size={16} />
-                          {isItemInStock ? 'Add to Cart' : 'Out of Stock'}
-                        </button>
+                    {/* Buttons Row: Add to Cart + Heart Button */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button
+                        onClick={() => addToCart(p)}
+                        disabled={!isItemInStock}
+                        style={{
+                          flex: 1,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          background: isItemInStock ? '#2563eb' : '#94a3b8',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '9px 8px',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          cursor: isItemInStock ? 'pointer' : 'not-allowed',
+                          transition: 'background-color 0.2s',
+                          whiteSpace: 'nowrap',
+                          minWidth: 0
+                        }}
+                        onMouseEnter={e => {
+                          if (isItemInStock) e.currentTarget.style.backgroundColor = '#1d4ed8';
+                        }}
+                        onMouseLeave={e => {
+                          if (isItemInStock) e.currentTarget.style.backgroundColor = '#2563eb';
+                        }}
+                      >
+                        <ShoppingCart size={15} style={{ flexShrink: 0 }} />
+                        <span>{isItemInStock ? 'Add to Cart' : 'Out of Stock'}</span>
+                      </button>
 
                       <button
                         onClick={() => toggleWishlist(p)}
                         style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '50%',
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '8px',
                           border: '1px solid #e5e7eb',
                           background: '#ffffff',
                           display: 'flex',
@@ -619,12 +621,13 @@ export const LandingPage = () => {
                           justifyContent: 'center',
                           cursor: 'pointer',
                           transition: 'all 0.2s',
-                          color: wish ? '#ef4444' : '#6b7280'
+                          color: wish ? '#ef4444' : '#6b7280',
+                          flexShrink: 0
                         }}
                         aria-label="Wishlist"
                       >
                         <Heart
-                          size={18}
+                          size={17}
                           fill={wish ? '#ef4444' : 'none'}
                           color={wish ? '#ef4444' : 'currentColor'}
                         />

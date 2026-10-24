@@ -2254,10 +2254,10 @@ export const AdminPanel = () => {
                                 border: '1px solid #e2e8f0'
                               }}>
                                 <img
-                                  src={p.imageUrl || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=120&q=80'}
+                                  src={getMediaUrl(p.imageUrl) || 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=120&q=80'}
                                   alt={p.name}
                                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                  onError={e => { e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=120&q=80'; }}
+                                  onError={e => { e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=120&q=80'; }}
                                 />
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
@@ -3440,7 +3440,7 @@ export const AdminPanel = () => {
                           src={getMediaUrl(productForm.imageUrl)}
                           alt="Product"
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=300&q=80'; }}
+                          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=300&q=80'; }}
                         />
                       </div>
 
