@@ -1115,20 +1115,18 @@ export const AdminPanel = () => {
             marginBottom: '20px',
             borderBottom: '1px solid var(--border-subtle)'
           }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)',
-              flexShrink: 0
-            }}>
-              <ShieldCheck size={22} />
-            </div>
+            <img
+              src="/mws_eagle_logo.jpg"
+              alt="MWS EAGLE"
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '8px',
+                objectFit: 'contain',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)',
+                flexShrink: 0
+              }}
+            />
             <div style={{ overflow: 'hidden' }}>
               <div style={{ fontSize: '0.94rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.2 }}>
                 Admin Operations
@@ -1269,7 +1267,17 @@ export const AdminPanel = () => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ShieldCheck size={20} color="var(--primary)" />
+                  <img
+                    src="/mws_eagle_logo.jpg"
+                    alt="MWS EAGLE"
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '6px',
+                      objectFit: 'contain',
+                      flexShrink: 0
+                    }}
+                  />
                   <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-main)' }}>Admin Controls</span>
                 </div>
                 <button onClick={() => setMobileSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
