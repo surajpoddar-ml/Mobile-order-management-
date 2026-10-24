@@ -156,8 +156,9 @@ export const AdvertisementBoard = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-end',
-          gap: '8px',
-          marginBottom: '10px'
+          gap: '6px',
+          marginBottom: '6px',
+          paddingRight: '4px'
         }}>
           {/* Autoplay Pause / Play toggle */}
           <button
@@ -165,36 +166,34 @@ export const AdvertisementBoard = () => {
             title={isPlaying ? 'Pause auto-scroll' : 'Resume auto-scroll'}
             className="btn btn-secondary btn-sm"
             style={{
-              padding: '6px 10px',
-              fontSize: '0.78rem',
+              padding: '4px 8px',
+              fontSize: '0.74rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '4px',
+              borderRadius: '6px'
             }}
           >
-            {isPlaying ? <Pause size={13} /> : <Play size={13} />}
-            <span style={{ display: 'none', '@media (min-width: 640px)': { display: 'inline' } }}>
-              {isPlaying ? 'Pause' : 'Play'}
-            </span>
+            {isPlaying ? <Pause size={12} /> : <Play size={12} />}
           </button>
 
           {/* Left Arrow */}
           <button
             onClick={handlePrev}
             className="btn btn-secondary btn-sm"
-            style={{ width: '36px', height: '36px', padding: 0, borderRadius: '50%' }}
+            style={{ width: '30px', height: '30px', padding: 0, borderRadius: '50%' }}
             aria-label="Previous advertisement"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={16} />
           </button>
 
           {/* Slide counter indicator */}
           <div style={{
-            fontSize: '0.82rem',
+            fontSize: '0.76rem',
             fontWeight: 700,
             color: 'var(--text-body)',
-            padding: '0 4px',
-            minWidth: '40px',
+            padding: '0 2px',
+            minWidth: '34px',
             textAlign: 'center'
           }}>
             {currentIndex + 1} / {ads.length}
@@ -204,10 +203,10 @@ export const AdvertisementBoard = () => {
           <button
             onClick={handleNext}
             className="btn btn-secondary btn-sm"
-            style={{ width: '36px', height: '36px', padding: 0, borderRadius: '50%' }}
+            style={{ width: '30px', height: '30px', padding: 0, borderRadius: '50%' }}
             aria-label="Next advertisement"
           >
-            <ChevronRight size={18} />
+            <ChevronRight size={16} />
           </button>
         </div>
       )}
@@ -395,38 +394,30 @@ export const AdvertisementBoard = () => {
               marginTop: '6px'
             }}>
               <button
-                onClick={() => navigate(currentAd.linkUrl || '/login')}
+                onClick={() => {
+                  if (currentAd.linkUrl) {
+                    if (currentAd.linkUrl.startsWith('http')) {
+                      window.open(currentAd.linkUrl, '_blank');
+                    } else {
+                      navigate(currentAd.linkUrl);
+                    }
+                  } else {
+                    const el = document.getElementById('best-selling-products-section') || document.getElementById('customer-products-grid') || document.getElementById('distributor-products-grid');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
                 className="btn btn-primary"
                 style={{
-                  padding: '9px 20px',
-                  fontSize: '0.88rem',
+                  padding: '8px 18px',
+                  fontSize: '0.84rem',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  borderRadius: '8px'
                 }}
               >
                 Explore Details
                 <ExternalLink size={14} />
-              </button>
-
-              <button
-                onClick={() => navigate('/login')}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.12)',
-                  color: '#ffffff',
-                  border: '1px solid rgba(255, 255, 255, 0.25)',
-                  backdropFilter: 'blur(6px)',
-                  padding: '9px 16px',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: '0.84rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'background 0.15s'
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'}
-              >
-                Sign In to Portal
               </button>
             </div>
           </div>

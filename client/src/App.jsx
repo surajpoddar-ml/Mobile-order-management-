@@ -51,7 +51,14 @@ function AppContent() {
       return <AuthPage prefillData={prefillDemo} />;
     }
 
-    // ---- Default: Landing Page ----
+    // ---- Default: Landing Page (or user portal if authenticated) ----
+    if (user) {
+      const role = user.role || user.userType;
+      if (role === 'Customer') return <CustomerPortal />;
+      if (role === 'Distributor') return <DistributorPortal />;
+      if (role === 'Admin') return <AdminPanel />;
+    }
+
     return <LandingPage />;
   };
 

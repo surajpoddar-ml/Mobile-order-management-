@@ -288,42 +288,51 @@ export const Navbar = () => {
         <div className="navbar-row-top">
           {/* Left: Brand Logo & Tagline */}
           <div
-            onClick={() => navigate('/')}
+            onClick={() => {
+              if (user?.role === 'Customer' || user?.userType === 'Customer') navigate('/customer');
+              else if (user?.role === 'Distributor' || user?.userType === 'Distributor') navigate('/distributor');
+              else if (user?.role === 'Admin' || user?.userType === 'Admin') navigate('/admin');
+              else navigate('/');
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
+              gap: '8px',
               cursor: 'pointer',
-              flexShrink: 0
+              flexShrink: 1,
+              minWidth: 0
             }}
           >
             <img
               src="/mws_eagle_logo.jpg"
               alt="MWS EAGLE"
               style={{
-                height: '38px',
+                height: '34px',
                 width: 'auto',
                 objectFit: 'contain',
-                borderRadius: '6px'
+                borderRadius: '6px',
+                flexShrink: 0
               }}
             />
-            <div>
+            <div style={{ minWidth: 0 }}>
               <div style={{
-                fontSize: '0.84rem',
+                fontSize: '0.82rem',
                 fontWeight: 900,
                 letterSpacing: '0.04em',
                 color: '#0f172a',
                 lineHeight: 1.15,
-                fontFamily: 'var(--font-main)'
+                fontFamily: 'var(--font-main)',
+                whiteSpace: 'nowrap'
               }}>
                 MWS <span style={{ color: '#2563eb' }}>EAGLE</span>
               </div>
-              <div style={{
-                fontSize: '0.50rem',
+              <div className="hide-on-mobile" style={{
+                fontSize: '0.48rem',
                 fontWeight: 700,
                 letterSpacing: '0.08em',
                 color: '#64748b',
-                textTransform: 'uppercase'
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap'
               }}>
                 PREMIUM MOBILE ACCESSORIES
               </div>
@@ -536,7 +545,7 @@ export const Navbar = () => {
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              padding: '6px',
+              padding: '5px 4px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -544,18 +553,18 @@ export const Navbar = () => {
             }}
             aria-label="Wishlist"
           >
-            <Heart size={23} />
+            <Heart size={21} />
             {wishlistCount > 0 && (
               <span style={{
                 position: 'absolute',
-                top: '0',
-                right: '0',
+                top: '-2px',
+                right: '-2px',
                 background: '#ef4444',
                 color: '#ffffff',
-                fontSize: '0.68rem',
+                fontSize: '0.65rem',
                 fontWeight: 800,
-                width: '18px',
-                height: '18px',
+                width: '17px',
+                height: '17px',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
@@ -574,7 +583,7 @@ export const Navbar = () => {
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              padding: '6px',
+              padding: '5px 4px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -582,18 +591,18 @@ export const Navbar = () => {
             }}
             aria-label="Shopping Cart"
           >
-            <ShoppingCart size={23} />
+            <ShoppingCart size={21} />
             {cartCount > 0 && (
               <span style={{
                 position: 'absolute',
-                top: '0',
-                right: '0',
+                top: '-2px',
+                right: '-2px',
                 background: '#2563eb',
                 color: '#ffffff',
-                fontSize: '0.68rem',
+                fontSize: '0.65rem',
                 fontWeight: 800,
-                width: '18px',
-                height: '18px',
+                width: '17px',
+                height: '17px',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
@@ -781,7 +790,12 @@ export const Navbar = () => {
 
           {/* Subnav links: Home, Shop, Track Order, Contact Us */}
           <button
-            onClick={() => navigate('/')}
+            onClick={() => {
+              if (user?.role === 'Customer' || user?.userType === 'Customer') navigate('/customer');
+              else if (user?.role === 'Distributor' || user?.userType === 'Distributor') navigate('/distributor');
+              else if (user?.role === 'Admin' || user?.userType === 'Admin') navigate('/admin');
+              else navigate('/');
+            }}
             style={{
               background: 'none',
               border: 'none',
