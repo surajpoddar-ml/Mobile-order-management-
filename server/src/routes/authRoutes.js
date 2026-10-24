@@ -250,6 +250,12 @@ router.post('/register/distributor', async (req, res) => {
  * Supports Customer, Distributor, and Admin authentication.
  * Enforces strict account status checks.
  */
+const getAdminCredentials = () => {
+  const email = (process.env.ADMIN_EMAIL || 'admin@mwseagle.com').trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD || 'Admin@123';
+  return { email, password };
+};
+
 router.post('/login', async (req, res) => {
   try {
     const { email, password, requestedPortal } = req.body;
@@ -261,11 +267,98 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const user = await queryGet('SELECT * FROM users WHERE LOWER(email) = LOWER(?)', [email.trim()]);
+    const trimmedEmail = (email || '').trim().toLowerCase();
+    const { email: envAdminEmail, password: envAdminPassword } = getAdminCredentials();
+    const isMasterAdminEmail = trimmedEmail === envAdminEmail;
+
+    // Strict role check: If requestedPortal is Admin, only the master admin email is allowed
+    if (requestedPortal === 'Admin' && !isMasterAdminEmail) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only the authorized administrator account can access the Admin Panel.'
+      });
+    }
+
+    // 1. MASTER ADMIN AUTHENTICATION
+    if (isMasterAdminEmail) {
+      let adminUser = await queryGet('SELECT * FROM users WHERE LOWER(email) = ?', [trimmedEmail]);
+      let isMatch = false;
+
+      // Match against master environment password or stored hash
+      if (password === envAdminPassword) {
+        isMatch = true;
+      } else if (adminUser && adminUser.passwordHash) {
+        isMatch = await bcrypt.compare(password, adminUser.passwordHash);
+      }
+
+      if (!isMatch) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password.'
+        });
+      }
+
+      const now = new Date().toISOString();
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(envAdminPassword, salt);
+
+      // Ensure Admin user exists with Active status in database
+      if (!adminUser) {
+        const insertRes = await queryRun(
+          `INSERT INTO users (
+            userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
+            profileInfo, createdDate, updatedDate, lastLogin, approvalDate, approvedBy
+          ) VALUES (?, ?, ?, ?, ?, 'Admin', 'Active', ?, ?, ?, ?, ?, ?)`,
+          [
+            'ADM-001',
+            'MWS Eagle System Admin',
+            trimmedEmail,
+            '+1-800-555-0100',
+            passwordHash,
+            'Master Administrator of MWS Eagle Marketplace',
+            now, now, now, now, 'SYSTEM'
+          ]
+        );
+        adminUser = await queryGet('SELECT * FROM users WHERE id = ?', [insertRes.lastID]);
+      } else {
+        await queryRun(
+          'UPDATE users SET userType = "Admin", accountStatus = "Active", passwordHash = ?, lastLogin = ?, updatedDate = ? WHERE id = ?',
+          [passwordHash, now, now, adminUser.id]
+        );
+        adminUser.userType = 'Admin';
+        adminUser.accountStatus = 'Active';
+        adminUser.lastLogin = now;
+      }
+
+      const { passwordHash: _, ...safeUser } = adminUser;
+      const token = jwt.sign(
+        { id: adminUser.id, userId: adminUser.userId, userType: 'Admin', email: adminUser.email },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: 'Welcome back, Administrator!',
+        token,
+        user: safeUser
+      });
+    }
+
+    // 2. STANDARD USER (CUSTOMER / DISTRIBUTOR) AUTHENTICATION
+    const user = await queryGet('SELECT * FROM users WHERE LOWER(email) = LOWER(?)', [trimmedEmail]);
     if (!user) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password.'
+      });
+    }
+
+    // Prevent any non-master email from claiming an Admin role
+    if (user.userType === 'Admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. This administrator account is not authorized.'
       });
     }
 
@@ -279,7 +372,6 @@ router.post('/login', async (req, res) => {
     }
 
     // Verify account type if the user explicitly submitted under a specific portal tab
-    // Note: Admin credentials can log in from ANY portal tab seamlessly
     if (requestedPortal && requestedPortal !== 'Any' && requestedPortal !== user.userType && user.userType !== 'Admin') {
       return res.status(403).json({
         success: false,
