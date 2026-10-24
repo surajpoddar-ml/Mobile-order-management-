@@ -198,7 +198,10 @@ export const DistributorPortal = () => {
 
   return (
     <div style={{ overflowX: 'hidden' }}>
-      {/* ====== DISTRIBUTOR WELCOME BANNER & TAB CONTROLS ====== */}
+      {/* ====== 1. AD DISPLAY TV VIEWER (CONTROLLABLE BY ADMIN) ====== */}
+      <AdvertisementBoard />
+
+      {/* ====== 2. DISTRIBUTOR WELCOME BANNER & TAB CONTROLS ====== */}
       <section style={{
         maxWidth: '1240px',
         margin: '20px auto 0 auto',
@@ -308,78 +311,9 @@ export const DistributorPortal = () => {
         </div>
       </section>
 
-      {/* ====== 3. CATALOG VIEW: CIRCULAR CATEGORIES & WHOLESALE BEST SELLING PRODUCTS ====== */}
+      {/* ====== 3. CATALOG VIEW: PRODUCTS & ORDERS ====== */}
       {activeTab === 'catalog' && (
         <>
-          {/* Circular Categories Strip */}
-          <section style={{
-            maxWidth: '1240px',
-            margin: '0 auto',
-            padding: '30px 20px 10px 20px'
-          }}>
-            <div className="circular-categories-container" style={{
-              gap: 'clamp(20px, 4vw, 50px)'
-            }}>
-              {circularCategories.map((cat) => {
-                const isSelected = selectedCategory === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => handleCategoryClick(cat.id)}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '6px',
-                      outline: 'none',
-                      transition: 'transform 0.2s ease',
-                      transform: isSelected ? 'scale(1.08)' : 'scale(1)'
-                    }}
-                  >
-                    <div style={{
-                      width: 'clamp(64px, 8vw, 76px)',
-                      height: 'clamp(64px, 8vw, 76px)',
-                      borderRadius: '50%',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      background: '#0a0d14',
-                      boxShadow: isSelected
-                        ? '0 0 0 3px #0284c7, 0 8px 18px rgba(2, 132, 199, 0.35)'
-                        : '0 4px 14px rgba(0, 0, 0, 0.15)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.25s'
-                    }}>
-                      <img
-                        src={cat.image}
-                        alt={cat.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.9 }}
-                      />
-                      <div style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 70%)',
-                        pointerEvents: 'none'
-                      }} />
-                    </div>
-
-                    <span style={{
-                      fontSize: '0.86rem',
-                      fontWeight: isSelected ? 800 : 600,
-                      color: isSelected ? '#0284c7' : 'var(--text-main)'
-                    }}>
-                      {cat.name}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
 
           {/* Wholesale Best Selling Products Section */}
           <section

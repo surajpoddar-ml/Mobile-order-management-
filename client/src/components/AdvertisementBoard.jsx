@@ -150,40 +150,14 @@ export const AdvertisementBoard = () => {
       }}
       aria-label="Interactive Advertisement Board"
     >
-      {/* Board Header Bar */}
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '12px',
-        marginBottom: '16px'
-      }}>
-        <div>
-          <h2 style={{
-            fontSize: 'clamp(1.2rem, 3.5vw, 1.65rem)',
-            fontWeight: 800,
-            color: 'var(--text-main)',
-            letterSpacing: '-0.02em',
-            margin: 0
-          }}>
-            Featured Announcements & Wholesale Spotlights
-          </h2>
-          <p style={{
-            fontSize: '0.85rem',
-            color: 'var(--text-muted)',
-            marginTop: '2px',
-            marginBottom: 0
-          }}>
-            Swipe or scroll through our latest technical videos, discounts, and genuine stock arrivals.
-          </p>
-        </div>
-
-        {/* Carousel Controls */}
+      {/* Board Controls Bar (Clean minimal controls without bulky text headers) */}
+      {ads.length > 1 && (
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px'
+          justifyContent: 'flex-end',
+          gap: '8px',
+          marginBottom: '10px'
         }}>
           {/* Autoplay Pause / Play toggle */}
           <button
@@ -236,7 +210,7 @@ export const AdvertisementBoard = () => {
             <ChevronRight size={18} />
           </button>
         </div>
-      </div>
+      )}
 
       {/* Main Advertisement Showcase Card (Touch swipe enabled) */}
       <div

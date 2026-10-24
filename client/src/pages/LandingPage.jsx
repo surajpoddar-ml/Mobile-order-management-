@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api, { getMediaUrl } from '../services/api';
+import AdvertisementBoard from '../components/AdvertisementBoard';
 import {
   ShieldCheck,
   Zap,
@@ -159,88 +160,8 @@ export const LandingPage = () => {
 
   return (
     <div style={{ overflowX: 'hidden' }}>
-      {/* ====== 1. CIRCULAR CATEGORIES STRIP (AT TOP) ====== */}
-      <section style={{
-        maxWidth: '1240px',
-        margin: '0 auto',
-        padding: '20px clamp(12px, 3vw, 20px) 14px'
-      }}>
-        <div className="circular-categories-container">
-          {circularCategories.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => handleCategoryClick(cat.id)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '6px',
-                  outline: 'none',
-                  transition: 'transform 0.2s ease',
-                  transform: isSelected ? 'scale(1.08)' : 'scale(1)'
-                }}
-                onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
-                onMouseLeave={e => {
-                  if (!isSelected) e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >
-                {/* Circular image avatar */}
-                <div style={{
-                  width: 'clamp(64px, 8vw, 78px)',
-                  height: 'clamp(64px, 8vw, 78px)',
-                  borderRadius: '50%',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  background: '#0a0d14',
-                  boxShadow: isSelected
-                    ? '0 0 0 3px #2563eb, 0 8px 18px rgba(37, 99, 235, 0.35)'
-                    : '0 4px 14px rgba(0, 0, 0, 0.18)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.25s'
-                }}>
-                  <img
-                    src={cat.image}
-                    alt={cat.name}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      opacity: 0.9
-                    }}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 70%)',
-                    pointerEvents: 'none'
-                  }} />
-                </div>
-
-                <span style={{
-                  fontSize: '0.86rem',
-                  fontWeight: isSelected ? 800 : 600,
-                  color: isSelected ? 'var(--primary)' : 'var(--text-main)',
-                  letterSpacing: '0.01em',
-                  transition: 'color 0.2s'
-                }}>
-                  {cat.name}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      {/* ====== 1. AD DISPLAY TV VIEWER (CONTROLLABLE BY ADMIN) ====== */}
+      <AdvertisementBoard />
 
       {/* ====== 3. BEST SELLING PRODUCTS (AS IN IMAGE 2) ====== */}
       <section
