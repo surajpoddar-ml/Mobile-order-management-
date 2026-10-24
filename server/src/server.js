@@ -61,10 +61,16 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Root endpoint - automatic redirect to frontend website if visited in browser
+// Root endpoint - redirect to frontend if CLIENT_URL is set, or return API status
 app.get('/', (req, res) => {
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-  res.redirect(clientUrl);
+  if (process.env.CLIENT_URL) {
+    return res.redirect(process.env.CLIENT_URL);
+  }
+  res.status(200).json({
+    name: 'MWS Eagle Marketplace Backend API',
+    status: 'online',
+    healthCheck: '/api/health'
+  });
 });
 
 // Global Error Handler
