@@ -1,0 +1,70 @@
+name: CI / CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate-and-build:
+    name: Build & Verify (Client and Server)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            client/package-lock.json
+            server/package-lock.json
+
+      # 1. Verify and Build Frontend
+      - name: Install Client Dependencies
+        run: |
+          cd client
+          npm ci
+
+      - name: Build Frontend Application
+        run: |
+          cd client
+          npm run build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || 'http://localhost:5001' }}
+
+      # 2. Verify Backend Dependencies and Syntax
+      - name: Install Server Dependencies
+        run: |
+          cd server
+          npm ci
+
+      - name: Validate Server Syntax
+        run: |
+          cd server
+          node --check src/server.js
+          node --check src/database/db.js
+          node --check src/database/seed.js
+
+  deploy-notify:
+    name: Continuous Deployment Trigger
+    needs: validate-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Trigger Webhook / Deploy Hook (Optional)
+        run: |
+          if [ -n "${{ secrets.DEPLOY_HOOK_URL }}" ]; then
+            echo "Triggering cloud deploy hook..."
+            curl -X POST "${{ secrets.DEPLOY_HOOK_URL }}"
+          else
+            echo "No DEPLOY_HOOK_URL provided. If your repository is connected to Vercel/Render, deployment was automatically triggered via Git push."
+          fi
