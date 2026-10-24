@@ -1,380 +1,305 @@
-import sqlite3 from 'sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const dbPath = path.resolve(__dirname, '../../database.sqlite');
+dotenv.config();
 
-const verboseSqlite = sqlite3.verbose();
-const db = new verboseSqlite.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Failed to connect to SQLite database:', err.message);
-  } else {
-    console.log('Connected to SQLite database at:', dbPath);
+const dbHost = process.env.DB_HOST || 'localhost';
+const dbPort = parseInt(process.env.DB_PORT || '3306', 10);
+const dbUser = process.env.DB_USER || 'root';
+const dbPassword = process.env.DB_PASSWORD || '';
+const dbName = process.env.DB_NAME || 'mobile_order_db';
+
+// Ensure the database exists before establishing main connection pool
+const ensureDatabaseExists = async () => {
+  try {
+    const tempConnection = await mysql.createConnection({
+      host: dbHost,
+      port: dbPort,
+      user: dbUser,
+      password: dbPassword
+    });
+    await tempConnection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+    await tempConnection.end();
+  } catch (err) {
+    console.error(`[MySQL Setup] Warning: Could not verify/create database "${dbName}":`, err.message);
   }
+};
+
+await ensureDatabaseExists();
+
+// Create connection pool for MySQL
+export const pool = mysql.createPool({
+  host: dbHost,
+  port: dbPort,
+  user: dbUser,
+  password: dbPassword,
+  database: dbName,
+  waitForConnections: true,
+  connectionLimit: 15,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000
 });
 
-// Promisified database helper methods
-export const queryGet = (sql, params = []) => {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
+console.log(`Connected to MySQL database [${dbName}] at ${dbHost}:${dbPort} as user "${dbUser}".`);
+
+// Helper to sanitize/normalize SQLite queries into valid MySQL queries
+const normalizeSql = (sql) => {
+  if (!sql || typeof sql !== 'string') return sql;
+  return sql
+    .replace(/\bINSERT\s+OR\s+REPLACE\s+INTO\b/gi, 'REPLACE INTO')
+    .replace(/\bINSERT\s+OR\s+IGNORE\s+INTO\b/gi, 'INSERT IGNORE INTO')
+    .replace(/\bsystem_settings\s+WHERE\s+key\s*=/gi, 'system_settings WHERE `key` =')
+    .replace(/\bsystem_settings\s*\(\s*key\s*,/gi, 'system_settings (`key`,');
 };
 
-export const queryAll = (sql, params = []) => {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
+// Promisified database helper methods matching the previous SQLite API
+export const queryGet = async (sql, params = []) => {
+  const normalizedSql = normalizeSql(sql);
+  const [rows] = await pool.query(normalizedSql, params);
+  return rows && rows.length > 0 ? rows[0] : null;
 };
 
-export const queryRun = (sql, params = []) => {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve({ lastID: this.lastID, changes: this.changes });
-    });
-  });
+export const queryAll = async (sql, params = []) => {
+  const normalizedSql = normalizeSql(sql);
+  const [rows] = await pool.query(normalizedSql, params);
+  return rows || [];
+};
+
+export const queryRun = async (sql, params = []) => {
+  const normalizedSql = normalizeSql(sql);
+  const [result] = await pool.query(normalizedSql, params);
+  return {
+    lastID: result ? result.insertId : 0,
+    insertId: result ? result.insertId : 0,
+    changes: result ? result.affectedRows : 0,
+    affectedRows: result ? result.affectedRows : 0
+  };
 };
 
 export const initDb = async () => {
   // Users table
   await queryRun(`
     CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId TEXT UNIQUE NOT NULL,
-      fullName TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      phoneNumber TEXT NOT NULL,
-      passwordHash TEXT NOT NULL,
-      userType TEXT NOT NULL CHECK(userType IN ('Customer', 'Distributor', 'Admin')),
-      accountStatus TEXT NOT NULL CHECK(accountStatus IN ('Pending', 'Active', 'Rejected', 'Suspended')),
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      userId VARCHAR(100) UNIQUE NOT NULL,
+      fullName VARCHAR(255) NOT NULL,
+      email VARCHAR(191) UNIQUE NOT NULL,
+      phoneNumber VARCHAR(50) NOT NULL,
+      passwordHash VARCHAR(255) NOT NULL,
+      userType VARCHAR(50) NOT NULL,
+      accountStatus VARCHAR(50) NOT NULL,
       profileInfo TEXT,
-      createdDate TEXT NOT NULL,
-      updatedDate TEXT NOT NULL,
-      lastLogin TEXT,
-      approvalDate TEXT,
-      approvedBy TEXT,
-      businessName TEXT,
+      createdDate VARCHAR(100) NOT NULL,
+      updatedDate VARCHAR(100) NOT NULL,
+      lastLogin VARCHAR(100),
+      approvalDate VARCHAR(100),
+      approvedBy VARCHAR(100),
+      businessName VARCHAR(255),
       businessAddress TEXT,
-      panVatNumber TEXT,
-      contactPerson TEXT,
-      businessPhone TEXT,
-      businessEmail TEXT,
-      statusRemark TEXT
-    )
+      panVatNumber VARCHAR(100),
+      contactPerson VARCHAR(255),
+      businessPhone VARCHAR(50),
+      businessEmail VARCHAR(191),
+      statusRemark TEXT,
+      pointsBalance INT DEFAULT 0,
+      totalPointsEarned INT DEFAULT 0
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
-  try {
-    await queryRun('ALTER TABLE users ADD COLUMN pointsBalance INTEGER DEFAULT 0');
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE users ADD COLUMN totalPointsEarned INTEGER DEFAULT 0');
-  } catch (e) {}
-
-  // Products table (foundation for Product Visibility role checks)
+  // Products table
   await queryRun(`
     CREATE TABLE IF NOT EXISTS products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      category TEXT NOT NULL,
-      sku TEXT UNIQUE NOT NULL,
-      customerPrice REAL,
-      distributorPrice REAL,
-      targetVisibility TEXT NOT NULL CHECK(targetVisibility IN ('Customer', 'Distributor', 'Both')),
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      category VARCHAR(100) NOT NULL,
+      sku VARCHAR(100) UNIQUE NOT NULL,
+      customerPrice DOUBLE DEFAULT 0,
+      distributorPrice DOUBLE DEFAULT 0,
+      targetVisibility VARCHAR(50) NOT NULL,
       description TEXT,
       imageUrl TEXT,
-      inStock INTEGER DEFAULT 1
-    )
+      inStock INT DEFAULT 1,
+      badge VARCHAR(100),
+      originalPrice DOUBLE DEFAULT 0,
+      rating DOUBLE DEFAULT 5.0,
+      reviewCount INT DEFAULT 0,
+      brand VARCHAR(100) DEFAULT 'MWS Eagle',
+      specifications TEXT,
+      productStatus VARCHAR(50) DEFAULT 'Active',
+      customerOriginalPrice DOUBLE DEFAULT 0,
+      customerDiscount DOUBLE DEFAULT 0,
+      customerPricingMode VARCHAR(50) DEFAULT 'auto',
+      showOnCustomerPortal INT DEFAULT 1,
+      distributorOriginalPrice DOUBLE DEFAULT 0,
+      distributorDiscount DOUBLE DEFAULT 0,
+      distributorPricingMode VARCHAR(50) DEFAULT 'auto',
+      showOnDistributorPortal INT DEFAULT 1
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
-  try {
-    await queryRun('ALTER TABLE products ADD COLUMN imageUrl TEXT');
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE products ADD COLUMN badge TEXT');
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE products ADD COLUMN originalPrice REAL');
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE products ADD COLUMN rating REAL DEFAULT 5.0');
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE products ADD COLUMN reviewCount INTEGER DEFAULT 0');
-  } catch (e) {}
-  try {
-    await queryRun("ALTER TABLE products ADD COLUMN brand TEXT DEFAULT 'MWS Eagle'");
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE products ADD COLUMN specifications TEXT');
-  } catch (e) {}
-  try {
-    await queryRun("ALTER TABLE products ADD COLUMN productStatus TEXT DEFAULT 'Active'");
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE products ADD COLUMN customerOriginalPrice REAL DEFAULT 0');
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE products ADD COLUMN customerDiscount REAL DEFAULT 0');
-  } catch (e) {}
-  try {
-    await queryRun("ALTER TABLE products ADD COLUMN customerPricingMode TEXT DEFAULT 'auto'");
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE products ADD COLUMN showOnCustomerPortal INTEGER DEFAULT 1');
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE products ADD COLUMN distributorOriginalPrice REAL DEFAULT 0');
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE products ADD COLUMN distributorDiscount REAL DEFAULT 0');
-  } catch (e) {}
-  try {
-    await queryRun("ALTER TABLE products ADD COLUMN distributorPricingMode TEXT DEFAULT 'auto'");
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE products ADD COLUMN showOnDistributorPortal INTEGER DEFAULT 1');
-  } catch (e) {}
-
-  // Backfill/migrate legacy product rows if needed
-  try {
-    await queryRun(`
-      UPDATE products 
-      SET 
-        brand = COALESCE(brand, 'MWS Eagle'),
-        productStatus = COALESCE(productStatus, 'Active'),
-        customerPricingMode = COALESCE(customerPricingMode, 'auto'),
-        distributorPricingMode = COALESCE(distributorPricingMode, 'auto'),
-        showOnCustomerPortal = CASE 
-          WHEN showOnCustomerPortal IS NOT NULL THEN showOnCustomerPortal
-          WHEN targetVisibility IN ('Customer', 'Both') THEN 1 
-          ELSE 0 
-        END,
-        showOnDistributorPortal = CASE 
-          WHEN showOnDistributorPortal IS NOT NULL THEN showOnDistributorPortal
-          WHEN targetVisibility IN ('Distributor', 'Both') THEN 1 
-          ELSE 0 
-        END,
-        customerOriginalPrice = CASE 
-          WHEN customerOriginalPrice IS NOT NULL AND customerOriginalPrice > 0 THEN customerOriginalPrice
-          WHEN originalPrice IS NOT NULL AND originalPrice > 0 THEN originalPrice
-          WHEN customerPrice IS NOT NULL AND customerPrice > 0 THEN ROUND(customerPrice * 1.25, 2)
-          ELSE 0 
-        END,
-        distributorOriginalPrice = CASE 
-          WHEN distributorOriginalPrice IS NOT NULL AND distributorOriginalPrice > 0 THEN distributorOriginalPrice
-          WHEN originalPrice IS NOT NULL AND originalPrice > 0 THEN originalPrice
-          WHEN distributorPrice IS NOT NULL AND distributorPrice > 0 THEN ROUND(distributorPrice * 1.4, 2)
-          ELSE 0 
-        END
-      WHERE customerOriginalPrice IS NULL OR customerOriginalPrice = 0 OR distributorOriginalPrice IS NULL OR distributorOriginalPrice = 0
-    `);
-
-    // Backfill discounts based on original and final prices
-    await queryRun(`
-      UPDATE products
-      SET
-        customerDiscount = CASE
-          WHEN customerDiscount IS NOT NULL AND customerDiscount > 0 THEN customerDiscount
-          WHEN customerOriginalPrice > customerPrice AND customerOriginalPrice > 0 THEN ROUND(((customerOriginalPrice - customerPrice) * 100.0) / customerOriginalPrice, 1)
-          ELSE 0
-        END,
-        distributorDiscount = CASE
-          WHEN distributorDiscount IS NOT NULL AND distributorDiscount > 0 THEN distributorDiscount
-          WHEN distributorOriginalPrice > distributorPrice AND distributorOriginalPrice > 0 THEN ROUND(((distributorOriginalPrice - distributorPrice) * 100.0) / distributorOriginalPrice, 1)
-          ELSE 0
-        END
-      WHERE customerDiscount IS NULL OR distributorDiscount IS NULL OR customerDiscount = 0 OR distributorDiscount = 0
-    `);
-  } catch (e) {
-    console.error('Migration notice:', e.message);
-  }
-
-  // Advertisements table for Landing Page Board (Images and Videos uploaded by Admin)
+  // Advertisements table
   await queryRun(`
     CREATE TABLE IF NOT EXISTS advertisements (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
       description TEXT,
-      mediaType TEXT NOT NULL CHECK(mediaType IN ('image', 'video')),
+      mediaType VARCHAR(50) NOT NULL,
       mediaUrl TEXT NOT NULL,
-      badgeText TEXT,
+      badgeText VARCHAR(100),
       linkUrl TEXT,
-      isActive INTEGER DEFAULT 1,
-      orderIndex INTEGER DEFAULT 0,
-      createdDate TEXT NOT NULL
-    )
+      isActive INT DEFAULT 1,
+      orderIndex INT DEFAULT 0,
+      createdDate VARCHAR(100) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
-  // Orders table for customer & distributor order management
+  // Orders table
   await queryRun(`
     CREATE TABLE IF NOT EXISTS orders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      orderNumber TEXT UNIQUE NOT NULL,
-      userId TEXT,
-      customerName TEXT NOT NULL,
-      customerEmail TEXT NOT NULL,
-      customerPhone TEXT NOT NULL,
-      userType TEXT NOT NULL,
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      orderNumber VARCHAR(100) UNIQUE NOT NULL,
+      userId VARCHAR(100),
+      customerName VARCHAR(255) NOT NULL,
+      customerEmail VARCHAR(191) NOT NULL,
+      customerPhone VARCHAR(50) NOT NULL,
+      userType VARCHAR(50) NOT NULL,
       shippingAddress TEXT NOT NULL,
-      district TEXT,
-      city TEXT,
-      state TEXT,
-      postalCode TEXT,
-      items TEXT NOT NULL,
-      totalAmount REAL NOT NULL,
-      paymentMethod TEXT DEFAULT 'Cash on Delivery',
-      transactionId TEXT,
+      district VARCHAR(100),
+      city VARCHAR(100),
+      state VARCHAR(100),
+      postalCode VARCHAR(50),
+      items LONGTEXT NOT NULL,
+      totalAmount DOUBLE NOT NULL,
+      paymentMethod VARCHAR(100) DEFAULT 'Cash on Delivery',
+      transactionId VARCHAR(255),
       paymentScreenshot TEXT,
-      paymentStatus TEXT DEFAULT 'Pending Verification',
-      orderStatus TEXT DEFAULT 'Pending' CHECK(orderStatus IN ('Pending', 'Processing', 'Dispatched', 'Delivered', 'Cancelled')),
+      paymentStatus VARCHAR(100) DEFAULT 'Pending Verification',
+      orderStatus VARCHAR(50) DEFAULT 'Pending',
       notes TEXT,
-      createdDate TEXT NOT NULL,
-      updatedDate TEXT NOT NULL
-    )
+      createdDate VARCHAR(100) NOT NULL,
+      updatedDate VARCHAR(100) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
-  try {
-    await queryRun('ALTER TABLE orders ADD COLUMN district TEXT');
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE orders ADD COLUMN transactionId TEXT');
-  } catch (e) {}
-  try {
-    await queryRun('ALTER TABLE orders ADD COLUMN paymentScreenshot TEXT');
-  } catch (e) {}
-  try {
-    await queryRun("ALTER TABLE orders ADD COLUMN paymentStatus TEXT DEFAULT 'Pending Verification'");
-  } catch (e) {}
-
-  // Notifications table for Admin, Customer, and Distributor alerts
+  // Notifications table
   await queryRun(`
     CREATE TABLE IF NOT EXISTS notifications (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      recipientId TEXT NOT NULL,
-      recipientRole TEXT,
-      title TEXT NOT NULL,
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      recipientId VARCHAR(100) NOT NULL,
+      recipientRole VARCHAR(50),
+      title VARCHAR(255) NOT NULL,
       message TEXT NOT NULL,
-      type TEXT NOT NULL,
-      entityId TEXT,
+      type VARCHAR(50) NOT NULL,
+      entityId VARCHAR(100),
       linkUrl TEXT NOT NULL,
-      isRead INTEGER DEFAULT 0,
-      createdDate TEXT NOT NULL,
-      dedupKey TEXT UNIQUE
-    )
+      isRead INT DEFAULT 0,
+      createdDate VARCHAR(100) NOT NULL,
+      dedupKey VARCHAR(191) UNIQUE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
-  // Categories table for master Category Management
+  // Categories table
   await queryRun(`
     CREATE TABLE IF NOT EXISTS categories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
-      slug TEXT UNIQUE NOT NULL,
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(150) UNIQUE NOT NULL,
+      slug VARCHAR(150) UNIQUE NOT NULL,
       imageUrl TEXT,
-      icon TEXT DEFAULT 'Package',
+      icon VARCHAR(100) DEFAULT 'Package',
       description TEXT,
-      status TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Inactive')),
-      displayOrder INTEGER DEFAULT 0,
-      createdDate TEXT NOT NULL,
-      updatedDate TEXT NOT NULL
-    )
+      status VARCHAR(50) NOT NULL DEFAULT 'Active',
+      displayOrder INT DEFAULT 0,
+      createdDate VARCHAR(100) NOT NULL,
+      updatedDate VARCHAR(100) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
-  // QR Offer Tokens table
+  // QR Tokens table
   await queryRun(`
     CREATE TABLE IF NOT EXISTS qr_tokens (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      token TEXT UNIQUE NOT NULL,
-      points INTEGER NOT NULL,
-      title TEXT DEFAULT 'MWS Eagle Rewards',
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      token VARCHAR(191) UNIQUE NOT NULL,
+      points INT NOT NULL,
+      title VARCHAR(255) DEFAULT 'MWS Eagle Rewards',
       description TEXT,
-      status TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Inactive', 'Claimed', 'Expired')),
-      createdByAdminId INTEGER,
-      createdDate TEXT NOT NULL,
-      expiryDate TEXT,
-      claimedByUserId INTEGER,
-      claimedByRole TEXT,
-      claimedAt TEXT,
-      claimIp TEXT
-    )
+      status VARCHAR(50) NOT NULL DEFAULT 'Active',
+      createdByAdminId INT,
+      createdDate VARCHAR(100) NOT NULL,
+      expiryDate VARCHAR(100),
+      claimedByUserId INT,
+      claimedByRole VARCHAR(50),
+      claimedAt VARCHAR(100),
+      claimIp VARCHAR(100)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
   // Point Ledger Transactions table
   await queryRun(`
     CREATE TABLE IF NOT EXISTS point_transactions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId INTEGER NOT NULL,
-      userType TEXT NOT NULL,
-      type TEXT NOT NULL CHECK(type IN ('earn_qr', 'redeem_request', 'redeem_refund', 'admin_adjustment')),
-      points INTEGER NOT NULL,
-      balanceAfter INTEGER NOT NULL,
-      referenceId TEXT,
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      userId INT NOT NULL,
+      userType VARCHAR(50) NOT NULL,
+      type VARCHAR(50) NOT NULL,
+      points INT NOT NULL,
+      balanceAfter INT NOT NULL,
+      referenceId VARCHAR(100),
       description TEXT NOT NULL,
-      createdDate TEXT NOT NULL
-    )
+      createdDate VARCHAR(100) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
   // Cash Redemption Requests table
   await queryRun(`
     CREATE TABLE IF NOT EXISTS redemption_requests (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      requestNumber TEXT UNIQUE NOT NULL,
-      userId INTEGER NOT NULL,
-      userType TEXT NOT NULL CHECK(userType IN ('Customer', 'Distributor')),
-      points INTEGER NOT NULL,
-      cashAmount REAL NOT NULL,
-      conversionRate REAL NOT NULL DEFAULT 1.0,
-      fullName TEXT NOT NULL,
-      phoneNumber TEXT NOT NULL,
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      requestNumber VARCHAR(100) UNIQUE NOT NULL,
+      userId INT NOT NULL,
+      userType VARCHAR(50) NOT NULL,
+      points INT NOT NULL,
+      cashAmount DOUBLE NOT NULL,
+      conversionRate DOUBLE NOT NULL DEFAULT 1.0,
+      fullName VARCHAR(255) NOT NULL,
+      phoneNumber VARCHAR(50) NOT NULL,
       address TEXT,
-      bankName TEXT NOT NULL,
-      accountHolderName TEXT NOT NULL,
-      accountNumber TEXT NOT NULL,
-      ifscCode TEXT NOT NULL,
-      upiId TEXT,
-      status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending', 'Approved', 'Processing', 'Paid', 'Rejected')),
+      bankName VARCHAR(255) NOT NULL,
+      accountHolderName VARCHAR(255) NOT NULL,
+      accountNumber VARCHAR(100) NOT NULL,
+      ifscCode VARCHAR(100) NOT NULL,
+      upiId VARCHAR(100),
+      status VARCHAR(50) NOT NULL DEFAULT 'Pending',
       adminNotes TEXT,
-      transactionReference TEXT,
+      transactionReference VARCHAR(255),
       rejectionReason TEXT,
-      createdDate TEXT NOT NULL,
-      updatedDate TEXT NOT NULL,
-      processedDate TEXT,
-      processedByAdminId INTEGER
-    )
+      createdDate VARCHAR(100) NOT NULL,
+      updatedDate VARCHAR(100) NOT NULL,
+      processedDate VARCHAR(100),
+      processedByAdminId INT
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
-  // System Settings table (for configurable rates and thresholds)
+  // System Settings table
   await queryRun(`
     CREATE TABLE IF NOT EXISTS system_settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updatedDate TEXT
-    )
+      \`key\` VARCHAR(100) PRIMARY KEY,
+      \`value\` TEXT NOT NULL,
+      updatedDate VARCHAR(100)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
-
-  // Ensure updatedDate column exists if table was created in an older migration
-  try {
-    await queryRun('ALTER TABLE system_settings ADD COLUMN updatedDate TEXT');
-  } catch (e) {}
 
   // Seed default reward system settings if not present
   try {
-    const rateSetting = await queryGet('SELECT value FROM system_settings WHERE key = "points_to_cash_rate"');
+    const rateSetting = await queryGet('SELECT value FROM system_settings WHERE `key` = "points_to_cash_rate"');
     if (!rateSetting) {
-      await queryRun('INSERT INTO system_settings (key, value, updatedDate) VALUES ("points_to_cash_rate", "1.0", ?)', [new Date().toISOString()]);
+      await queryRun('INSERT INTO system_settings (`key`, `value`, updatedDate) VALUES ("points_to_cash_rate", "1.0", ?)', [new Date().toISOString()]);
     }
-    const minRedeemSetting = await queryGet('SELECT value FROM system_settings WHERE key = "min_redemption_points"');
+    const minRedeemSetting = await queryGet('SELECT value FROM system_settings WHERE `key` = "min_redemption_points"');
     if (!minRedeemSetting) {
-      await queryRun('INSERT INTO system_settings (key, value, updatedDate) VALUES ("min_redemption_points", "10", ?)', [new Date().toISOString()]);
+      await queryRun('INSERT INTO system_settings (`key`, `value`, updatedDate) VALUES ("min_redemption_points", "10", ?)', [new Date().toISOString()]);
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[MySQL Init] Setting seed notice:', e.message);
+  }
 
   // Seed default categories if empty
   try {
@@ -467,7 +392,7 @@ export const initDb = async () => {
       const now = new Date().toISOString();
       for (const cat of defaultCategories) {
         await queryRun(
-          `INSERT OR IGNORE INTO categories (name, slug, icon, imageUrl, description, status, displayOrder, createdDate, updatedDate)
+          `INSERT IGNORE INTO categories (name, slug, icon, imageUrl, description, status, displayOrder, createdDate, updatedDate)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [cat.name, cat.slug, cat.icon, cat.imageUrl, cat.description, cat.status, cat.displayOrder, now, now]
         );
@@ -475,27 +400,27 @@ export const initDb = async () => {
       console.log('[INIT DB] Initial default categories seeded.');
     }
 
-    // Also auto-sync any category from products that isn't in categories table
+    // Sync any unique product categories
     const productCategoriesInDb = await queryAll('SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != ""');
     const now = new Date().toISOString();
     for (const row of productCategoriesInDb) {
-      const catName = row.category.trim();
+      const catName = (row.category || '').trim();
       if (!catName) continue;
       const slug = catName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       const existing = await queryGet('SELECT id FROM categories WHERE LOWER(name) = LOWER(?)', [catName]);
       if (!existing) {
         await queryRun(
-          `INSERT INTO categories (name, slug, icon, imageUrl, description, status, displayOrder, createdDate, updatedDate)
+          `INSERT IGNORE INTO categories (name, slug, icon, imageUrl, description, status, displayOrder, createdDate, updatedDate)
            VALUES (?, ?, 'Package', '', ?, 'Active', 10, ?, ?)`,
           [catName, slug, `${catName} category products and spare parts`, now, now]
         );
       }
     }
   } catch (err) {
-    console.error('Category table init/sync notice:', err.message);
+    console.warn('[MySQL Init] Category sync notice:', err.message);
   }
 
-  console.log('Database tables verified and ready.');
+  console.log('MySQL database tables verified and ready.');
 };
 
-export default db;
+export default pool;

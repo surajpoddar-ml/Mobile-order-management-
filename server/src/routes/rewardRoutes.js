@@ -11,8 +11,8 @@ const router = express.Router();
  * Helper to get system settings with fallback defaults
  */
 const getRewardSettings = async () => {
-  const rateRow = await queryGet('SELECT value FROM system_settings WHERE key = "points_to_cash_rate"');
-  const minRow = await queryGet('SELECT value FROM system_settings WHERE key = "min_redemption_points"');
+  const rateRow = await queryGet('SELECT `value` FROM system_settings WHERE `key` = "points_to_cash_rate"');
+  const minRow = await queryGet('SELECT `value` FROM system_settings WHERE `key` = "min_redemption_points"');
   return {
     rate: rateRow ? parseFloat(rateRow.value) || 1.0 : 1.0,
     minPoints: minRow ? parseInt(minRow.value, 10) || 10 : 10
@@ -997,7 +997,7 @@ router.put('/admin/settings', verifyToken, requireAdmin, async (req, res) => {
         return res.status(400).json({ success: false, message: 'Points conversion rate must be a positive number.' });
       }
       await queryRun(
-        'INSERT OR REPLACE INTO system_settings (key, value, updatedDate) VALUES ("points_to_cash_rate", ?, ?)',
+        'REPLACE INTO system_settings (`key`, `value`, updatedDate) VALUES ("points_to_cash_rate", ?, ?)',
         [String(numRate), now]
       );
     }
@@ -1008,7 +1008,7 @@ router.put('/admin/settings', verifyToken, requireAdmin, async (req, res) => {
         return res.status(400).json({ success: false, message: 'Minimum redemption points must be a positive integer.' });
       }
       await queryRun(
-        'INSERT OR REPLACE INTO system_settings (key, value, updatedDate) VALUES ("min_redemption_points", ?, ?)',
+        'REPLACE INTO system_settings (`key`, `value`, updatedDate) VALUES ("min_redemption_points", ?, ?)',
         [String(numMin), now]
       );
     }

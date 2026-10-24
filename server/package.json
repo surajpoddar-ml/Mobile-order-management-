@@ -16,7 +16,7 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.4.0",
-    "qrcode": "^1.5.4",
-    "sqlite3": "^5.1.7"
+    "mysql2": "^3.24.6",
+    "qrcode": "^1.5.4"
   }
 }
