@@ -74,13 +74,14 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start HTTP server immediately so cloud platforms can connect
-const server = app.listen(PORT, '0.0.0.0', () => {
+// Start HTTP server immediately so cloud platforms and LiteSpeed can connect
+const listenPort = typeof process.env.PORT !== 'undefined' ? process.env.PORT : 5001;
+const server = app.listen(listenPort, () => {
   console.log(`===============================================`);
   console.log(` MWS EAGLE — Mobile Parts Marketplace Server`);
-  console.log(` Running on:   http://0.0.0.0:${PORT}`);
-  console.log(` Health check: http://0.0.0.0:${PORT}/api/health`);
-  console.log(` Media uploads: http://0.0.0.0:${PORT}/uploads`);
+  console.log(` Listening on: ${listenPort}`);
+  console.log(` Health check: /api/health`);
+  console.log(` Media uploads: /uploads`);
   console.log(`===============================================`);
 
   // Initialize and seed database in background without crashing the web service
