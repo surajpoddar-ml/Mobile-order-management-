@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import api, { getMediaUrl } from '../services/api';
 import {
   ShieldCheck, Users, User, Building2, Clock, CheckCircle, XCircle,
   Search, Eye, Trash2, Check, X, PauseCircle, PlayCircle, RefreshCw, Layers,
@@ -1033,12 +1033,6 @@ export const AdminPanel = () => {
     justifyContent: 'center',
     padding: '16px',
     zIndex: 200
-  };
-
-  const getMediaUrl = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return `http://localhost:5001${url}`;
   };
 
   // Sidebar Menu Items Definition

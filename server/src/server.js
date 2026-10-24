@@ -51,7 +51,8 @@ app.get('/api/health', (req, res) => {
 
 // Root endpoint - automatic redirect to frontend website if visited in browser
 app.get('/', (req, res) => {
-  res.redirect('http://localhost:5173');
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  res.redirect(clientUrl);
 });
 
 // Global Error Handler
@@ -67,10 +68,10 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   try {
     await seedDatabase();
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`===============================================`);
       console.log(` MWS EAGLE — Mobile Parts Marketplace Server`);
-      console.log(` Running on:   http://localhost:${PORT}`);
+      console.log(` Running on:   http://0.0.0.0:${PORT}`);
       console.log(` Health check: http://localhost:${PORT}/api/health`);
       console.log(` Media uploads: http://localhost:${PORT}/uploads`);
       console.log(`===============================================`);

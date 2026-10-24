@@ -1,4 +1,17 @@
-const API_BASE_URL = 'http://localhost:5001/api';
+export const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001').replace(/\/+$/, '');
+export const API_BASE_URL = `${API_ORIGIN}/api`;
+
+/**
+ * Helper to build media URLs pointing to either cloud backend or local server
+ */
+export const getMediaUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) {
+    return url;
+  }
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return `${API_ORIGIN}${cleanPath}`;
+};
 
 /**
  * Universal Fetch wrapper with JWT injection & error handling

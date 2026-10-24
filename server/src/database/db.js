@@ -3,14 +3,16 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const databaseUrl = process.env.DATABASE_URL || process.env.MYSQL_URL || process.env.JAWSDB_URL;
 const dbHost = process.env.DB_HOST || 'localhost';
 const dbPort = parseInt(process.env.DB_PORT || '3306', 10);
 const dbUser = process.env.DB_USER || 'root';
 const dbPassword = process.env.DB_PASSWORD || '';
 const dbName = process.env.DB_NAME || 'mobile_order_db';
 
-// Ensure the database exists before establishing main connection pool
+// Ensure the database exists before establishing main connection pool if running on custom host
 const ensureDatabaseExists = async () => {
+  if (databaseUrl) return; // Cloud-managed DBs already have database provisioned
   try {
     const tempConnection = await mysql.createConnection({
       host: dbHost,
@@ -21,27 +23,44 @@ const ensureDatabaseExists = async () => {
     await tempConnection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
     await tempConnection.end();
   } catch (err) {
-    console.error(`[MySQL Setup] Warning: Could not verify/create database "${dbName}":`, err.message);
+    console.warn(`[MySQL Setup] Note: Could not auto-create database "${dbName}":`, err.message);
   }
 };
 
-await ensureDatabaseExists();
+try {
+  await ensureDatabaseExists();
+} catch (e) {
+  console.warn('[MySQL Setup] Pre-connection check skipped:', e.message);
+}
 
-// Create connection pool for MySQL
-export const pool = mysql.createPool({
-  host: dbHost,
-  port: dbPort,
-  user: dbUser,
-  password: dbPassword,
-  database: dbName,
-  waitForConnections: true,
-  connectionLimit: 15,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 10000
-});
+// Create connection pool for MySQL (supports cloud DATABASE_URL or individual credentials)
+export const pool = databaseUrl
+  ? mysql.createPool({
+      uri: databaseUrl,
+      waitForConnections: true,
+      connectionLimit: 15,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000
+    })
+  : mysql.createPool({
+      host: dbHost,
+      port: dbPort,
+      user: dbUser,
+      password: dbPassword,
+      database: dbName,
+      waitForConnections: true,
+      connectionLimit: 15,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000
+    });
 
-console.log(`Connected to MySQL database [${dbName}] at ${dbHost}:${dbPort} as user "${dbUser}".`);
+console.log(
+  databaseUrl
+    ? `Configured MySQL connection pool via cloud DATABASE_URL.`
+    : `Connected to MySQL database [${dbName}] at ${dbHost}:${dbPort} as user "${dbUser}".`
+);
 
 // Helper to sanitize/normalize SQLite queries into valid MySQL queries
 const normalizeSql = (sql) => {

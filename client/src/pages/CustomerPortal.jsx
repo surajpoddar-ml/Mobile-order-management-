@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import AdvertisementBoard from '../components/AdvertisementBoard';
-import api from '../services/api';
+import api, { getMediaUrl } from '../services/api';
 import {
   User,
   Package,
@@ -46,8 +46,7 @@ export const CustomerPortal = () => {
 
   const getCategoryImageUrl = (url) => {
     if (!url) return 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=300&q=80';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return `http://localhost:5001${url}`;
+    return getMediaUrl(url);
   };
 
   const fetchCategories = () => {

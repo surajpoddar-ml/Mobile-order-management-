@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import api, { getMediaUrl } from '../services/api';
 import {
   ChevronLeft,
   ChevronRight,
@@ -137,12 +137,8 @@ export const AdvertisementBoard = () => {
   }
 
   const currentAd = ads[currentIndex];
-  // Determine if mediaUrl is a local uploaded file or external URL
-  const getFullMediaUrl = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return `http://localhost:5001${url}`;
-  };
+  // Determine mediaUrl using dynamic API helper
+  const getFullMediaUrl = (url) => getMediaUrl(url);
 
   return (
     <section
