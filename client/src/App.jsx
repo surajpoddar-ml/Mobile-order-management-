@@ -76,8 +76,8 @@ function AppContent() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <img src="/mws_eagle_logo.jpg" alt="MWS EAGLE" style={{ height: '44px', borderRadius: '8px' }} />
               <div>
-                <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff' }}>MWS EAGLE</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', letterSpacing: '0.04em' }}>PREMIUM MOBILE ACCESSORIES</div>
+                <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#ffffff', letterSpacing: '0.04em' }}>MWS EAGLE</div>
+                <div style={{ fontSize: '0.58rem', color: 'var(--text-dim)', letterSpacing: '0.06em' }}>PREMIUM MOBILE ACCESSORIES</div>
               </div>
             </div>
 

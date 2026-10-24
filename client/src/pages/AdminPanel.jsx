@@ -88,6 +88,7 @@ export const AdminPanel = () => {
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [savingProduct, setSavingProduct] = useState(false);
+  const [uploadingProductImg, setUploadingProductImg] = useState(false);
   const [productForm, setProductForm] = useState({
     name: '',
     category: 'Displays',
@@ -664,6 +665,31 @@ export const AdminPanel = () => {
       targetVisibility: (showCust && showDist) ? 'Both' : (showCust ? 'Customer' : (showDist ? 'Distributor' : 'None'))
     });
     setProductModalOpen(true);
+  };
+
+  const handleProductImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('imageFile', file);
+
+    setUploadingProductImg(true);
+    try {
+      const res = await api.products.uploadImage(formData);
+      if (res.success && res.url) {
+        setProductForm(prev => ({
+          ...prev,
+          imageUrl: res.url
+        }));
+        setActionMsg('Product picture uploaded successfully!');
+        setTimeout(() => setActionMsg(''), 4000);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to upload product picture.');
+    } finally {
+      setUploadingProductImg(false);
+    }
   };
 
   const handleSaveProduct = async (e) => {
@@ -3382,43 +3408,125 @@ export const AdminPanel = () => {
                   </div>
                 </div>
 
-                {/* Image URL with live preview thumbnail */}
-                <div style={{ marginBottom: '14px' }}>
+                {/* Product Picture File Upload (File Upload System Only) */}
+                <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#1e293b' }}>
-                    Product Image URL
+                    Product Picture (File Upload Only) *
                   </label>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <input
-                      type="text"
-                      placeholder="https://images.unsplash.com/... (Direct image link)"
-                      value={productForm.imageUrl}
-                      onChange={e => setProductForm({ ...productForm, imageUrl: e.target.value })}
-                      style={{ ...inputStyle, flex: 1 }}
-                    />
+
+                  {productForm.imageUrl ? (
                     <div style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '8px',
-                      border: '1.5px solid #cbd5e1',
-                      overflow: 'hidden',
-                      background: '#f8fafc',
-                      flexShrink: 0,
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      gap: '14px',
+                      padding: '12px 16px',
+                      background: '#f8fafc',
+                      borderRadius: '12px',
+                      border: '1.5px solid #cbd5e1'
                     }}>
-                      {productForm.imageUrl ? (
+                      <div style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        background: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
                         <img
-                          src={productForm.imageUrl}
-                          alt="Preview"
+                          src={getMediaUrl(productForm.imageUrl)}
+                          alt="Product"
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={e => { e.target.style.display = 'none'; }}
+                          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=300&q=80'; }}
                         />
-                      ) : (
-                        <ImageIcon size={18} color="#94a3b8" />
-                      )}
+                      </div>
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {productForm.imageUrl.split('/').pop()}
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
+                          <CheckCircle size={13} /> Picture ready & linked to product
+                        </div>
+                      </div>
+
+                      <label style={{
+                        padding: '8px 14px',
+                        background: '#ffffff',
+                        border: '1.5px solid #cbd5e1',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        color: '#334155',
+                        cursor: uploadingProductImg ? 'wait' : 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.16s'
+                      }}>
+                        <Upload size={14} />
+                        {uploadingProductImg ? 'Uploading...' : 'Change Picture'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleProductImageUpload}
+                          disabled={uploadingProductImg}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
                     </div>
-                  </div>
+                  ) : (
+                    <label style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '24px 16px',
+                      background: uploadingProductImg ? '#f1f5f9' : '#f8fafc',
+                      borderRadius: '12px',
+                      border: '2px dashed #94a3b8',
+                      cursor: uploadingProductImg ? 'wait' : 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'center'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = '#0d9488'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = '#94a3b8'}
+                    >
+                      <div style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '50%',
+                        background: 'rgba(13, 148, 136, 0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#0d9488'
+                      }}>
+                        {uploadingProductImg ? (
+                          <div className="spinner" style={{ width: '20px', height: '20px' }} />
+                        ) : (
+                          <Upload size={22} />
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b' }}>
+                        {uploadingProductImg ? 'Uploading picture to server...' : 'Click to Upload Product Picture'}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                        Choose file from device — Supports JPG, PNG, WEBP, GIF, SVG (up to 20MB)
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProductImageUpload}
+                        disabled={uploadingProductImg}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
+                  )}
                 </div>
 
                 {/* Description & Specifications */}

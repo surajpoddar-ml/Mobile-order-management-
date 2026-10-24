@@ -340,20 +340,17 @@ export const NotificationBell = () => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div
+              <img
+                src="/mws_eagle_logo.jpg"
+                alt="MWS EAGLE"
                 style={{
                   width: '28px',
                   height: '28px',
-                  borderRadius: '8px',
-                  background: 'rgba(37, 99, 235, 0.1)',
-                  color: '#2563eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+                  borderRadius: '6px',
+                  objectFit: 'cover',
+                  border: '1px solid #e2e8f0'
                 }}
-              >
-                <Bell size={15} />
-              </div>
+              />
               <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a' }}>
                 Notifications
               </div>

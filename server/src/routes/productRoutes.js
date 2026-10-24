@@ -1,4 +1,8 @@
 import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import multer from 'multer';
 import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
 import { notifyProductEvent } from '../services/notificationService.js';
@@ -6,6 +10,66 @@ import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'mws_eagle_mobile_parts_super_secret_jwt_key_2026_auth_system';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadDir = path.resolve(__dirname, '../../uploads/products');
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const cleanBaseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
+    const uniqueSuffix = `${Date.now()}_${Math.round(Math.random() * 1e6)}`;
+    cb(null, `${cleanBaseName}_${uniqueSuffix}${ext}`);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowedExtensions = /\.(jpg|jpeg|png|webp|gif|svg|avif)$/i;
+  const isExtAllowed = allowedExtensions.test(path.extname(file.originalname));
+  const isMimeAllowed = file.mimetype.startsWith('image/');
+
+  if (isExtAllowed || isMimeAllowed) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files (JPG, PNG, WEBP, GIF, SVG) are allowed.'));
+  }
+};
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter
+});
+
+/**
+ * 0. POST /api/products/upload
+ * Upload Product Image File (Admin Only)
+ */
+router.post('/upload', verifyToken, requireAdmin, upload.single('imageFile'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image file uploaded.' });
+    }
+    const relativeUrl = `/uploads/products/${req.file.filename}`;
+    return res.status(200).json({
+      success: true,
+      message: 'Product image uploaded successfully!',
+      url: relativeUrl,
+      filename: req.file.filename
+    });
+  } catch (error) {
+    console.error('Product image upload error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Image upload failed.' });
+  }
+});
 
 /**
  * Standard Price Calculation Helper

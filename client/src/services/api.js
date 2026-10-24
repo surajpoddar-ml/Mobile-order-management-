@@ -222,6 +222,12 @@ export const api = {
     delete: (id) =>
       request(`/products/${id}`, {
         method: 'DELETE'
+      }),
+
+    uploadImage: (formData) =>
+      request('/products/upload', {
+        method: 'POST',
+        body: formData
       })
   },
 

@@ -108,18 +108,18 @@ export const Navbar = () => {
               />
               <div>
                 <div style={{
-                  fontSize: '1.24rem',
+                  fontSize: '0.84rem',
                   fontWeight: 900,
                   letterSpacing: '0.04em',
                   color: '#0f172a',
-                  lineHeight: 1.1
+                  lineHeight: 1.15
                 }}>
                   MWS <span style={{ color: '#2563eb' }}>EAGLE</span>
                 </div>
                 <div style={{
-                  fontSize: '0.62rem',
+                  fontSize: '0.50rem',
                   fontWeight: 700,
-                  letterSpacing: '0.12em',
+                  letterSpacing: '0.08em',
                   color: '#64748b',
                   textTransform: 'uppercase'
                 }}>
@@ -309,19 +309,19 @@ export const Navbar = () => {
             />
             <div>
               <div style={{
-                fontSize: '1.24rem',
+                fontSize: '0.84rem',
                 fontWeight: 900,
                 letterSpacing: '0.04em',
                 color: '#0f172a',
-                lineHeight: 1.1,
+                lineHeight: 1.15,
                 fontFamily: 'var(--font-main)'
               }}>
                 MWS <span style={{ color: '#2563eb' }}>EAGLE</span>
               </div>
               <div style={{
-                fontSize: '0.60rem',
+                fontSize: '0.50rem',
                 fontWeight: 700,
-                letterSpacing: '0.12em',
+                letterSpacing: '0.08em',
                 color: '#64748b',
                 textTransform: 'uppercase'
               }}>
@@ -894,10 +894,10 @@ export const Navbar = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <img src="/mws_eagle_logo.jpg" alt="MWS EAGLE" style={{ height: '36px', borderRadius: '6px' }} />
                 <div>
-                  <div style={{ fontWeight: 900, fontSize: '1.05rem', color: '#0f172a', lineHeight: 1.1 }}>
+                  <div style={{ fontWeight: 900, fontSize: '0.84rem', color: '#0f172a', lineHeight: 1.15 }}>
                     MWS <span style={{ color: '#2563eb' }}>EAGLE</span>
                   </div>
-                  <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#64748b' }}>
+                  <div style={{ fontSize: '0.50rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.06em' }}>
                     MOBILE SPARES & ACCESSORIES
                   </div>
                 </div>
