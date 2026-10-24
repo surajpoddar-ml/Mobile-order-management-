@@ -654,11 +654,81 @@ html, body {
   border-radius: 9999px;
 }
 
+/* ======================================================== */
+/* ===== PORTAL & GRID MOBILE RESPONSIVENESS ===== */
+/* ======================================================== */
+
+.portal-header-section {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.portal-partner-card {
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.portal-tabs-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  box-sizing: border-box;
+}
+.portal-tabs-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.portal-tab-btn {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  transition: all 0.2s ease;
+}
+
+.category-scroll-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.category-scroll-strip::-webkit-scrollbar {
+  display: none;
+}
+.category-scroll-strip button,
+.category-filter-chip {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+.portal-products-section {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.portal-orders-section {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.order-card-box {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* Responsive Products Grid */
 .products-responsive-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (min-width: 641px) and (max-width: 1024px) {
@@ -677,7 +747,7 @@ html, body {
 
 /* Product Card Image Wrapper */
 .product-card-img-wrapper {
-  height: clamp(135px, 40vw, 175px);
+  height: clamp(120px, 36vw, 155px);
 }
 @media (min-width: 641px) {
   .product-card-img-wrapper {
@@ -685,19 +755,109 @@ html, body {
   }
 }
 
-/* Category Scroll Strip (smooth touch-swipe horizontal list) */
-.category-scroll-strip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding-bottom: 6px;
-  margin-bottom: 12px;
-}
-.category-scroll-strip::-webkit-scrollbar {
-  display: none;
+/* Mobile optimizations for partner card, tabs, chips, and grid */
+@media (max-width: 768px) {
+  .portal-header-section {
+    padding: 0 10px !important;
+    margin-top: 10px !important;
+  }
+
+  .portal-partner-card {
+    padding: 12px 14px !important;
+    border-radius: 12px !important;
+    gap: 12px !important;
+  }
+
+  .portal-title {
+    font-size: clamp(1.15rem, 4.5vw, 1.35rem) !important;
+    word-break: break-word;
+    line-height: 1.25 !important;
+  }
+
+  .portal-subtitle {
+    font-size: 0.74rem !important;
+    line-height: 1.35 !important;
+  }
+
+  .portal-tabs-wrapper {
+    width: 100% !important;
+    display: flex !important;
+    padding: 3px !important;
+    border-radius: 9999px !important;
+    gap: 3px !important;
+  }
+
+  .portal-tab-btn {
+    padding: 6px 12px !important;
+    font-size: 0.78rem !important;
+    gap: 4px !important;
+  }
+
+  .portal-products-section {
+    padding: 16px 10px 40px 10px !important;
+  }
+
+  .category-scroll-strip {
+    gap: 6px !important;
+    padding-bottom: 4px !important;
+  }
+
+  .category-scroll-strip button,
+  .category-filter-chip {
+    padding: 6px 14px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .products-responsive-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .product-card-img-wrapper {
+    height: clamp(110px, 34vw, 140px) !important;
+  }
+
+  .product-card-body {
+    padding: 8px 6px 10px 6px !important;
+  }
+
+  .product-card-title {
+    font-size: 0.80rem !important;
+    line-height: 1.25 !important;
+    min-height: 2.5em !important;
+    margin-bottom: 4px !important;
+  }
+
+  .product-card-category {
+    font-size: 0.62rem !important;
+    margin-bottom: 3px !important;
+  }
+
+  .product-card-price {
+    font-size: clamp(0.95rem, 3.2vw, 1.12rem) !important;
+  }
+
+  .product-card-btn {
+    padding: 7px 4px !important;
+    font-size: 0.72rem !important;
+    gap: 4px !important;
+  }
+
+  .product-card-heart-btn {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .portal-orders-section {
+    padding: 0 10px !important;
+    margin: 16px auto 50px auto !important;
+  }
+
+  .order-card-box {
+    padding: 14px !important;
+    border-radius: 12px !important;
+  }
 }
 
 /* Circular Categories on Mobile vs Desktop */

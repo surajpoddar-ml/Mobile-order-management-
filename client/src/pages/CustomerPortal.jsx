@@ -202,12 +202,12 @@ export const CustomerPortal = () => {
       <AdvertisementBoard />
 
       {/* ====== 2. CUSTOMER WELCOME BANNER & TAB CONTROLS ====== */}
-      <section style={{
+      <section className="portal-header-section" style={{
         maxWidth: '1240px',
         margin: '20px auto 0 auto',
         padding: '0 20px'
       }}>
-        <div style={{
+        <div className="portal-partner-card" style={{
           background: '#ffffff',
           borderRadius: '16px',
           border: '1px solid var(--border-subtle)',
@@ -220,7 +220,7 @@ export const CustomerPortal = () => {
           boxShadow: 'var(--shadow-xs)'
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
               <span className="badge badge-customer">
                 <User size={12} /> Retail Customer Account
               </span>
@@ -228,16 +228,16 @@ export const CustomerPortal = () => {
                 <CheckCircle size={12} /> {user?.accountStatus}
               </span>
             </div>
-            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+            <h1 className="portal-title" style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
               Welcome back, {user?.fullName}!
             </h1>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+            <div className="portal-subtitle" style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
               Showing genuine mobile accessories & retail prices in INR (₹).
             </div>
           </div>
 
           {/* Navigation Tabs: Products Catalog vs My Orders */}
-          <div style={{
+          <div className="portal-tabs-wrapper" style={{
             display: 'inline-flex',
             alignItems: 'center',
             background: '#f1f5f9',
@@ -246,6 +246,7 @@ export const CustomerPortal = () => {
           }}>
             <button
               onClick={() => setActiveTab('catalog')}
+              className="portal-tab-btn"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -258,7 +259,9 @@ export const CustomerPortal = () => {
                 fontSize: '0.86rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
             >
               <Layers size={15} />
@@ -267,6 +270,7 @@ export const CustomerPortal = () => {
 
             <button
               onClick={() => setActiveTab('orders')}
+              className="portal-tab-btn"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -279,7 +283,9 @@ export const CustomerPortal = () => {
                 fontSize: '0.86rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
             >
               <Package size={15} />
@@ -288,6 +294,7 @@ export const CustomerPortal = () => {
 
             <button
               onClick={() => setActiveTab('rewards')}
+              className="portal-tab-btn"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -301,7 +308,9 @@ export const CustomerPortal = () => {
                 fontWeight: 700,
                 cursor: 'pointer',
                 transition: 'all 0.2s',
-                boxShadow: activeTab === 'rewards' ? '0 2px 8px rgba(245, 158, 11, 0.3)' : 'none'
+                boxShadow: activeTab === 'rewards' ? '0 2px 8px rgba(245, 158, 11, 0.3)' : 'none',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
             >
               <Gift size={15} />
@@ -318,6 +327,7 @@ export const CustomerPortal = () => {
           {/* Best Selling Products Section with Category Pills */}
           <section
             id="customer-products-grid"
+            className="portal-products-section"
             style={{
               maxWidth: '1240px',
               margin: '0 auto',
@@ -333,7 +343,7 @@ export const CustomerPortal = () => {
                 gap: '12px',
                 marginBottom: '16px'
               }}>
-                <h2 style={{ fontSize: 'clamp(1.6rem, 3.5vw, 2.2rem)', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
+                <h2 style={{ fontSize: 'clamp(1.35rem, 3.5vw, 2.2rem)', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
                   Best Selling Products
                 </h2>
 
@@ -346,7 +356,7 @@ export const CustomerPortal = () => {
 
               {/* Filter Pills */}
               <div className="category-scroll-strip" style={{
-                gap: '10px',
+                gap: '8px',
                 paddingBottom: '8px'
               }}>
                 {filterTabs.map((tab) => {
@@ -355,6 +365,7 @@ export const CustomerPortal = () => {
                     <button
                       key={tab}
                       onClick={() => setSelectedCategory(tab)}
+                      className="category-filter-chip"
                       style={{
                         padding: '8px 20px',
                         borderRadius: 'var(--radius-full)',
@@ -366,7 +377,8 @@ export const CustomerPortal = () => {
                         border: active ? '1px solid #2563eb' : '1px solid var(--border-medium)',
                         background: active ? '#2563eb' : '#ffffff',
                         color: active ? '#ffffff' : 'var(--text-body)',
-                        boxShadow: active ? '0 2px 10px rgba(37, 99, 235, 0.28)' : 'var(--shadow-xs)'
+                        boxShadow: active ? '0 2px 10px rgba(37, 99, 235, 0.28)' : 'var(--shadow-xs)',
+                        flexShrink: 0
                       }}
                     >
                       {tab}
@@ -437,7 +449,7 @@ export const CustomerPortal = () => {
                         {badgeLabel && (
                           <span style={{
                             position: 'absolute',
-                            top: '12px',
+                            top: '8px',
                             left: '8px',
                             background: badgeBg,
                             color: '#ffffff',
@@ -446,7 +458,11 @@ export const CustomerPortal = () => {
                             padding: '2px 8px',
                             borderRadius: 'var(--radius-full)',
                             zIndex: 2,
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                            maxWidth: '80%',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
                           }}>
                             {badgeLabel}
                           </span>
@@ -489,8 +505,8 @@ export const CustomerPortal = () => {
                       </div>
 
                       {/* Content Area */}
-                      <div style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                        <div style={{
+                      <div className="product-card-body" style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                        <div className="product-card-category" style={{
                           fontSize: '0.68rem',
                           fontWeight: 700,
                           color: '#9ca3af',
@@ -501,7 +517,7 @@ export const CustomerPortal = () => {
                           {p.category || 'MWS ACCESSORIES'}
                         </div>
 
-                        <h3 style={{
+                        <h3 className="product-card-title" style={{
                           fontSize: '0.92rem',
                           fontWeight: 700,
                           color: '#1f2937',
@@ -517,19 +533,19 @@ export const CustomerPortal = () => {
                         </h3>
 
                         {/* Star Rating */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
                           {[1, 2, 3, 4, 5].map((starIdx) => {
                             const isFilled = starIdx <= Math.round(p.rating || 0);
                             return (
                               <Star
                                 key={starIdx}
-                                size={14}
+                                size={13}
                                 color={isFilled ? '#f59e0b' : '#d1d5db'}
                                 fill={isFilled ? '#f59e0b' : 'none'}
                               />
                             );
                           })}
-                          <span style={{ fontSize: '0.78rem', color: '#9ca3af', fontWeight: 600, marginLeft: '4px' }}>
+                          <span style={{ fontSize: '0.74rem', color: '#9ca3af', fontWeight: 600, marginLeft: '3px' }}>
                             ({p.reviewCount || 0})
                           </span>
                         </div>
@@ -540,27 +556,27 @@ export const CustomerPortal = () => {
                           alignItems: 'baseline',
                           flexWrap: 'wrap',
                           gap: '4px 6px',
-                          marginBottom: '14px',
+                          marginBottom: '12px',
                           marginTop: 'auto'
                         }}>
-                          <span style={{ fontSize: 'clamp(1.05rem, 3.5vw, 1.22rem)', fontWeight: 800, color: '#111827' }}>
+                          <span className="product-card-price" style={{ fontSize: 'clamp(1.05rem, 3.5vw, 1.22rem)', fontWeight: 800, color: '#111827' }}>
                             ₹{Number(p.price || 0).toLocaleString()}
                           </span>
 
                           {p.originalPrice && p.originalPrice > p.price && (
-                            <span style={{ fontSize: '0.80rem', color: '#9ca3af', textDecoration: 'line-through' }}>
+                            <span style={{ fontSize: '0.78rem', color: '#9ca3af', textDecoration: 'line-through' }}>
                               ₹{Number(p.originalPrice).toLocaleString()}
                             </span>
                           )}
 
                           {discountStr && (
                             <span style={{
-                              fontSize: '0.74rem',
+                              fontSize: '0.70rem',
                               fontWeight: 800,
                               color: '#ef4444',
                               whiteSpace: 'nowrap',
                               background: '#fee2e2',
-                              padding: '1px 6px',
+                              padding: '1px 5px',
                               borderRadius: '4px'
                             }}>
                               {discountStr}
@@ -573,6 +589,7 @@ export const CustomerPortal = () => {
                           <button
                             onClick={() => addToCart(p)}
                             disabled={!isItemInStock}
+                            className="product-card-btn"
                             style={{
                               flex: 1,
                               display: 'inline-flex',
@@ -598,12 +615,13 @@ export const CustomerPortal = () => {
                               if (isItemInStock) e.currentTarget.style.backgroundColor = '#2563eb';
                             }}
                           >
-                            <ShoppingCart size={15} style={{ flexShrink: 0 }} />
+                            <ShoppingCart size={14} style={{ flexShrink: 0 }} />
                             <span>{isItemInStock ? 'Add to Cart' : 'Out of Stock'}</span>
                           </button>
 
                           <button
                             onClick={() => toggleWishlist(p)}
+                            className="product-card-heart-btn"
                             style={{
                               width: '36px',
                               height: '36px',
@@ -620,7 +638,7 @@ export const CustomerPortal = () => {
                             }}
                             aria-label="Wishlist"
                           >
-                            <Heart size={17} fill={wish ? '#ef4444' : 'none'} color={wish ? '#ef4444' : 'currentColor'} />
+                            <Heart size={16} fill={wish ? '#ef4444' : 'none'} color={wish ? '#ef4444' : 'currentColor'} />
                           </button>
                         </div>
                       </div>
@@ -635,7 +653,7 @@ export const CustomerPortal = () => {
 
       {/* ====== 4. MY ORDERS VIEW ====== */}
       {activeTab === 'orders' && (
-        <section style={{ maxWidth: '1000px', margin: '30px auto 80px', padding: '0 20px' }}>
+        <section className="portal-orders-section" style={{ maxWidth: '1000px', margin: '30px auto 80px', padding: '0 20px' }}>
           <div style={{ marginBottom: '22px' }}>
             <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '4px' }}>
               Your Orders & Delivery Status
@@ -676,6 +694,7 @@ export const CustomerPortal = () => {
               {myOrders.map((ord) => (
                 <div
                   key={ord.id}
+                  className="order-card-box"
                   style={{
                     background: '#ffffff',
                     border: '1px solid #e2e8f0',
