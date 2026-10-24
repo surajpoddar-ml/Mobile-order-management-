@@ -24,7 +24,8 @@ import {
   Gift,
   X,
   Phone,
-  MessageCircle
+  MessageCircle,
+  Bell
 } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 
@@ -285,450 +286,330 @@ export const Navbar = () => {
     }}>
       {/* ================= TIER 1: BRAND LOGO + SEARCH + ACTIONS ================= */}
       <div className="navbar-tier1">
+        {/* ROW 1: Logo & Three-dot/Hamburger menu on LEFT | Notification Bell & S Profile on RIGHT */}
         <div className="navbar-row-top">
-          {/* Left: Brand Logo & Tagline */}
-          <div
-            onClick={() => {
-              if (user?.role === 'Customer' || user?.userType === 'Customer') navigate('/customer');
-              else if (user?.role === 'Distributor' || user?.userType === 'Distributor') navigate('/distributor');
-              else if (user?.role === 'Admin' || user?.userType === 'Admin') navigate('/admin');
-              else navigate('/');
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              flexShrink: 1,
-              minWidth: 0
-            }}
-          >
-            <img
-              src="/mws_eagle_logo.jpg"
-              alt="MWS EAGLE"
-              style={{
-                height: '34px',
-                width: 'auto',
-                objectFit: 'contain',
-                borderRadius: '6px',
-                flexShrink: 0
+          {/* Left: Mobile Menu Trigger + Brand Logo */}
+          <div className="navbar-row1-left">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="mobile-menu-btn"
+              aria-label="Open Navigation Menu"
+              title="Menu"
+            >
+              <Menu size={20} />
+            </button>
+
+            <div
+              onClick={() => {
+                if (user?.role === 'Customer' || user?.userType === 'Customer') navigate('/customer');
+                else if (user?.role === 'Distributor' || user?.userType === 'Distributor') navigate('/distributor');
+                else if (user?.role === 'Admin' || user?.userType === 'Admin') navigate('/admin');
+                else navigate('/');
               }}
-            />
-            <div style={{ minWidth: 0 }}>
-              <div style={{
-                fontSize: '0.82rem',
-                fontWeight: 900,
-                letterSpacing: '0.04em',
-                color: '#0f172a',
-                lineHeight: 1.15,
-                fontFamily: 'var(--font-main)',
-                whiteSpace: 'nowrap'
-              }}>
-                MWS <span style={{ color: '#2563eb' }}>EAGLE</span>
-              </div>
-              <div className="hide-on-mobile" style={{
-                fontSize: '0.48rem',
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                color: '#64748b',
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap'
-              }}>
-                PREMIUM MOBILE ACCESSORIES
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                flexShrink: 1,
+                minWidth: 0
+              }}
+            >
+              <img
+                src="/mws_eagle_logo.jpg"
+                alt="MWS EAGLE"
+                style={{
+                  height: '32px',
+                  width: 'auto',
+                  objectFit: 'contain',
+                  borderRadius: '6px',
+                  flexShrink: 0
+                }}
+              />
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  fontSize: '0.82rem',
+                  fontWeight: 900,
+                  letterSpacing: '0.04em',
+                  color: '#0f172a',
+                  lineHeight: 1.15,
+                  fontFamily: 'var(--font-main)',
+                  whiteSpace: 'nowrap'
+                }}>
+                  MWS <span style={{ color: '#2563eb' }}>EAGLE</span>
+                </div>
+                <div className="hide-on-mobile" style={{
+                  fontSize: '0.48rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  color: '#64748b',
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap'
+                }}>
+                  PREMIUM MOBILE ACCESSORIES
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Right: User Login/Register + Wishlist + Cart + Mobile Hamburger */}
-          <div className="navbar-actions-group">
-          {/* User Account / Login */}
-          {user ? (
-            <div style={{ position: 'relative' }}>
+          {/* Right: Notification Bell + S Profile */}
+          <div className="navbar-row1-right">
+            {/* Notification Bell */}
+            {user ? (
+              <NotificationBell />
+            ) : (
               <button
                 type="button"
-                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  padding: '7px 14px',
-                  borderRadius: 'var(--radius-full)',
-                  cursor: 'pointer',
-                  fontSize: '0.86rem',
-                  fontWeight: 700,
-                  color: '#1e293b'
-                }}
+                onClick={() => navigate('/login')}
+                className="nav-icon-btn"
+                aria-label="Notifications"
+                title="Notifications"
               >
-                <div style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  background: user.userType === 'Distributor' ? '#0284c7' : '#2563eb',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.72rem',
-                  fontWeight: 800
-                }}>
-                  {user.fullName ? user.fullName[0].toUpperCase() : 'U'}
-                </div>
-                <span className="hide-on-mobile">{user.fullName.split(' ')[0]}</span>
-                <ChevronDown size={14} color="#64748b" />
+                <Bell size={20} />
               </button>
+            )}
 
-              {/* User Dropdown */}
-              {userDropdownOpen && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 8px)',
-                    right: 0,
-                    width: '210px',
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                    zIndex: 200,
-                    padding: '8px 0',
-                    overflow: 'hidden'
-                  }}
-                  onMouseLeave={() => setUserDropdownOpen(false)}
+            {/* S Profile / User Account */}
+            {user ? (
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="nav-profile-pill"
+                  aria-label="User profile menu"
                 >
-                  <div style={{ padding: '8px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a' }}>{user.fullName}</div>
-                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{user.userType} Account</div>
+                  <div
+                    className="nav-profile-avatar"
+                    style={{
+                      background: user.userType === 'Distributor' ? '#0284c7' : '#2563eb'
+                    }}
+                  >
+                    {user.fullName ? user.fullName[0].toUpperCase() : 'S'}
                   </div>
+                  <span className="hide-on-mobile" style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1e293b' }}>
+                    {user.fullName.split(' ')[0]}
+                  </span>
+                  <ChevronDown size={14} color="#64748b" className="hide-on-mobile" />
+                </button>
 
-                  <button
-                    onClick={() => {
-                      setUserDropdownOpen(false);
-                      if (user.userType === 'Customer') navigate('/portal/customer');
-                      else if (user.userType === 'Distributor') navigate('/portal/distributor');
-                      else if (user.userType === 'Admin') navigate('/admin');
-                    }}
+                {/* User Dropdown */}
+                {userDropdownOpen && (
+                  <div
                     style={{
-                      width: '100%',
-                      padding: '9px 16px',
-                      background: 'none',
-                      border: 'none',
-                      textAlign: 'left',
-                      fontSize: '0.86rem',
-                      color: '#1e293b',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
+                      position: 'absolute',
+                      top: 'calc(100% + 8px)',
+                      right: 0,
+                      width: '210px',
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                      zIndex: 200,
+                      padding: '8px 0',
+                      overflow: 'hidden'
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    onMouseLeave={() => setUserDropdownOpen(false)}
                   >
-                    <Layers size={15} color="#2563eb" />
-                    My Portal
-                  </button>
+                    <div style={{ padding: '8px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                      <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a' }}>{user.fullName}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{user.userType} Account</div>
+                    </div>
 
-                  <button
-                    onClick={() => {
-                      setUserDropdownOpen(false);
-                      setIsTrackOrderOpen(true);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '9px 16px',
-                      background: 'none',
-                      border: 'none',
-                      textAlign: 'left',
-                      fontSize: '0.86rem',
-                      color: '#1e293b',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                  >
-                    <Package size={15} color="#059669" />
-                    My Orders
-                  </button>
+                    <button
+                      onClick={() => {
+                        setUserDropdownOpen(false);
+                        if (user.userType === 'Customer') navigate('/portal/customer');
+                        else if (user.userType === 'Distributor') navigate('/portal/distributor');
+                        else if (user.userType === 'Admin') navigate('/admin');
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '9px 16px',
+                        background: 'none',
+                        border: 'none',
+                        textAlign: 'left',
+                        fontSize: '0.86rem',
+                        color: '#1e293b',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >
+                      <Layers size={15} color="#2563eb" />
+                      My Portal
+                    </button>
 
-                  <div style={{ borderTop: '1px solid #f1f5f9', margin: '4px 0' }} />
+                    <button
+                      onClick={() => {
+                        setUserDropdownOpen(false);
+                        setIsTrackOrderOpen(true);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '9px 16px',
+                        background: 'none',
+                        border: 'none',
+                        textAlign: 'left',
+                        fontSize: '0.86rem',
+                        color: '#1e293b',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >
+                      <Package size={15} color="#059669" />
+                      My Orders
+                    </button>
 
-                  <button
-                    onClick={() => {
-                      setUserDropdownOpen(false);
-                      logout();
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '9px 16px',
-                      background: 'none',
-                      border: 'none',
-                      textAlign: 'left',
-                      fontSize: '0.86rem',
-                      color: '#dc2626',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                  >
-                    <LogOut size={15} />
-                    Logout
-                  </button>
+                    <div style={{ borderTop: '1px solid #f1f5f9', margin: '4px 0' }} />
+
+                    <button
+                      onClick={() => {
+                        setUserDropdownOpen(false);
+                        logout();
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '9px 16px',
+                        background: 'none',
+                        border: 'none',
+                        textAlign: 'left',
+                        fontSize: '0.86rem',
+                        color: '#dc2626',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >
+                      <LogOut size={15} />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="nav-profile-pill"
+                title="Login / Register"
+                aria-label="Login / Register"
+              >
+                <div
+                  className="nav-profile-avatar"
+                  style={{
+                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
+                  }}
+                >
+                  S
                 </div>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={() => navigate('/login')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                color: '#1e293b',
-                padding: '6px 8px'
-              }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#1e293b')}
-            >
-              <User size={20} color="#1e293b" />
-              <span className="hide-on-mobile">Login / Register</span>
-            </button>
-          )}
+                <span className="hide-on-mobile" style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1e293b' }}>
+                  Login
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
 
-          {/* Rewards Shortcut Button (Customer / Distributor) */}
-          {user && (user.userType === 'Customer' || user.userType === 'Distributor') && (
+        {/* ROW 2: Search Bar + Cart, Wishlist, Gift icons */}
+        <div className="navbar-row-secondary">
+          {/* Search bar */}
+          <form onSubmit={handleSearchSubmit} className="navbar-search-form">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search for products, model or category..."
+              className="navbar-search-input"
+            />
             <button
+              type="submit"
+              className="navbar-search-btn"
+              aria-label="Search"
+            >
+              <Search size={15} />
+            </button>
+          </form>
+
+          {/* Action icons: Gift (Rewards), Wishlist, Cart */}
+          <div className="navbar-row2-icons">
+            {/* Gift Icon (Rewards) */}
+            <button
+              type="button"
               onClick={() => {
-                const target = user.userType === 'Distributor' ? '/distributor?tab=rewards' : '/customer?tab=rewards';
-                navigate(target);
+                if (user?.userType === 'Distributor') navigate('/distributor?tab=rewards');
+                else if (user?.userType === 'Customer') navigate('/customer?tab=rewards');
+                else navigate('/login');
               }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 12px',
-                borderRadius: '20px',
-                border: '1.5px solid #fde68a',
-                background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
-                color: '#b45309',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              title="My Rewards & Points"
+              className="nav-icon-btn"
+              aria-label="Rewards & Gifts"
+              title="Rewards & Gifts"
             >
-              <Gift size={14} color="#d97706" />
-              <span className="hide-on-mobile">Rewards</span>
+              <Gift size={20} color="#d97706" />
             </button>
-          )}
 
-          {/* Notification Bell (Customer / Distributor) */}
-          {user && <NotificationBell />}
+            {/* Wishlist Heart Icon */}
+            <button
+              type="button"
+              onClick={() => setIsWishlistOpen(true)}
+              className="nav-icon-btn"
+              aria-label="Wishlist"
+              title="Wishlist"
+            >
+              <Heart size={20} />
+              {wishlistCount > 0 && (
+                <span className="nav-badge-pill nav-badge-red">
+                  {wishlistCount}
+                </span>
+              )}
+            </button>
 
-          {/* Wishlist Heart Icon */}
-          <button
-            onClick={() => setIsWishlistOpen(true)}
-            style={{
-              position: 'relative',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '5px 4px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#1e293b'
-            }}
-            aria-label="Wishlist"
-          >
-            <Heart size={21} />
-            {wishlistCount > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-2px',
-                right: '-2px',
-                background: '#ef4444',
-                color: '#ffffff',
-                fontSize: '0.65rem',
-                fontWeight: 800,
-                width: '17px',
-                height: '17px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {wishlistCount}
-              </span>
-            )}
-          </button>
-
-          {/* Cart Icon */}
-          <button
-            onClick={() => setIsCartOpen(true)}
-            style={{
-              position: 'relative',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '5px 4px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#1e293b'
-            }}
-            aria-label="Shopping Cart"
-          >
-            <ShoppingCart size={21} />
-            {cartCount > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-2px',
-                right: '-2px',
-                background: '#2563eb',
-                color: '#ffffff',
-                fontSize: '0.65rem',
-                fontWeight: 800,
-                width: '17px',
-                height: '17px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {cartCount}
-              </span>
-            )}
-          </button>
-
-          {/* Mobile Navigation Drawer Trigger */}
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(true)}
-            className="mobile-menu-btn"
-            aria-label="Open Navigation Menu"
-          >
-            <Menu size={20} />
-          </button>
+            {/* Cart Icon */}
+            <button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              className="nav-icon-btn"
+              aria-label="Shopping Cart"
+              title="Shopping Cart"
+            >
+              <ShoppingCart size={20} />
+              {cartCount > 0 && (
+                <span className="nav-badge-pill nav-badge-blue">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Center: Full-width responsive search bar */}
-      <div className="navbar-search-wrapper">
-        <form
-          onSubmit={handleSearchSubmit}
-          style={{
-            width: '100%',
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center'
-          }}
-        >
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search for products, model or category..."
-            style={{
-              width: '100%',
-              padding: '10px 52px 10px 18px',
-              fontSize: '0.9rem',
-              color: '#1f2937',
-              backgroundColor: '#f8fafc',
-              border: '1.5px solid #e2e8f0',
-              borderRadius: '9999px',
-              outline: 'none',
-              transition: 'border-color 0.2s, background-color 0.2s, box-shadow 0.2s'
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#2563eb';
-              e.target.style.backgroundColor = '#ffffff';
-              e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.12)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = '#e2e8f0';
-              e.target.style.backgroundColor = '#f8fafc';
-              e.target.style.boxShadow = 'none';
-            }}
-          />
-
-          <button
-            type="submit"
-            style={{
-              position: 'absolute',
-              right: '4px',
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              backgroundColor: '#2563eb',
-              color: '#ffffff',
-              border: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#2563eb')}
-            aria-label="Search"
-          >
-            <Search size={17} />
-          </button>
-        </form>
-      </div>
-    </div>
-
-      {/* ================= TIER 2: SUB-NAVIGATION BAR (AS IN IMAGE) ================= */}
+      {/* ================= TIER 2: SUB-NAVIGATION BAR (CATEGORIES, HOME, SHOP, TRACK ORDER) ================= */}
       <div style={{
         backgroundColor: '#fafbfc',
         borderTop: '1px solid #f1f5f9'
       }}>
-        <div style={{
-          maxWidth: '1280px',
-          margin: '0 auto',
-          padding: '0 clamp(14px, 3vw, 24px)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'clamp(18px, 4vw, 36px)',
-          height: '46px',
-          overflowX: 'auto',
-          scrollbarWidth: 'none'
-        }}>
-          {/* All Categories Dropdown Trigger */}
+        <div className="navbar-tier2-container">
+          {/* 1. All Categories Dropdown Trigger */}
           <div style={{ position: 'relative' }}>
             <button
               type="button"
               onClick={() => setCategoriesDropdownOpen(!categoriesDropdownOpen)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: 'transparent',
-                border: 'none',
-                color: '#1e293b',
-                fontSize: '0.92rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                padding: '6px 0',
-                whiteSpace: 'nowrap'
-              }}
+              className="nav-link-btn"
+              style={{ fontWeight: 800, color: '#1e293b' }}
             >
-              <Menu size={18} color="#2563eb" />
+              <Menu size={16} color="#2563eb" />
               <span>All Categories</span>
-              <ChevronDown size={14} color="#64748b" />
+              <ChevronDown size={13} color="#64748b" />
             </button>
 
             {/* Dropdown Menu */}
@@ -788,7 +669,7 @@ export const Navbar = () => {
             )}
           </div>
 
-          {/* Subnav links: Home, Shop, Track Order, Contact Us */}
+          {/* 2. Home */}
           <button
             onClick={() => {
               if (user?.role === 'Customer' || user?.userType === 'Customer') navigate('/customer');
@@ -796,72 +677,31 @@ export const Navbar = () => {
               else if (user?.role === 'Admin' || user?.userType === 'Admin') navigate('/admin');
               else navigate('/');
             }}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#334155',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: '6px 0',
-              whiteSpace: 'nowrap'
-            }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#334155')}
+            className="nav-link-btn"
           >
             Home
           </button>
 
+          {/* 3. Shop */}
           <button
             onClick={handleShopClick}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#334155',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: '6px 0',
-              whiteSpace: 'nowrap'
-            }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#334155')}
+            className="nav-link-btn"
           >
             Shop
           </button>
 
+          {/* 4. Track Order */}
           <button
             onClick={() => setIsTrackOrderOpen(true)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#334155',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: '6px 0',
-              whiteSpace: 'nowrap'
-            }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#334155')}
+            className="nav-link-btn"
           >
             Track Order
           </button>
 
+          {/* 5. Contact Us */}
           <button
             onClick={() => setIsContactOpen(true)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#334155',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: '6px 0',
-              whiteSpace: 'nowrap'
-            }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#334155')}
+            className="nav-link-btn"
           >
             Contact Us
           </button>
