@@ -1,4 +1,19 @@
-export const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001').replace(/\/+$/, '');
+const resolveApiOrigin = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+    return envUrl.trim();
+  }
+  if (typeof window !== 'undefined' && window.location) {
+    const host = window.location.hostname;
+    if (host !== 'localhost' && host !== '127.0.0.1' && !host.startsWith('192.168.')) {
+      // In production on any live domain (e.g. mwseagle.com)
+      return 'https://api.mwseagle.com';
+    }
+  }
+  return 'http://localhost:5001';
+};
+
+export const API_ORIGIN = resolveApiOrigin().replace(/\/+$/, '');
 export const API_BASE_URL = `${API_ORIGIN}/api`;
 
 /**

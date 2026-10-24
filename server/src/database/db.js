@@ -10,43 +10,26 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config();
 
-const databaseUrl = process.env.DATABASE_URL || process.env.MYSQL_URL || process.env.JAWSDB_URL;
-const dbHost = process.env.DB_HOST || 'localhost';
-const dbPort = parseInt(process.env.DB_PORT || '3306', 10);
-const dbUser = process.env.DB_USER || 'root';
-const dbPassword = process.env.DB_PASSWORD || '';
-const dbName = process.env.DB_NAME || 'mobile_order_db';
-
-// Ensure the database exists before establishing main connection pool if running on custom host
-const ensureDatabaseExists = async () => {
-  if (databaseUrl) return; // Cloud-managed DBs already have database provisioned
-  try {
-    const tempConnection = await mysql.createConnection({
-      host: dbHost,
-      port: dbPort,
-      user: dbUser,
-      password: dbPassword
-    });
-    await tempConnection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
-    await tempConnection.end();
-  } catch (err) {
-    console.warn(`[MySQL Setup] Note: Could not auto-create database "${dbName}":`, err.message);
-  }
+const getCleanEnv = (key, fallback = '') => {
+  const val = process.env[key] !== undefined ? process.env[key] : process.env[key.trim()];
+  return val !== undefined && val !== null && String(val).trim() !== '' ? String(val).trim() : fallback;
 };
 
-try {
-  await ensureDatabaseExists();
-} catch (e) {
-  console.warn('[MySQL Setup] Pre-connection check skipped:', e.message);
-}
+const databaseUrl = getCleanEnv('DATABASE_URL') || getCleanEnv('MYSQL_URL') || getCleanEnv('JAWSDB_URL');
+const dbHost = getCleanEnv('DB_HOST', '127.0.0.1');
+const dbPort = parseInt(getCleanEnv('DB_PORT', '3306'), 10);
+const dbUser = getCleanEnv('DB_USER', 'u472025985_mwseagle1');
+const dbPassword = getCleanEnv('DB_PASSWORD', 'Sharwan@1234!');
+const dbName = getCleanEnv('DB_NAME', 'u472025985_mwseagle_123');
 
-// Create connection pool for MySQL (supports cloud DATABASE_URL or individual credentials)
+// Create connection pool for MySQL (non-blocking, instant initialization)
 export const pool = databaseUrl
   ? mysql.createPool({
       uri: databaseUrl,
       waitForConnections: true,
-      connectionLimit: 15,
+      connectionLimit: 10,
       queueLimit: 0,
+      connectTimeout: 10000,
       enableKeepAlive: true,
       keepAliveInitialDelay: 10000
     })
@@ -57,8 +40,9 @@ export const pool = databaseUrl
       password: dbPassword,
       database: dbName,
       waitForConnections: true,
-      connectionLimit: 15,
+      connectionLimit: 10,
       queueLimit: 0,
+      connectTimeout: 10000,
       enableKeepAlive: true,
       keepAliveInitialDelay: 10000
     });
@@ -66,7 +50,7 @@ export const pool = databaseUrl
 console.log(
   databaseUrl
     ? `Configured MySQL connection pool via cloud DATABASE_URL.`
-    : `Connected to MySQL database [${dbName}] at ${dbHost}:${dbPort} as user "${dbUser}".`
+    : `Configured MySQL pool for [${dbName}] at ${dbHost}:${dbPort} (user: ${dbUser}).`
 );
 
 // Helper to sanitize/normalize SQLite queries into valid MySQL queries
