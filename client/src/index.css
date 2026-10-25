@@ -302,6 +302,9 @@ input::placeholder, textarea::placeholder {
   .desktop-nav {
     display: flex !important;
   }
+  .mobile-only {
+    display: none !important;
+  }
 }
 
 @media (max-width: 640px) {

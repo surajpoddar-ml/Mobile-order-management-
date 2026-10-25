@@ -44,7 +44,6 @@ export const Navbar = () => {
     setSelectedCategory
   } = useCart();
 
-  const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dbCategories, setDbCategories] = useState([]);
@@ -270,7 +269,6 @@ export const Navbar = () => {
 
   const handleCategorySelect = (catId) => {
     setSelectedCategory(catId);
-    setCategoriesDropdownOpen(false);
     const el = document.getElementById('best-selling-products-section');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -299,18 +297,8 @@ export const Navbar = () => {
       <div className="navbar-tier1">
         {/* ROW 1: Logo & Three-dot/Hamburger menu on LEFT | Notification Bell & S Profile on RIGHT */}
         <div className="navbar-row-top">
-          {/* Left: Mobile Menu Trigger + Brand Logo */}
+          {/* Left: Brand Logo (Top mobile menu button removed) */}
           <div className="navbar-row1-left">
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(true)}
-              className="mobile-menu-btn"
-              aria-label="Open Navigation Menu"
-              title="Menu"
-            >
-              <Menu size={20} />
-            </button>
-
             <div
               onClick={() => {
                 if (user?.role === 'Customer' || user?.userType === 'Customer') navigate('/customer');
@@ -611,75 +599,23 @@ export const Navbar = () => {
         borderTop: '1px solid #f1f5f9'
       }}>
         <div className="navbar-tier2-container">
-          {/* 1. All Categories Dropdown Trigger */}
-          <div style={{ position: 'relative' }}>
-            <button
-              type="button"
-              onClick={() => setCategoriesDropdownOpen(!categoriesDropdownOpen)}
-              className="nav-link-btn"
-              style={{ fontWeight: 800, color: '#1e293b' }}
-            >
-              <Menu size={16} color="#2563eb" />
-              <span>All Categories</span>
-              <ChevronDown size={13} color="#64748b" />
-            </button>
-
-            {/* Dropdown Menu */}
-            {categoriesDropdownOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 4px)',
-                  left: 0,
-                  width: '230px',
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  boxShadow: '0 12px 30px rgba(0,0,0,0.12)',
-                  zIndex: 200,
-                  padding: '6px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '2px'
-                }}
-                onMouseLeave={() => setCategoriesDropdownOpen(false)}
-              >
-                {categories.map((cat) => {
-                  const isCurrent = selectedCategory === cat.id;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleCategorySelect(cat.id)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '10px 14px',
-                        borderRadius: '8px',
-                        background: isCurrent ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
-                        color: isCurrent ? '#2563eb' : '#1f2937',
-                        border: 'none',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        fontSize: '0.88rem',
-                        fontWeight: isCurrent ? 800 : 600,
-                        transition: 'background-color 0.15s'
-                      }}
-                      onMouseEnter={e => {
-                        if (!isCurrent) e.currentTarget.style.backgroundColor = '#f8fafc';
-                      }}
-                      onMouseLeave={e => {
-                        if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
-                    >
-                      {React.createElement(cat.icon, { size: 16, color: isCurrent ? '#2563eb' : '#64748b' })}
-                      <span>{cat.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          {/* 1. Mobile-Only Three-Line Menu Button (opens mobile navigation drawer with categories) */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="nav-link-btn mobile-only"
+            style={{
+              padding: '6px 8px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#2563eb'
+            }}
+            aria-label="Open Navigation Menu"
+            title="Menu"
+          >
+            <Menu size={18} />
+          </button>
 
           {/* 2. Home */}
           <button
@@ -885,6 +821,45 @@ export const Navbar = () => {
                 <Phone size={18} color="#8b5cf6" />
                 Contact & Support
               </button>
+
+              {/* Product Categories Arrangement in Mobile Drawer */}
+              <div style={{ marginTop: '8px', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 8px 8px 8px' }}>
+                  Product Categories
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  {categories.map((cat) => {
+                    const isCurrent = selectedCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          handleCategorySelect(cat.id);
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '9px 12px',
+                          background: isCurrent ? 'rgba(37, 99, 235, 0.08)' : 'none',
+                          border: 'none',
+                          textAlign: 'left',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.88rem',
+                          fontWeight: isCurrent ? 800 : 600,
+                          color: isCurrent ? '#2563eb' : '#1e293b',
+                          transition: 'background-color 0.15s'
+                        }}
+                      >
+                        {React.createElement(cat.icon, { size: 16, color: isCurrent ? '#2563eb' : '#64748b' })}
+                        <span>{cat.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Direct Instant Contact (Call & WhatsApp) */}
