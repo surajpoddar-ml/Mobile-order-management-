@@ -108,16 +108,30 @@ export const AdvertisementBoard = () => {
     if (isRightSwipe) handlePrev();
   };
 
+  const defaultAds = [
+    {
+      id: 'default-main-banner',
+      title: '',
+      description: '',
+      mediaType: 'image',
+      mediaUrl: '/mws_main_banner.jpg',
+      badgeText: '',
+      linkUrl: '#best-selling-products-section'
+    }
+  ];
+
+  const activeAds = ads.length > 0 ? ads : defaultAds;
+
   if (loading) {
     return (
       <div style={{
         maxWidth: '1240px',
-        margin: '20px auto 40px auto',
+        margin: '12px auto 20px auto',
         padding: '0 16px'
       }}>
         <div style={{
-          height: '360px',
-          borderRadius: 'var(--radius-xl)',
+          height: '240px',
+          borderRadius: '16px',
           background: 'linear-gradient(110deg, #ede8de 8%, #f6f1e9 18%, #ede8de 33%)',
           backgroundSize: '200% 100%',
           animation: 'shine 1.5s linear infinite',
@@ -132,13 +146,13 @@ export const AdvertisementBoard = () => {
     );
   }
 
-  if (!ads.length) {
-    return null;
-  }
-
-  const currentAd = ads[currentIndex];
+  const currentAd = activeAds[currentIndex % activeAds.length] || activeAds[0];
   // Determine mediaUrl using dynamic API helper
-  const getFullMediaUrl = (url) => getMediaUrl(url);
+  const getFullMediaUrl = (url) => {
+    if (!url) return '/mws_main_banner.jpg';
+    if (url.startsWith('/')) return url;
+    return getMediaUrl(url);
+  };
 
   return (
     <section
@@ -270,157 +284,167 @@ export const AdvertisementBoard = () => {
             />
           )}
 
-          {/* Dark gradient overlay for text readability */}
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.55) 45%, rgba(0, 0, 0, 0.25) 100%)',
-            pointerEvents: 'none'
-          }} />
+          {/* Dark gradient overlay only if title/description exists for readability */}
+          {(currentAd.title || currentAd.description) && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.55) 45%, rgba(0, 0, 0, 0.25) 100%)',
+              pointerEvents: 'none'
+            }} />
+          )}
 
           {/* Top badges & media type indicator */}
-          <div style={{
-            position: 'absolute',
-            top: '16px',
-            left: '16px',
-            right: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            zIndex: 10
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {/* Badge Tag */}
-              <span style={{
-                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                color: '#ffffff',
-                fontSize: '0.74rem',
-                fontWeight: 800,
-                letterSpacing: '0.06em',
-                padding: '4px 12px',
-                borderRadius: 'var(--radius-full)',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-                textTransform: 'uppercase'
-              }}>
-                {currentAd.badgeText || 'HOT DEAL'}
-              </span>
-
-              {/* Media format pill */}
-              <span style={{
-                background: 'rgba(0, 0, 0, 0.65)',
-                backdropFilter: 'blur(8px)',
-                color: '#f8fafc',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                padding: '4px 10px',
-                borderRadius: 'var(--radius-full)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px'
-              }}>
-                {currentAd.mediaType === 'video' ? <Film size={12} color="#38bdf8" /> : <ImageIcon size={12} color="#4ade80" />}
-                {currentAd.mediaType === 'video' ? 'Interactive Video' : 'HD Showcase'}
-              </span>
-            </div>
-
-            {/* Video sound mute/unmute control */}
-            {currentAd.mediaType === 'video' && (
-              <button
-                onClick={() => setIsMuted(!isMuted)}
-                title={isMuted ? 'Unmute video audio' : 'Mute video audio'}
-                style={{
-                  background: 'rgba(0, 0, 0, 0.65)',
-                  backdropFilter: 'blur(8px)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#ffffff',
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'background 0.15s, transform 0.15s'
-                }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-              >
-                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} color="#38bdf8" />}
-              </button>
-            )}
-          </div>
-
-          {/* Bottom Card Content overlay */}
-          <div style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '24px 20px',
-            zIndex: 10,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px'
-          }}>
-            <h3 style={{
-              fontSize: 'clamp(1.15rem, 3.2vw, 1.8rem)',
-              fontWeight: 800,
-              color: '#ffffff',
-              lineHeight: 1.25,
-              margin: 0,
-              textShadow: '0 2px 10px rgba(0,0,0,0.7)'
-            }}>
-              {currentAd.title}
-            </h3>
-
-            {currentAd.description && (
-              <p style={{
-                fontSize: 'clamp(0.85rem, 2vw, 0.98rem)',
-                color: '#cbd5e1',
-                lineHeight: 1.45,
-                maxWidth: '750px',
-                margin: 0,
-                textShadow: '0 1px 6px rgba(0,0,0,0.6)'
-              }}>
-                {currentAd.description}
-              </p>
-            )}
-
-            {/* Action CTA */}
+          {(currentAd.badgeText || currentAd.mediaType === 'video') && (
             <div style={{
+              position: 'absolute',
+              top: '16px',
+              left: '16px',
+              right: '16px',
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
-              marginTop: '6px'
+              justifyContent: 'space-between',
+              zIndex: 10
             }}>
-              <button
-                onClick={() => {
-                  if (currentAd.linkUrl) {
-                    if (currentAd.linkUrl.startsWith('http')) {
-                      window.open(currentAd.linkUrl, '_blank');
-                    } else {
-                      navigate(currentAd.linkUrl);
-                    }
-                  } else {
-                    const el = document.getElementById('best-selling-products-section') || document.getElementById('customer-products-grid') || document.getElementById('distributor-products-grid');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }}
-                className="btn btn-primary"
-                style={{
-                  padding: '8px 18px',
-                  fontSize: '0.84rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  borderRadius: '8px'
-                }}
-              >
-                Explore Details
-                <ExternalLink size={14} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {currentAd.badgeText && (
+                  <span style={{
+                    background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                    color: '#ffffff',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.06em',
+                    padding: '4px 12px',
+                    borderRadius: 'var(--radius-full)',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                    textTransform: 'uppercase'
+                  }}>
+                    {currentAd.badgeText}
+                  </span>
+                )}
+
+                {currentAd.mediaType === 'video' && (
+                  <span style={{
+                    background: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(8px)',
+                    color: '#f8fafc',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}>
+                    <Film size={12} color="#38bdf8" />
+                    Interactive Video
+                  </span>
+                )}
+              </div>
+
+              {/* Video sound mute/unmute control */}
+              {currentAd.mediaType === 'video' && (
+                <button
+                  onClick={() => setIsMuted(!isMuted)}
+                  title={isMuted ? 'Unmute video audio' : 'Mute video audio'}
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#ffffff',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'background 0.15s, transform 0.15s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} color="#38bdf8" />}
+                </button>
+              )}
             </div>
-          </div>
+          )}
+
+          {/* Bottom Card Content overlay if title or description exists */}
+          {(currentAd.title || currentAd.description) && (
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: '24px 20px',
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              {currentAd.title && (
+                <h3 style={{
+                  fontSize: 'clamp(1.15rem, 3.2vw, 1.8rem)',
+                  fontWeight: 800,
+                  color: '#ffffff',
+                  lineHeight: 1.25,
+                  margin: 0,
+                  textShadow: '0 2px 10px rgba(0,0,0,0.7)'
+                }}>
+                  {currentAd.title}
+                </h3>
+              )}
+
+              {currentAd.description && (
+                <p style={{
+                  fontSize: 'clamp(0.85rem, 2vw, 0.98rem)',
+                  color: '#cbd5e1',
+                  lineHeight: 1.45,
+                  maxWidth: '750px',
+                  margin: 0,
+                  textShadow: '0 1px 6px rgba(0,0,0,0.6)'
+                }}>
+                  {currentAd.description}
+                </p>
+              )}
+
+              {/* Action CTA */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginTop: '6px'
+              }}>
+                <button
+                  onClick={() => {
+                    if (currentAd.linkUrl) {
+                      if (currentAd.linkUrl.startsWith('http')) {
+                        window.open(currentAd.linkUrl, '_blank');
+                      } else {
+                        navigate(currentAd.linkUrl);
+                      }
+                    } else {
+                      const el = document.getElementById('best-selling-products-section') || document.getElementById('customer-products-grid') || document.getElementById('distributor-products-grid');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className="btn btn-primary"
+                  style={{
+                    padding: '8px 18px',
+                    fontSize: '0.84rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    borderRadius: '8px'
+                  }}
+                >
+                  Explore Details
+                  <ExternalLink size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Thumbnail & Dot Navigation Bar at bottom */}

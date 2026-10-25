@@ -32,6 +32,10 @@ export const getMediaUrl = (url) => {
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) {
     return url;
   }
+  // Public static assets served from client public directory
+  if (url.startsWith('/cat_') || url.startsWith('/mws_') || url.startsWith('/goa_') || url.startsWith('/favicon')) {
+    return url;
+  }
   const cleanPath = url.startsWith('/') ? url : `/${url}`;
   return `${API_ORIGIN}${cleanPath}`;
 };

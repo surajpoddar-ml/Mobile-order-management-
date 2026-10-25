@@ -158,13 +158,13 @@ export const MobileBottomNav = () => {
               />
 
               {/* Notification / Count Badge (e.g. Cart, Wishlist) */}
-              {item.badge > 0 && (
+              {(item.id === 'cart' || item.badge > 0) && (
                 <span
                   style={{
                     position: 'absolute',
                     top: '-6px',
                     right: '-10px',
-                    background: item.badgeBg || '#2563eb',
+                    background: item.badgeBg || '#ef4444',
                     color: '#ffffff',
                     fontSize: '0.62rem',
                     fontWeight: 800,
@@ -179,7 +179,7 @@ export const MobileBottomNav = () => {
                     lineHeight: 1
                   }}
                 >
-                  {item.badge > 99 ? '99+' : item.badge}
+                  {item.id === 'cart' && (!item.badge || item.badge <= 0) ? 0 : (item.badge > 99 ? '99+' : item.badge)}
                 </span>
               )}
             </div>

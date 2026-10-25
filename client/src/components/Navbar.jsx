@@ -25,7 +25,10 @@ import {
   X,
   Phone,
   MessageCircle,
-  Bell
+  Bell,
+  Home as HomeIcon,
+  Store,
+  ChevronRight
 } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 
@@ -335,21 +338,21 @@ export const Navbar = () => {
               />
               <div style={{ minWidth: 0 }}>
                 <div style={{
-                  fontSize: '0.82rem',
+                  fontSize: '0.88rem',
                   fontWeight: 900,
                   letterSpacing: '0.04em',
-                  color: '#0f172a',
+                  color: '#ffffff',
                   lineHeight: 1.15,
                   fontFamily: 'var(--font-main)',
                   whiteSpace: 'nowrap'
                 }}>
-                  MWS <span style={{ color: '#2563eb' }}>EAGLE</span>
+                  MWS <span style={{ color: '#ffffff' }}>EAGLE</span>
                 </div>
                 <div className="hide-on-mobile" style={{
-                  fontSize: '0.48rem',
+                  fontSize: '0.50rem',
                   fontWeight: 700,
                   letterSpacing: '0.08em',
-                  color: '#64748b',
+                  color: '#e0f2fe',
                   textTransform: 'uppercase',
                   whiteSpace: 'nowrap'
                 }}>
@@ -372,7 +375,8 @@ export const Navbar = () => {
                 aria-label="Notifications"
                 title="Notifications"
               >
-                <Bell size={19} />
+                <Bell size={20} color="#ffffff" />
+                <span className="nav-badge-pill nav-badge-red">2</span>
               </button>
             )}
 
@@ -384,7 +388,7 @@ export const Navbar = () => {
               aria-label="Wishlist"
               title="Wishlist"
             >
-              <Heart size={19} />
+              <Heart size={20} color="#ffffff" strokeWidth={2} />
               {wishlistCount > 0 && (
                 <span className="nav-badge-pill nav-badge-red">
                   {wishlistCount}
@@ -400,12 +404,10 @@ export const Navbar = () => {
               aria-label="Shopping Cart"
               title="Shopping Cart"
             >
-              <ShoppingCart size={19} />
-              {cartCount > 0 && (
-                <span className="nav-badge-pill nav-badge-blue">
-                  {cartCount}
-                </span>
-              )}
+              <ShoppingCart size={20} color="#ffffff" strokeWidth={2} />
+              <span className="nav-badge-pill nav-badge-red">
+                {cartCount || 0}
+              </span>
             </button>
 
             {/* S Profile / User Account */}
@@ -414,21 +416,10 @@ export const Navbar = () => {
                 <button
                   type="button"
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="nav-profile-pill"
+                  className="nav-profile-circle-btn"
                   aria-label="User profile menu"
                 >
-                  <div
-                    className="nav-profile-avatar"
-                    style={{
-                      background: user.userType === 'Distributor' ? '#0284c7' : '#2563eb'
-                    }}
-                  >
-                    {user.fullName ? user.fullName[0].toUpperCase() : 'S'}
-                  </div>
-                  <span className="hide-on-mobile" style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1e293b' }}>
-                    {user.fullName.split(' ')[0]}
-                  </span>
-                  <ChevronDown size={14} color="#64748b" className="hide-on-mobile" />
+                  <User size={18} color="#ffffff" />
                 </button>
 
                 {/* User Dropdown */}
@@ -539,21 +530,11 @@ export const Navbar = () => {
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="nav-profile-pill"
+                className="nav-profile-circle-btn"
                 title="Login / Register"
                 aria-label="Login / Register"
               >
-                <div
-                  className="nav-profile-avatar"
-                  style={{
-                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
-                  }}
-                >
-                  S
-                </div>
-                <span className="hide-on-mobile" style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1e293b' }}>
-                  Login
-                </span>
+                <User size={18} color="#ffffff" />
               </button>
             )}
           </div>
@@ -562,11 +543,14 @@ export const Navbar = () => {
         {/* ROW 2: Full-Width Search Bar */}
         <div className="navbar-row-secondary">
           <form onSubmit={handleSearchSubmit} className="navbar-search-form">
+            <span className="navbar-search-left-icon">
+              <Search size={16} color="#0284c7" />
+            </span>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for products, model or category..."
+              placeholder="Search for products, categories, model..."
               className="navbar-search-input"
             />
             <button
@@ -574,17 +558,14 @@ export const Navbar = () => {
               className="navbar-search-btn"
               aria-label="Search"
             >
-              <Search size={15} />
+              <Search size={14} color="#ffffff" />
             </button>
           </form>
         </div>
       </div>
 
       {/* ================= TIER 2: SUB-NAVIGATION BAR (CATEGORIES, HOME, SHOP, TRACK ORDER) ================= */}
-      <div style={{
-        backgroundColor: '#fafbfc',
-        borderTop: '1px solid #f1f5f9'
-      }}>
+      <div className="navbar-tier2-wrapper">
         <div className="navbar-tier2-container">
           {/* 1. All Categories */}
           <button
@@ -597,18 +578,12 @@ export const Navbar = () => {
                 setMobileMenuOpen(true);
               }
             }}
-            className="nav-link-btn"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              color: '#2563eb',
-              fontWeight: 700
-            }}
+            className="nav-all-categories-pill"
             title="All Categories"
           >
-            <Menu size={16} />
+            <Menu size={15} />
             <span>All Categories</span>
+            <ChevronRight size={13} />
           </button>
 
           {/* 2. Home */}
@@ -619,9 +594,13 @@ export const Navbar = () => {
               else if (user?.role === 'Admin' || user?.userType === 'Admin') navigate('/admin');
               else navigate('/');
             }}
-            className="nav-link-btn"
+            className={`nav-link-btn ${currentRoute === '/' || currentRoute === '/customer' || !currentRoute ? 'active' : ''}`}
           >
-            Home
+            <HomeIcon size={15} />
+            <span>Home</span>
+            {(currentRoute === '/' || currentRoute === '/customer' || !currentRoute) && (
+              <span className="nav-active-bar" />
+            )}
           </button>
 
           {/* 3. Shop */}
@@ -629,7 +608,8 @@ export const Navbar = () => {
             onClick={handleShopClick}
             className="nav-link-btn"
           >
-            Shop
+            <Store size={15} />
+            <span>Shop</span>
           </button>
 
           {/* 4. Track Order */}
@@ -637,7 +617,8 @@ export const Navbar = () => {
             onClick={() => setIsTrackOrderOpen(true)}
             className="nav-link-btn"
           >
-            Track Order
+            <Package size={15} />
+            <span>Track Order</span>
           </button>
 
           {/* 5. Contact Us */}
@@ -645,7 +626,8 @@ export const Navbar = () => {
             onClick={() => setIsContactOpen(true)}
             className="nav-link-btn"
           >
-            Contact Us
+            <Phone size={15} />
+            <span>Contact Us</span>
           </button>
         </div>
       </div>

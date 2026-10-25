@@ -23,7 +23,10 @@ import {
   Tag,
   Check,
   Layers,
-  Sparkles
+  Sparkles,
+  Truck,
+  RefreshCw,
+  ChevronRight
 } from 'lucide-react';
 
 import { useCart } from '../context/CartContext';
@@ -70,20 +73,29 @@ export const LandingPage = () => {
     return () => window.removeEventListener('mws_categories_updated', handleCategorySync);
   }, []);
 
-  // Circular Categories loaded dynamically from DB (with fallback defaults)
-  const circularCategories = dbCategories.length > 0
-    ? dbCategories.map(cat => ({
-        id: cat.name,
-        name: cat.name,
-        image: getCategoryImageUrl(cat.imageUrl)
-      }))
-    : [
-        { id: 'Charging', name: 'Charging', image: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=300&q=80' },
-        { id: 'Power', name: 'Power', image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=300&q=80' },
-        { id: 'Cables', name: 'Cables', image: 'https://images.unsplash.com/photo-1588508065123-287b28e013da?auto=format&fit=crop&w=300&q=80' },
-        { id: 'Audio', name: 'Audio', image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=300&q=80' },
-        { id: 'Protection', name: 'Protection', image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=300&q=80' }
-      ];
+  // Standard 9 Categories matching exact visual reference
+  const standardCategories = [
+    { id: 'Earphone', name: 'Earphone', image: '/cat_earphone.jpg' },
+    { id: 'Ear Bud', name: 'Ear Bud', image: '/cat_earbud.jpg' },
+    { id: 'Neck Band', name: 'Neck Band', image: '/cat_neckband.jpg' },
+    { id: 'Charger', name: 'Charger', image: '/cat_charger.jpg' },
+    { id: 'DC Charger', name: 'DC Charger', image: '/cat_dc_charger.jpg' },
+    { id: 'Data Cable', name: 'Data Cable', image: '/cat_data_cable.jpg' },
+    { id: 'Power Bank', name: 'Power Bank', image: '/cat_power_bank.jpg' },
+    { id: 'Bluetooth Speaker', name: 'Bluetooth Speaker', image: '/cat_bt_speaker.jpg' },
+    { id: 'OTG', name: 'OTG', image: '/cat_otg.jpg' }
+  ];
+
+  const categoriesList = dbCategories.length > 0
+    ? dbCategories.map(cat => {
+        const found = standardCategories.find(s => s.name.toLowerCase() === cat.name.toLowerCase());
+        return {
+          id: cat.name,
+          name: cat.name,
+          image: cat.imageUrl ? getCategoryImageUrl(cat.imageUrl) : (found ? found.image : '/cat_earphone.jpg')
+        };
+      })
+    : standardCategories;
 
   // Fetch all products from catalog
   const fetchAllProducts = () => {
@@ -481,96 +493,127 @@ export const LandingPage = () => {
       {/* ====== 1. LARGE ADMIN-CONTROLLED BANNER SLIDER ====== */}
       <AdvertisementBoard />
 
-      {/* ====== 2. SHOP BY CATEGORY (DYNAMIC ADMIN-CONTROLLED CATEGORIES) ====== */}
+      {/* ====== 1.5 TRUST BADGES ROW (EXACT REFERENCE ARRANGEMENT) ====== */}
+      <div className="trust-badges-bar-container">
+        <div className="trust-badge-item">
+          <div className="trust-badge-icon-box">
+            <Truck size={18} color="#0284c7" />
+          </div>
+          <div className="trust-badge-text">
+            <strong>Fast Delivery</strong>
+            <span>Across India</span>
+          </div>
+        </div>
+
+        <div className="trust-badge-item">
+          <div className="trust-badge-icon-box">
+            <ShieldCheck size={18} color="#0284c7" />
+          </div>
+          <div className="trust-badge-text">
+            <strong>100% Genuine</strong>
+            <span>Original Products</span>
+          </div>
+        </div>
+
+        <div className="trust-badge-item">
+          <div className="trust-badge-icon-box">
+            <Award size={18} color="#0284c7" />
+          </div>
+          <div className="trust-badge-text">
+            <strong>Best Quality</strong>
+            <span>Assured</span>
+          </div>
+        </div>
+
+        <div className="trust-badge-item">
+          <div className="trust-badge-icon-box">
+            <RefreshCw size={18} color="#0284c7" />
+          </div>
+          <div className="trust-badge-text">
+            <strong>Easy Returns</strong>
+            <span>Hassle Free</span>
+          </div>
+        </div>
+
+        <div className="trust-badge-item">
+          <div className="trust-badge-icon-box">
+            <Headphones size={18} color="#0284c7" />
+          </div>
+          <div className="trust-badge-text">
+            <strong>Customer Support</strong>
+            <span>Quick Response</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ====== 2. SHOP BY CATEGORY (EXACT REFERENCE ARRANGEMENT) ====== */}
       <section
         id="shop-by-category-section"
         style={{
           maxWidth: '1240px',
           margin: '0 auto',
-          padding: '16px 20px 20px 20px'
+          padding: '10px 16px 20px 16px'
         }}
       >
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '14px'
-        }}>
-          <div>
-            <h2 style={{
-              fontSize: 'clamp(1.2rem, 3.2vw, 1.6rem)',
-              fontWeight: 900,
-              color: 'var(--text-main)',
-              margin: 0,
-              letterSpacing: '-0.02em'
-            }}>
-              Shop by Category
-            </h2>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Select a category to explore genuine spare parts &amp; accessories
-            </div>
-          </div>
-
-          {selectedCategory !== 'All' && (
-            <button
-              onClick={() => setSelectedCategory('All')}
-              className="btn btn-secondary btn-sm"
-              style={{
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                padding: '4px 10px',
-                borderRadius: 'var(--radius-full)'
-              }}
-            >
-              Show All
-            </button>
-          )}
+        <div className="shop-by-cat-heading-wrap">
+          <span className="cat-heading-line" />
+          <h2 className="shop-by-cat-title">
+            <Zap size={20} className="cat-lightning-icon" /> Shop by Category
+          </h2>
+          <span className="cat-heading-line" />
         </div>
 
-        {/* Circular Category Strip */}
-        <div className="shop-by-category-strip">
-          {circularCategories.map((cat) => {
+        <div className="cat-cards-grid">
+          {categoriesList.map((cat) => {
             const active = selectedCategory === cat.name;
             return (
-              <button
+              <div
                 key={cat.id || cat.name}
-                type="button"
                 onClick={() => handleCategoryClick(cat.name)}
-                className="category-circle-btn"
+                className={`cat-product-card ${active ? 'active' : ''}`}
                 title={`Shop ${cat.name}`}
               >
-                <div
-                  className="category-circle-avatar"
-                  style={{
-                    border: active ? '2.5px solid #2563eb' : '1.5px solid #e2e8f0',
-                    boxShadow: active ? '0 0 0 3px rgba(37, 99, 235, 0.25)' : '0 2px 8px rgba(0,0,0,0.06)'
-                  }}
-                >
+                <div className="cat-card-img-container">
                   <img
                     src={cat.image}
                     alt={cat.name}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover'
-                    }}
                     onError={(e) => {
-                      e.target.src = 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=300&q=80';
+                      e.target.src = '/mws_eagle_logo.jpg';
                     }}
                   />
                 </div>
-                <span
-                  className="category-circle-label"
-                  style={{
-                    color: active ? '#2563eb' : '#1e293b',
-                    fontWeight: active ? 800 : 700
+                <button
+                  type="button"
+                  className="cat-pill-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCategoryClick(cat.name);
                   }}
                 >
-                  {cat.name}
-                </span>
-              </button>
+                  <span>{cat.name}</span>
+                  <ChevronRight size={12} />
+                </button>
+              </div>
             );
           })}
+
+          {/* 3-Column MWS Eagle Promo Card spanning remaining columns on row 2 */}
+          <div
+            className="cat-promo-card"
+            onClick={() => {
+              const el = document.getElementById('best-selling-products-section');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
+            title="MWS Eagle Premium Mobile Accessories"
+          >
+            <img
+              src="/mws_promo_card.jpg"
+              alt="MWS Eagle Premium Mobile Accessories"
+              onError={(e) => {
+                e.target.src = '/mws_main_banner.jpg';
+              }}
+            />
+          </div>
         </div>
       </section>
 

@@ -39,8 +39,19 @@ export const PromotionalSticker = () => {
     };
   }, []);
 
-  // DO NOT show anything if no stickers are active or uploaded by Admin (per prompt requirement: never invent a default sticker!)
-  if (loading || !stickers.length) {
+  const defaultStickers = [
+    {
+      id: 'default-goa-trip',
+      title: 'Goa Trip Promotion',
+      subtitle: 'Buy 1000 pcs Each of 3 Data Cables - Goa Trip - 3000 Pieces Total',
+      imageUrl: '/goa_trip_banner.jpg',
+      linkUrl: '#best-selling-products-section'
+    }
+  ];
+
+  const activeStickers = stickers.length > 0 ? stickers : defaultStickers;
+
+  if (loading) {
     return null;
   }
 
@@ -56,7 +67,7 @@ export const PromotionalSticker = () => {
       aria-label="Promotional Announcement Strip"
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {stickers.map((st) => (
+        {activeStickers.map((st) => (
           <div
             key={st.id}
             onClick={() => {
