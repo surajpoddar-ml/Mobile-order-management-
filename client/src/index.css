@@ -1068,3 +1068,21 @@ html, body {
   border: 0 !important;
 }
 
+/* Mobile Bottom Navigation Bar & Content Spacing */
+.mobile-bottom-nav {
+  display: flex !important;
+}
+
+@media (min-width: 769px) {
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  body, main {
+    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+

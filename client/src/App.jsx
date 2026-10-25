@@ -7,6 +7,7 @@ import { AuthPage } from './pages/AuthPage';
 import { CustomerPortal } from './pages/CustomerPortal';
 import { DistributorPortal } from './pages/DistributorPortal';
 import { AdminPanel } from './pages/AdminPanel';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { Phone, MessageCircle, MapPin } from 'lucide-react';
 
 function AppContent() {
@@ -258,6 +259,9 @@ function AppContent() {
           </div>
         </footer>
       )}
+
+      {/* Fixed Mobile Bottom Navigation Bar (Home, Categories, Wishlist, Cart, Account) */}
+      <MobileBottomNav />
     </div>
   );
 }

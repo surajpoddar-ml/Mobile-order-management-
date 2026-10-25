@@ -63,6 +63,12 @@ export const Navbar = () => {
     return () => window.removeEventListener('mws_categories_updated', loadCats);
   }, []);
 
+  useEffect(() => {
+    const handleOpenMenu = () => setMobileMenuOpen(true);
+    window.addEventListener('mws_open_mobile_menu', handleOpenMenu);
+    return () => window.removeEventListener('mws_open_mobile_menu', handleOpenMenu);
+  }, []);
+
   // Check if currently on Admin Dashboard route
   const isOnAdminDashboard = currentRoute === '/admin' || currentRoute === '/admin-access' || currentRoute === '/portal/admin';
 
