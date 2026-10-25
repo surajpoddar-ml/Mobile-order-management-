@@ -34,6 +34,7 @@ import {
   MessageCircle,
   PhoneCall
 } from 'lucide-react';
+import { ProductDetailModal } from './ProductDetailModal';
 
 export const ShopModals = () => {
   const { user, login, registerCustomer, navigate } = useAuth();
@@ -1931,6 +1932,9 @@ export const ShopModals = () => {
           </div>
         </div>
       )}
+
+      {/* Product Details Dedicated Modal */}
+      <ProductDetailModal />
     </>
   );
 };

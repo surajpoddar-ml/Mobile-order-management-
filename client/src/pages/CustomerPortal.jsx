@@ -33,7 +33,8 @@ export const CustomerPortal = () => {
     isWishlisted,
     searchQuery,
     selectedCategory,
-    setSelectedCategory
+    setSelectedCategory,
+    openProductDetails
   } = useCart();
 
   const [activeTab, setActiveTab] = useState('catalog'); // 'catalog' | 'orders'
@@ -439,8 +440,10 @@ export const CustomerPortal = () => {
                         justifyContent: 'space-between',
                         boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)',
                         transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                        opacity: isItemInStock ? 1 : 0.9
+                        opacity: isItemInStock ? 1 : 0.9,
+                        cursor: 'pointer'
                       }}
+                      onClick={() => openProductDetails(p)}
                       onMouseEnter={e => {
                         e.currentTarget.style.transform = 'translateY(-4px)';
                         e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.08)';
@@ -601,7 +604,10 @@ export const CustomerPortal = () => {
                         {/* Action Buttons: Add to Cart + Heart */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <button
-                            onClick={() => addToCart(p)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(p);
+                            }}
                             disabled={!isItemInStock}
                             className="product-card-btn"
                             style={{
@@ -634,7 +640,10 @@ export const CustomerPortal = () => {
                           </button>
 
                           <button
-                            onClick={() => toggleWishlist(p)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleWishlist(p);
+                            }}
                             className="product-card-heart-btn"
                             style={{
                               width: '36px',

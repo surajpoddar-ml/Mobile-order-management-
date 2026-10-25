@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { AdminCreateOffers } from '../components/rewards/AdminCreateOffers';
 import { AdminRewardsPayouts } from '../components/rewards/AdminRewardsPayouts';
+import { AdminStickers } from '../components/AdminStickers';
 
 export const AdminPanel = () => {
   const { user, navigate, logout } = useAuth();
@@ -22,7 +23,7 @@ export const AdminPanel = () => {
   });
 
   // Core navigation & view state
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'orders' | 'pending' | 'distributors' | 'customers' | 'all' | 'products' | 'advertisements'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'orders' | 'pending' | 'distributors' | 'customers' | 'all' | 'products' | 'advertisements' | 'stickers'
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [actionMsg, setActionMsg] = useState('');
 
@@ -32,7 +33,7 @@ export const AdminPanel = () => {
       try {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get('tab');
-        if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'advertisements', 'categories', 'create-offers', 'rewards-payouts'].includes(tab)) {
+        if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'advertisements', 'categories', 'create-offers', 'rewards-payouts', 'stickers'].includes(tab)) {
           setActiveTab(tab);
         }
       } catch (e) {}
@@ -1073,6 +1074,7 @@ export const AdminPanel = () => {
     { id: 'products', label: 'Product Management', icon: Package, badge: allProducts?.length ?? 0, color: '#0d9488' },
     { id: 'categories', label: 'Categories', icon: FolderTree, badge: categories?.length ?? 0, color: '#8b5cf6' },
     { id: 'advertisements', label: 'Ad Board & Media', icon: Film, badge: advertisements?.length ?? 0, color: '#ea580c' },
+    { id: 'stickers', label: 'Promotional Stickers', icon: Sparkles, badge: null, color: '#ec4899' },
     { id: 'all', label: 'All User Accounts', icon: Search, badge: users?.length ?? 0, color: '#6366f1' },
   ];
 
@@ -3091,6 +3093,13 @@ export const AdminPanel = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* ======== VIEW: PROMOTIONAL STICKERS MANAGEMENT ========= */}
+        {/* ======================================================== */}
+        {activeTab === 'stickers' && (
+          <AdminStickers />
         )}
 
         {/* ======================================================== */}

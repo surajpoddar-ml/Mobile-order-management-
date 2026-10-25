@@ -184,6 +184,47 @@ export const api = {
       })
   },
 
+  // Promotional Stickers System (Thin promotional strip controlled by Admin)
+  stickers: {
+    getActive: () =>
+      request('/stickers/active', {
+        method: 'GET'
+      }),
+
+    getAll: () =>
+      request('/stickers', {
+        method: 'GET'
+      }),
+
+    uploadMedia: (formData) =>
+      request('/stickers/upload', {
+        method: 'POST',
+        body: formData
+      }),
+
+    create: (payload) =>
+      request('/stickers', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+
+    update: (id, payload) =>
+      request(`/stickers/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      }),
+
+    toggle: (id) =>
+      request(`/stickers/${id}/toggle`, {
+        method: 'PATCH'
+      }),
+
+    delete: (id) =>
+      request(`/stickers/${id}`, {
+        method: 'DELETE'
+      })
+  },
+
   // Role-Based Product Catalog & Admin Authority
   products: {
     getVisibleProducts: (role, category) => {

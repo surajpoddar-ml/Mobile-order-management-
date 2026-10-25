@@ -164,6 +164,20 @@ export const initDb = async () => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
+  // Promotional Stickers table
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS promotional_stickers (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      imageUrl TEXT NOT NULL,
+      linkUrl TEXT,
+      isActive INT DEFAULT 1,
+      orderIndex INT DEFAULT 0,
+      createdDate VARCHAR(100) NOT NULL,
+      updatedDate VARCHAR(100) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
   // Orders table
   await queryRun(`
     CREATE TABLE IF NOT EXISTS orders (

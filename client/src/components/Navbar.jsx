@@ -359,7 +359,7 @@ export const Navbar = () => {
             </div>
           </div>
 
-          {/* Right: Notification Bell + S Profile */}
+          {/* Right: Notification Bell + Wishlist + Cart + Profile */}
           <div className="navbar-row1-right">
             {/* Notification Bell */}
             {user ? (
@@ -372,9 +372,41 @@ export const Navbar = () => {
                 aria-label="Notifications"
                 title="Notifications"
               >
-                <Bell size={20} />
+                <Bell size={19} />
               </button>
             )}
+
+            {/* Wishlist Heart Icon */}
+            <button
+              type="button"
+              onClick={() => setIsWishlistOpen(true)}
+              className="nav-icon-btn"
+              aria-label="Wishlist"
+              title="Wishlist"
+            >
+              <Heart size={19} />
+              {wishlistCount > 0 && (
+                <span className="nav-badge-pill nav-badge-red">
+                  {wishlistCount}
+                </span>
+              )}
+            </button>
+
+            {/* Cart Icon */}
+            <button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              className="nav-icon-btn"
+              aria-label="Shopping Cart"
+              title="Shopping Cart"
+            >
+              <ShoppingCart size={19} />
+              {cartCount > 0 && (
+                <span className="nav-badge-pill nav-badge-blue">
+                  {cartCount}
+                </span>
+              )}
+            </button>
 
             {/* S Profile / User Account */}
             {user ? (
@@ -527,9 +559,8 @@ export const Navbar = () => {
           </div>
         </div>
 
-        {/* ROW 2: Search Bar + Cart, Wishlist, Gift icons */}
+        {/* ROW 2: Full-Width Search Bar */}
         <div className="navbar-row-secondary">
-          {/* Search bar */}
           <form onSubmit={handleSearchSubmit} className="navbar-search-form">
             <input
               type="text"
@@ -546,56 +577,6 @@ export const Navbar = () => {
               <Search size={15} />
             </button>
           </form>
-
-          {/* Action icons: Gift (Rewards), Wishlist, Cart */}
-          <div className="navbar-row2-icons">
-            {/* Gift Icon (Rewards) */}
-            <button
-              type="button"
-              onClick={() => {
-                if (user?.userType === 'Distributor') navigate('/distributor?tab=rewards');
-                else if (user?.userType === 'Customer') navigate('/customer?tab=rewards');
-                else navigate('/login');
-              }}
-              className="nav-icon-btn"
-              aria-label="Rewards & Gifts"
-              title="Rewards & Gifts"
-            >
-              <Gift size={20} color="#d97706" />
-            </button>
-
-            {/* Wishlist Heart Icon */}
-            <button
-              type="button"
-              onClick={() => setIsWishlistOpen(true)}
-              className="nav-icon-btn"
-              aria-label="Wishlist"
-              title="Wishlist"
-            >
-              <Heart size={20} />
-              {wishlistCount > 0 && (
-                <span className="nav-badge-pill nav-badge-red">
-                  {wishlistCount}
-                </span>
-              )}
-            </button>
-
-            {/* Cart Icon */}
-            <button
-              type="button"
-              onClick={() => setIsCartOpen(true)}
-              className="nav-icon-btn"
-              aria-label="Shopping Cart"
-              title="Shopping Cart"
-            >
-              <ShoppingCart size={20} />
-              {cartCount > 0 && (
-                <span className="nav-badge-pill nav-badge-blue">
-                  {cartCount}
-                </span>
-              )}
-            </button>
-          </div>
         </div>
       </div>
 
@@ -605,22 +586,29 @@ export const Navbar = () => {
         borderTop: '1px solid #f1f5f9'
       }}>
         <div className="navbar-tier2-container">
-          {/* 1. Mobile-Only Three-Line Menu Button (opens mobile navigation drawer with categories) */}
+          {/* 1. All Categories */}
           <button
             type="button"
-            onClick={() => setMobileMenuOpen(true)}
-            className="nav-link-btn mobile-only"
+            onClick={() => {
+              const el = document.getElementById('shop-by-category-section');
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              } else {
+                setMobileMenuOpen(true);
+              }
+            }}
+            className="nav-link-btn"
             style={{
-              padding: '6px 8px',
               display: 'inline-flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              color: '#2563eb'
+              gap: '6px',
+              color: '#2563eb',
+              fontWeight: 700
             }}
-            aria-label="Open Navigation Menu"
-            title="Menu"
+            title="All Categories"
           >
-            <Menu size={18} />
+            <Menu size={16} />
+            <span>All Categories</span>
           </button>
 
           {/* 2. Home */}

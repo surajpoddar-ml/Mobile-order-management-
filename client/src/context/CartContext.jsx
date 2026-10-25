@@ -28,6 +28,8 @@ export const CartProvider = ({ children }) => {
   const [isTrackOrderOpen, setIsTrackOrderOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [isCategoriesDropdownOpen, setIsCategoriesDropdownOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isProductDetailOpen, setIsProductDetailOpen] = useState(false);
 
   // Global search & category filtering state
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,6 +43,11 @@ export const CartProvider = ({ children }) => {
     setTimeout(() => {
       setToastMessage(null);
     }, 3000);
+  };
+
+  const openProductDetails = (product) => {
+    setSelectedProduct(product);
+    setIsProductDetailOpen(true);
   };
 
   // Sync cart to localStorage
@@ -133,11 +140,18 @@ export const CartProvider = ({ children }) => {
     0
   );
 
+  const buyNow = (product) => {
+    addToCart(product, 1);
+    setIsProductDetailOpen(false);
+    setIsCartOpen(true);
+  };
+
   return (
     <CartContext.Provider
       value={{
         cart,
         addToCart,
+        buyNow,
         removeFromCart,
         updateQuantity,
         clearCart,
@@ -157,6 +171,11 @@ export const CartProvider = ({ children }) => {
         setIsContactOpen,
         isCategoriesDropdownOpen,
         setIsCategoriesDropdownOpen,
+        selectedProduct,
+        setSelectedProduct,
+        isProductDetailOpen,
+        setIsProductDetailOpen,
+        openProductDetails,
         searchQuery,
         setSearchQuery,
         selectedCategory,
