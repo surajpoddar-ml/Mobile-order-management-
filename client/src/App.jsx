@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -16,6 +16,51 @@ function AppContent() {
   const handleQuickFill = (email, password, role) => {
     setPrefillDemo({ email, password, role });
   };
+
+  // Synchronize document title, canonical URL, and indexing directives dynamically based on current route
+  useEffect(() => {
+    const path = currentRoute ? currentRoute.split('?')[0] : '/';
+    let title = 'MWS Eagle | Official Website — Mobile Spare-Parts Marketplace & Accessories';
+    let isNoindex = false;
+
+    if (path === '/login') {
+      title = 'Login & Partner Registration | MWS Eagle Official';
+    } else if (path === '/portal/customer' || path === '/customer') {
+      title = 'Customer Portal | MWS Eagle';
+      isNoindex = true;
+    } else if (path === '/portal/distributor' || path === '/distributor') {
+      title = 'Distributor Trade Terminal | MWS Eagle';
+      isNoindex = true;
+    } else if (path === '/admin' || path === '/admin-access' || path === '/portal/admin') {
+      title = 'Administration Suite | MWS Eagle';
+      isNoindex = true;
+    } else {
+      title = 'MWS Eagle | Official Website — Mobile Spare-Parts Marketplace & Accessories';
+    }
+
+    document.title = title;
+
+    // Dynamically maintain canonical link
+    let canonicalEl = document.querySelector('link[rel="canonical"]');
+    if (!canonicalEl) {
+      canonicalEl = document.createElement('link');
+      canonicalEl.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalEl);
+    }
+    const cleanPath = path === '/' ? '' : path;
+    canonicalEl.setAttribute('href', `https://mwseagle.com${cleanPath}`);
+
+    // Update robots meta tag for private portals to preserve crawl equity
+    let robotsEl = document.querySelector('meta[name="robots"]');
+    if (robotsEl) {
+      robotsEl.setAttribute(
+        'content',
+        isNoindex
+          ? 'noindex, nofollow'
+          : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
+      );
+    }
+  }, [currentRoute]);
 
   const renderView = () => {
     const path = currentRoute.split('?')[0]; // strip query params for matching
@@ -81,7 +126,7 @@ function AppContent() {
           <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
             {/* Brand Logo & Description */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <img src="/mws_eagle_logo.jpg?v=3" alt="MWS EAGLE" style={{ height: '44px', borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.25)' }} />
+              <img src="/mws_eagle_logo.jpg?v=3" alt="MWS Eagle Official Logo" style={{ height: '44px', borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.25)' }} />
               <div>
                 <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#ffffff', letterSpacing: '0.04em' }}>MWS EAGLE</div>
                 <div style={{ fontSize: '0.58rem', color: 'var(--text-dim)', letterSpacing: '0.06em' }}>PREMIUM MOBILE ACCESSORIES</div>

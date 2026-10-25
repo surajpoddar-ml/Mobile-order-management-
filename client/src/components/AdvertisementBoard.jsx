@@ -256,7 +256,7 @@ export const AdvertisementBoard = () => {
           ) : (
             <img
               src={getFullMediaUrl(currentAd.mediaUrl)}
-              alt={currentAd.title}
+              alt={currentAd.title ? `${currentAd.title} - MWS Eagle` : 'MWS Eagle Special Showcase'}
               style={{
                 width: '100%',
                 height: '100%',

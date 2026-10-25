@@ -160,6 +160,11 @@ export const LandingPage = () => {
 
   return (
     <div style={{ overflowX: 'hidden' }}>
+      {/* Semantic H1 for search engines and accessibility — MWS Eagle Official Brand */}
+      <h1 className="sr-only">
+        MWS Eagle — Official Website | Mobile Spare-Parts Marketplace &amp; Wholesale Distribution
+      </h1>
+
       {/* ====== 1. AD DISPLAY TV VIEWER (CONTROLLABLE BY ADMIN) ====== */}
       <AdvertisementBoard />
 
@@ -385,7 +390,7 @@ export const LandingPage = () => {
                     {/* Product Image */}
                     <img
                       src={getMediaUrl(p.imageUrl) || 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80'}
-                      alt={p.name}
+                      alt={p.name ? `${p.name} - MWS Eagle` : 'MWS Eagle Mobile Spare Part & Accessory'}
                       style={{
                         width: '100%',
                         height: '100%',

@@ -222,7 +222,7 @@ export const CustomerPortal = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0, flex: '1 1 auto' }}>
             <img
               src="/mws_eagle_logo.jpg?v=3"
-              alt="MWS EAGLE"
+              alt="MWS Eagle Official Logo"
               style={{
                 width: '44px',
                 height: '44px',

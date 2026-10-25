@@ -101,7 +101,7 @@ export const Navbar = () => {
             >
               <img
                 src="/mws_eagle_logo.jpg?v=3"
-                alt="MWS EAGLE"
+                alt="MWS Eagle Official Logo"
                 style={{
                   height: '34px',
                   width: 'auto',
@@ -329,7 +329,7 @@ export const Navbar = () => {
             >
               <img
                 src="/mws_eagle_logo.jpg?v=3"
-                alt="MWS EAGLE"
+                alt="MWS Eagle Official Logo"
                 style={{
                   height: '34px',
                   width: 'auto',

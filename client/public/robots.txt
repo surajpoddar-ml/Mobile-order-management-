@@ -1,0 +1,26 @@
+# Robots.txt for MWS Eagle Official Website (https://mwseagle.com)
+# Search Engine Crawl and Indexing Policy
+
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /favicon.ico
+Allow: /favicon.png
+Allow: /favicon.svg
+Allow: /mws_eagle_logo.jpg
+Allow: /site.webmanifest
+Allow: /sitemap.xml
+
+# Protect internal authenticated portals and API endpoints from public indexation
+Disallow: /admin
+Disallow: /admin-access
+Disallow: /portal/admin
+Disallow: /portal/customer
+Disallow: /portal/distributor
+Disallow: /customer
+Disallow: /distributor
+Disallow: /api/
+
+# Host and Sitemap Specification
+Host: https://mwseagle.com
+Sitemap: https://mwseagle.com/sitemap.xml

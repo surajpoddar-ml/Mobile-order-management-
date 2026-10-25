@@ -255,7 +255,7 @@ export const AuthPage = ({ prefillData }) => {
       <div style={{ textAlign: 'center', marginBottom: '24px' }}>
         <img
           src="/mws_eagle_logo.jpg?v=3"
-          alt="MWS EAGLE"
+          alt="MWS Eagle Official Logo"
           style={{
             height: '76px',
             width: 'auto',
