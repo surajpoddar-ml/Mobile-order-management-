@@ -516,9 +516,7 @@ export const CustomerPortal = () => {
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No products match your current search or category filter.</p>
               </div>
             ) : (
-              <div className="products-responsive-grid" style={{
-                gap: '22px'
-              }}>
+              <div className="products-responsive-grid">
                 {displayedProducts.map((p) => {
                   const wish = isWishlisted(p.id);
                   const discountStr = calculateDiscount(p.price, p.originalPrice, p.discount);
@@ -530,6 +528,7 @@ export const CustomerPortal = () => {
                   return (
                     <div
                       key={p.id}
+                      className="product-card-container"
                       style={{
                         background: '#ffffff',
                         borderRadius: '12px',
@@ -564,7 +563,9 @@ export const CustomerPortal = () => {
                         justifyContent: 'center'
                       }}>
                         {badgeLabel && (
-                          <span style={{
+                          <span
+                            className="product-card-badge"
+                            style={{
                             position: 'absolute',
                             top: '8px',
                             left: '8px',
@@ -587,7 +588,9 @@ export const CustomerPortal = () => {
 
                         {/* Stock Status Pill */}
                         {!isItemInStock && (
-                          <span style={{
+                          <span
+                            className="product-card-stock-pill"
+                            style={{
                             position: 'absolute',
                             top: '8px',
                             right: '8px',
@@ -653,7 +656,7 @@ export const CustomerPortal = () => {
                         </h3>
 
                         {/* Star Rating */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
+                        <div className="product-card-rating" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
                           {[1, 2, 3, 4, 5].map((starIdx) => {
                             const isFilled = starIdx <= Math.round(p.rating || 0);
                             return (
@@ -671,7 +674,7 @@ export const CustomerPortal = () => {
                         </div>
 
                         {/* Price in INR ₹ */}
-                        <div style={{
+                        <div className="product-card-pricing-row" style={{
                           display: 'flex',
                           alignItems: 'baseline',
                           flexWrap: 'wrap',
@@ -684,13 +687,13 @@ export const CustomerPortal = () => {
                           </span>
 
                           {p.originalPrice && p.originalPrice > p.price && (
-                            <span style={{ fontSize: '0.78rem', color: '#9ca3af', textDecoration: 'line-through' }}>
+                            <span className="product-card-original-price" style={{ fontSize: '0.78rem', color: '#9ca3af', textDecoration: 'line-through' }}>
                               ₹{Number(p.originalPrice).toLocaleString()}
                             </span>
                           )}
 
                           {discountStr && (
-                            <span style={{
+                            <span className="product-card-discount-tag" style={{
                               fontSize: '0.70rem',
                               fontWeight: 800,
                               color: '#ef4444',
@@ -705,7 +708,7 @@ export const CustomerPortal = () => {
                         </div>
 
                         {/* Action Buttons: Add to Cart + Heart */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div className="product-card-actions-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
