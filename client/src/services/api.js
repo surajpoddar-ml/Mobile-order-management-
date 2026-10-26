@@ -25,36 +25,7 @@ export const API_ORIGIN = resolveApiOrigin().replace(/\/+$/, '');
 export const API_BASE_URL = `${API_ORIGIN}/api`;
 
 /**
- * Known static public assets bundled in client/public (exact filenames).
- * Only these should be served from the public folder.
- * Admin-uploaded files are always served via the backend /uploads/ path.
- */
-const PUBLIC_STATIC_ASSETS = new Set([
-  'mws_eagle_logo.jpg',
-  'mws_payment_qr.png',
-  'mws_main_banner.jpg',
-  'mws_default_ad.jpg',
-  'mws_promo_card.jpg',
-  'goa_trip_banner.jpg',
-  'cat_bt_speaker.jpg',
-  'cat_charger.jpg',
-  'cat_data_cable.jpg',
-  'cat_dc_charger.jpg',
-  'cat_earbud.jpg',
-  'cat_earphone.jpg',
-  'cat_neckband.jpg',
-  'cat_otg.jpg',
-  'cat_power_bank.jpg',
-]);
-
-/**
- * Helper to build media URLs pointing to either cloud backend or local server.
- *
- * FIX: Previously any path starting with mws_ / cat_ / goa_ was routed to the
- * public static folder. This broke admin-uploaded product/ad images whose
- * auto-generated filenames happened to start with those prefixes, causing them
- * to resolve to non-existent public paths (broken images). Now we only use the
- * public-static shortcut for the small, exact set of known bundled assets.
+ * Helper to build media URLs pointing to either cloud backend or local server
  */
 export const getMediaUrl = (url) => {
   if (!url) return '';
@@ -62,17 +33,13 @@ export const getMediaUrl = (url) => {
   if (normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('blob:') || normalized.startsWith('data:')) {
     return normalized;
   }
-  // If the path explicitly references the uploads directory it MUST go to backend
-  if (normalized.includes('/uploads/')) {
-    const cleanPath = normalized.startsWith('/') ? normalized : `/${normalized}`;
-    return `${API_ORIGIN}${cleanPath}`;
+  // Public static assets served from client public directory
+  if (
+    normalized.startsWith('/cat_') || normalized.startsWith('/mws_') || normalized.startsWith('/goa_') || normalized.startsWith('/favicon') ||
+    normalized.startsWith('cat_') || normalized.startsWith('mws_') || normalized.startsWith('goa_')
+  ) {
+    return normalized.startsWith('/') ? normalized : `/${normalized}`;
   }
-  // Check against the exact set of known public static assets
-  const basename = normalized.replace(/^\//, '');
-  if (PUBLIC_STATIC_ASSETS.has(basename)) {
-    return `/${basename}`;
-  }
-  // Everything else (relative paths, unknown paths) goes to the backend
   const cleanPath = normalized.startsWith('/') ? normalized : `/${normalized}`;
   return `${API_ORIGIN}${cleanPath}`;
 };
