@@ -126,10 +126,9 @@ export const AdvertisementBoard = () => {
   }
 
   const currentAd = activeAds[currentIndex % activeAds.length] || activeAds[0];
-  // Determine mediaUrl using dynamic API helper (zero default/placeholder fallbacks)
+  // Determine mediaUrl using dynamic API helper (ensures backend origin is resolved for /uploads/...)
   const getFullMediaUrl = (url) => {
     if (!url) return '';
-    if (url.startsWith('/')) return url;
     return getMediaUrl(url);
   };
 
@@ -245,6 +244,14 @@ export const AdvertisementBoard = () => {
               loop
               autoPlay
               muted={isMuted}
+              onError={(e) => {
+                const cur = e.currentTarget.src || '';
+                if (!e.currentTarget.dataset.retried && cur.includes('/uploads/')) {
+                  e.currentTarget.dataset.retried = 'true';
+                  const uploadRel = '/uploads/' + cur.split('/uploads/')[1];
+                  e.currentTarget.src = cur.startsWith('http') ? uploadRel : getMediaUrl(uploadRel);
+                }
+              }}
             />
           ) : (
             <img
@@ -257,7 +264,19 @@ export const AdvertisementBoard = () => {
                 transition: 'transform 0.4s ease'
               }}
               onError={(e) => {
-                e.currentTarget.style.display = 'none';
+                const cur = e.currentTarget.src || '';
+                if (!e.currentTarget.dataset.retried && cur.includes('/uploads/')) {
+                  e.currentTarget.dataset.retried = 'true';
+                  const uploadRel = '/uploads/' + cur.split('/uploads/')[1];
+                  // If it failed with full URL, retry with relative proxy path; if relative failed, retry with getMediaUrl
+                  if (cur.startsWith('http')) {
+                    e.currentTarget.src = uploadRel;
+                  } else {
+                    e.currentTarget.src = getMediaUrl(uploadRel);
+                  }
+                  return;
+                }
+                console.warn('Ad image failed to render:', cur);
               }}
             />
           )}

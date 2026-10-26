@@ -18,7 +18,7 @@ const resolveApiOrigin = () => {
   if (envUrl) {
     return envUrl;
   }
-  return 'http://localhost:5000';
+  return 'http://localhost:5001';
 };
 
 export const API_ORIGIN = resolveApiOrigin().replace(/\/+$/, '');
@@ -29,14 +29,18 @@ export const API_BASE_URL = `${API_ORIGIN}/api`;
  */
 export const getMediaUrl = (url) => {
   if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) {
-    return url;
+  const normalized = String(url).trim().replace(/\\/g, '/');
+  if (normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('blob:') || normalized.startsWith('data:')) {
+    return normalized;
   }
   // Public static assets served from client public directory
-  if (url.startsWith('/cat_') || url.startsWith('/mws_') || url.startsWith('/goa_') || url.startsWith('/favicon')) {
-    return url;
+  if (
+    normalized.startsWith('/cat_') || normalized.startsWith('/mws_') || normalized.startsWith('/goa_') || normalized.startsWith('/favicon') ||
+    normalized.startsWith('cat_') || normalized.startsWith('mws_') || normalized.startsWith('goa_')
+  ) {
+    return normalized.startsWith('/') ? normalized : `/${normalized}`;
   }
-  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  const cleanPath = normalized.startsWith('/') ? normalized : `/${normalized}`;
   return `${API_ORIGIN}${cleanPath}`;
 };
 

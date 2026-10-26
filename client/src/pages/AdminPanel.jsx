@@ -931,6 +931,7 @@ export const AdminPanel = () => {
         });
         loadAdvertisementData();
         window.dispatchEvent(new Event('mws_ads_updated'));
+        try { localStorage.setItem('mws_ads_last_update', Date.now().toString()); } catch (e) {}
       }
     } catch (err) {
       alert(err.message || 'Failed to publish advertisement.');
@@ -946,6 +947,7 @@ export const AdminPanel = () => {
         notify(`"${ad.title}" is now the default advertisement.`);
         loadAdvertisementData();
         window.dispatchEvent(new Event('mws_ads_updated'));
+        try { localStorage.setItem('mws_ads_last_update', Date.now().toString()); } catch (e) {}
       }
     } catch (err) {
       alert(err.message || 'Failed to set default advertisement.');
@@ -959,6 +961,7 @@ export const AdminPanel = () => {
         notify(`Advertisement set to ${ad.isActive ? 'Inactive' : 'Active'}.`);
         loadAdvertisementData();
         window.dispatchEvent(new Event('mws_ads_updated'));
+        try { localStorage.setItem('mws_ads_last_update', Date.now().toString()); } catch (e) {}
       }
     } catch (err) {
       alert(err.message);
@@ -972,6 +975,8 @@ export const AdminPanel = () => {
       if (res.success) {
         notify('Advertisement deleted.');
         loadAdvertisementData();
+        window.dispatchEvent(new Event('mws_ads_updated'));
+        try { localStorage.setItem('mws_ads_last_update', Date.now().toString()); } catch (e) {}
       }
     } catch (err) {
       alert(err.message);
