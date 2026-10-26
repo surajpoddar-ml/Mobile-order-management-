@@ -51,68 +51,7 @@ export const seedDatabase = async () => {
     console.log(`[SEED] Created Admin account from .env: ${envAdminEmail}`);
   }
 
-  // 2. Ensure Sample Advertisements for Landing Page Board (Images and Videos)
-  const existingAds = await queryAll('SELECT id FROM advertisements');
-  if (existingAds.length === 0) {
-    console.log('[SEED] Seeding interactive advertisement board items (images & videos)...');
-    const defaultAds = [
-      {
-        title: 'Next-Gen OLED Display Assemblies for Flagship Phones',
-        description: 'Ultra-high 120Hz refresh rate, true tone color accuracy, and military-grade glass coating.',
-        mediaType: 'video',
-        mediaUrl: 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-man-repairing-a-smartphone-40899-large.mp4',
-        badgeText: 'FEATURED VIDEO',
-        linkUrl: '/login?mode=signup&role=Distributor',
-        orderIndex: 1
-      },
-      {
-        title: 'Wholesale Touch Screens, ICs & Flex Ribbon Cables',
-        description: 'Direct factory imports at guaranteed volume discounts for registered service centers.',
-        mediaType: 'image',
-        mediaUrl: 'https://images.unsplash.com/photo-1597733336794-12d05021d510?auto=format&fit=crop&w=1200&q=80',
-        badgeText: 'WHOLESALE DEAL',
-        linkUrl: '/login',
-        orderIndex: 2
-      },
-      {
-        title: 'Precision Soldering & High-Tech Motherboard Rework',
-        description: 'Watch precision micro-soldering and thermal imaging diagnostics in action.',
-        mediaType: 'video',
-        mediaUrl: 'https://assets.mixkit.co/videos/preview/mixkit-circuit-board-of-a-technological-device-41559-large.mp4',
-        badgeText: 'TECH LAB',
-        linkUrl: '/login',
-        orderIndex: 3
-      },
-      {
-        title: 'Certified 5000mAh Replacement Battery Packs',
-        description: 'Zero-cycle cobalt cells with multi-layer smart temperature protection and 1-year warranty.',
-        mediaType: 'image',
-        mediaUrl: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=1200&q=80',
-        badgeText: 'NEW ARRIVAL',
-        linkUrl: '/login?mode=signup&role=Customer',
-        orderIndex: 4
-      },
-      {
-        title: 'Express 24-Hour Dispatch & Pan-National Delivery',
-        description: 'Immediate secure packing and priority dispatch for wholesale distributor shipments.',
-        mediaType: 'image',
-        mediaUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80',
-        badgeText: 'FAST SHIPPING',
-        linkUrl: '/login',
-        orderIndex: 5
-      }
-    ];
-
-    for (const ad of defaultAds) {
-      await queryRun(
-        `INSERT INTO advertisements (
-          title, description, mediaType, mediaUrl, badgeText, linkUrl, isActive, orderIndex, createdDate
-        ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
-        [ad.title, ad.description, ad.mediaType, ad.mediaUrl, ad.badgeText, ad.linkUrl, ad.orderIndex, now]
-      );
-    }
-    console.log('[SEED] Default advertisements seeded successfully.');
-  }
+  // 2. Advertisements are 100% managed and uploaded by the Admin via the Admin Panel (Zero automatic sample ads)
 
   // 3. Ensure system_settings table exists and check if initial seed was already completed
   await queryRun(`

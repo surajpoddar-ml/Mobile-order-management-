@@ -97,10 +97,11 @@ export const LandingPage = () => {
       })
     : standardCategories;
 
-  // Fetch all products from catalog
+  // Fetch all products from catalog (applicable to existing accounts, new accounts & visitors)
   const fetchAllProducts = () => {
     setLoadingAll(true);
-    api.products.getVisibleProducts('Customer', 'All')
+    const role = (user?.role === 'Distributor' || user?.userType === 'Distributor') ? 'Distributor' : 'Customer';
+    api.products.getVisibleProducts(role, 'All')
       .then(res => {
         if (res && res.products) {
           setAllProducts(res.products);
@@ -123,7 +124,8 @@ export const LandingPage = () => {
       return;
     }
     setLoadingCategory(true);
-    api.products.getVisibleProducts('Customer', cat)
+    const role = (user?.role === 'Distributor' || user?.userType === 'Distributor') ? 'Distributor' : 'Customer';
+    api.products.getVisibleProducts(role, cat)
       .then(res => {
         if (res && res.products) {
           setCategoryProducts(res.products);
@@ -141,7 +143,7 @@ export const LandingPage = () => {
 
   useEffect(() => {
     fetchAllProducts();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (selectedCategory && selectedCategory !== 'All') {

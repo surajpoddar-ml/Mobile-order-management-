@@ -451,9 +451,22 @@ export const initDb = async () => {
     console.warn('[MySQL Init] Category seed/sync notice:', err.message);
   }
 
-  // Clean up all existing advertisements and photos so ads board and media are 100% controlled by admin
+  // Remove the 5 sample advertisements so digital board is 100% controlled by Admin Panel
   try {
-    await queryRun('DELETE FROM advertisements');
+    await queryRun(`
+      DELETE FROM advertisements 
+      WHERE title IN (
+        'Next-Gen OLED Display Assemblies for Flagship Phones',
+        'Wholesale Touch Screens, ICs & Flex Ribbon Cables',
+        'Precision Soldering & High-Tech Motherboard Rework',
+        'Certified 5000mAh Replacement Battery Packs',
+        'Express 24-Hour Dispatch & Pan-National Delivery',
+        'MWS Eagle Premium Mobile Accessories'
+      )
+      OR mediaUrl LIKE '%mixkit%'
+      OR mediaUrl LIKE '%unsplash%'
+      OR mediaUrl LIKE '%mws_main_banner%'
+    `);
   } catch (err) {}
 
   console.log('MySQL database tables verified and ready.');
