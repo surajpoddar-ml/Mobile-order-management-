@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
 import { createNotification } from '../services/notificationService.js';
+import { calculateOrderAmount } from '../services/paymentService.js';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
@@ -87,6 +88,7 @@ router.post('/', verifyToken, async (req, res) => {
       items,
       totalAmount,
       paymentMethod = 'Cash on Delivery',
+      paymentReference = null,
       transactionId = null,
       paymentScreenshot = null,
       notes = ''
@@ -100,14 +102,32 @@ router.post('/', verifyToken, async (req, res) => {
       });
     }
 
+    let parsedItems = items;
+    if (typeof parsedItems === 'string') {
+      try { parsedItems = JSON.parse(parsedItems); } catch(e) {}
+    }
+
+    const userId = req.user.userId;
+    const userType = req.user.userType;
+
+    // Authoritative server-side price calculation
+    let authoritativeTotal = Number(totalAmount) || 0;
+    try {
+      const calcResult = await calculateOrderAmount(parsedItems, userType);
+      authoritativeTotal = calcResult.totalAmount;
+    } catch (calcError) {
+      return res.status(400).json({
+        success: false,
+        message: calcError.message || 'Error validating items and prices.'
+      });
+    }
+
     const isOnlinePayment = paymentMethod.includes('Online') || paymentMethod.includes('QR') || paymentMethod.includes('UPI');
     let paymentStatus = isOnlinePayment ? 'Pending Verification' : 'Pending (Cash on Delivery)';
     if (paymentMethod.includes('Wholesale Invoice')) {
       paymentStatus = 'Invoice Net 30';
     }
 
-    const userId = req.user.userId;
-    const userType = req.user.userType;
     const orderNumber = `MWS-ORD-${Math.floor(100000 + Math.random() * 900000)}`;
     const now = new Date().toISOString();
     const itemsJson = typeof items === 'string' ? items : JSON.stringify(items);
@@ -116,8 +136,8 @@ router.post('/', verifyToken, async (req, res) => {
       `INSERT INTO orders (
         orderNumber, userId, customerName, customerEmail, customerPhone, userType,
         shippingAddress, district, city, state, postalCode, items, totalAmount, paymentMethod,
-        transactionId, paymentScreenshot, paymentStatus, orderStatus, notes, createdDate, updatedDate
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?)`,
+        paymentReference, transactionId, paymentScreenshot, paymentStatus, orderStatus, notes, createdDate, updatedDate
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?)`,
       [
         orderNumber,
         userId,
@@ -131,8 +151,9 @@ router.post('/', verifyToken, async (req, res) => {
         state ? state.trim() : '',
         postalCode ? postalCode.trim() : '',
         itemsJson,
-        Number(totalAmount) || 0,
+        authoritativeTotal,
         paymentMethod,
+        paymentReference ? paymentReference.trim() : null,
         transactionId ? transactionId.trim() : null,
         paymentScreenshot || null,
         paymentStatus,
@@ -141,6 +162,16 @@ router.post('/', verifyToken, async (req, res) => {
         now
       ]
     );
+
+    // Link payment_attempts if paymentReference was provided
+    if (paymentReference) {
+      try {
+        await queryRun(
+          'UPDATE payment_attempts SET orderNumber = ?, transactionId = ?, screenshotUrl = ?, updatedDate = ? WHERE paymentReference = ?',
+          [orderNumber, transactionId ? transactionId.trim() : null, paymentScreenshot || null, now, paymentReference.trim()]
+        );
+      } catch (err) {}
+    }
 
     const createdOrder = await queryGet('SELECT * FROM orders WHERE id = ?', [result.lastID]);
     if (createdOrder) {
@@ -424,6 +455,16 @@ router.put('/admin/:id/approve-payment', verifyToken, requireAdmin, async (req, 
       [now, id]
     );
 
+    // Synchronize payment_attempts audit record
+    if (existing.orderNumber) {
+      try {
+        await queryRun(
+          'UPDATE payment_attempts SET status = "VERIFIED", reconciledBy = ?, reconciledAt = ?, updatedDate = ? WHERE orderNumber = ?',
+          [req.user?.email || 'Admin', now, now, existing.orderNumber]
+        );
+      } catch (e) {}
+    }
+
     const updatedOrder = await queryGet('SELECT * FROM orders WHERE id = ?', [id]);
     try {
       updatedOrder.items = JSON.parse(updatedOrder.items);
@@ -469,6 +510,16 @@ router.put('/admin/:id/reject-payment', verifyToken, requireAdmin, async (req, r
       "UPDATE orders SET paymentStatus = 'Payment Rejected', orderStatus = 'Cancelled', notes = ?, updatedDate = ? WHERE id = ?",
       [`Payment Rejected: ${reason}`, now, id]
     );
+
+    // Synchronize payment_attempts audit record
+    if (existing.orderNumber) {
+      try {
+        await queryRun(
+          'UPDATE payment_attempts SET status = "REJECTED", reconciledBy = ?, reconciledAt = ?, updatedDate = ? WHERE orderNumber = ?',
+          [req.user?.email || 'Admin', now, now, existing.orderNumber]
+        );
+      } catch (e) {}
+    }
 
     const updatedOrder = await queryGet('SELECT * FROM orders WHERE id = ?', [id]);
     try {

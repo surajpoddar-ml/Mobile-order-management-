@@ -32,7 +32,12 @@ import {
   Eye,
   Check,
   MessageCircle,
-  PhoneCall
+  PhoneCall,
+  Copy,
+  CheckCheck,
+  RefreshCw,
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 import { ProductDetailModal } from './ProductDetailModal';
 
@@ -117,6 +122,61 @@ export const ShopModals = () => {
     } finally {
       setProofUploading(false);
     }
+  };
+
+  // Dynamic UPI QR Payment Gateway State
+  const [dynamicPayment, setDynamicPayment] = useState(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState(null);
+  const [copiedUpi, setCopiedUpi] = useState(false);
+
+  // Generate / Regenerate Dynamic UPI QR Code whenever cart or payment method changes
+  useEffect(() => {
+    let isMounted = true;
+    if (checkoutStep === 'checkout' && formData.paymentMethod === 'UPI / QR Payment' && cart.length > 0) {
+      setQrLoading(true);
+      setQrError(null);
+
+      const itemsPayload = cart.map(item => ({
+        productId: item.product.id,
+        quantity: item.quantity
+      }));
+
+      api.payments.createQR({ items: itemsPayload })
+        .then(res => {
+          if (!isMounted) return;
+          if (res.success) {
+            setDynamicPayment(res);
+          } else {
+            setQrError(res.message || 'Failed to generate dynamic payment QR.');
+          }
+        })
+        .catch(err => {
+          if (!isMounted) return;
+          setQrError(err.message || 'Error connecting to payment gateway.');
+        })
+        .finally(() => {
+          if (isMounted) setQrLoading(false);
+        });
+    } else if (formData.paymentMethod !== 'UPI / QR Payment') {
+      setDynamicPayment(null);
+      setQrError(null);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [checkoutStep, formData.paymentMethod, cart]);
+
+  const handleCopyUpiId = (upiId) => {
+    if (!upiId) return;
+    navigator.clipboard.writeText(upiId).then(() => {
+      setCopiedUpi(true);
+      showToast('UPI ID copied to clipboard!');
+      setTimeout(() => setCopiedUpi(false), 2000);
+    }).catch(() => {
+      showToast('Could not copy UPI ID. Please copy manually.');
+    });
   };
 
   // Track Order state
@@ -283,13 +343,14 @@ export const ShopModals = () => {
 
       const payload = {
         ...formData,
+        paymentReference: dynamicPayment?.paymentReference || null,
         items: itemsPayload,
-        totalAmount: cartTotal
+        totalAmount: dynamicPayment?.amount || cartTotal
       };
 
       const res = await api.orders.create(payload);
       if (res.success) {
-        setPlacedOrder(res.order || { orderNumber: res.orderNumber, totalAmount: cartTotal });
+        setPlacedOrder(res.order || { orderNumber: res.orderNumber, totalAmount: dynamicPayment?.amount || cartTotal });
         clearCart();
         setCheckoutStep('success');
         window.dispatchEvent(new Event('mws_notifications_refresh'));
@@ -1031,7 +1092,7 @@ export const ShopModals = () => {
                             </div>
                           </div>
 
-                          {/* QR Code Card */}
+                          {/* Dynamic Order-Specific QR Code Card */}
                           <div style={{
                             display: 'flex',
                             flexDirection: 'column',
@@ -1043,28 +1104,167 @@ export const ShopModals = () => {
                             border: '1px solid #e2e8f0',
                             marginBottom: '16px'
                           }}>
+                            {/* Header Tag */}
                             <div style={{
-                              padding: '10px',
-                              background: '#ffffff',
-                              borderRadius: '12px',
-                              border: '2px dashed #94a3b8',
-                              display: 'inline-block',
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: '#eff6ff',
+                              color: '#1d4ed8',
+                              padding: '4px 10px',
+                              borderRadius: '20px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              marginBottom: '12px',
+                              border: '1px solid #bfdbfe'
                             }}>
-                              <img
-                                src="/mws_payment_qr.png"
-                                alt="MWS EAGLE Payment QR"
-                                style={{ width: '180px', height: '180px', objectFit: 'contain', display: 'block', borderRadius: '6px' }}
-                              />
+                              <Sparkles size={13} /> Dynamic UPI QR (Order Price-Linked)
                             </div>
-                            <div style={{ marginTop: '10px', textAlign: 'center' }}>
-                              <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155' }}>
-                                Amount to Pay: <span style={{ color: '#2563eb', fontSize: '1.05rem', fontWeight: 900 }}>₹{cartTotal.toLocaleString('en-IN')}</span>
+
+                            {qrLoading ? (
+                              <div style={{ padding: '36px 20px', textAlign: 'center' }}>
+                                <RefreshCw size={28} className="animate-spin" color="#2563eb" style={{ margin: '0 auto 10px' }} />
+                                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>
+                                  Generating Order-Specific QR...
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                                  Calculating verified payable amount
+                                </div>
                               </div>
-                              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
-                                Scan this QR code and complete the transfer in your UPI app.
+                            ) : qrError ? (
+                              <div style={{ padding: '20px', textAlign: 'center', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca', width: '100%' }}>
+                                <AlertCircle size={24} color="#dc2626" style={{ margin: '0 auto 6px' }} />
+                                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#991b1b' }}>{qrError}</div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setQrLoading(true);
+                                    setQrError(null);
+                                    const itemsPayload = cart.map(item => ({ productId: item.product.id, quantity: item.quantity }));
+                                    api.payments.createQR({ items: itemsPayload })
+                                      .then(res => { if (res.success) setDynamicPayment(res); else setQrError(res.message); })
+                                      .catch(err => setQrError(err.message))
+                                      .finally(() => setQrLoading(false));
+                                  }}
+                                  className="btn btn-outline"
+                                  style={{ marginTop: '10px', padding: '6px 14px', fontSize: '0.75rem' }}
+                                >
+                                  Retry QR Generation
+                                </button>
                               </div>
-                            </div>
+                            ) : dynamicPayment ? (
+                              <>
+                                {/* Crisp Dynamic QR Image */}
+                                <div style={{
+                                  padding: '10px',
+                                  background: '#ffffff',
+                                  borderRadius: '12px',
+                                  border: '2px dashed #3b82f6',
+                                  display: 'inline-block',
+                                  boxShadow: '0 4px 14px rgba(37,99,235,0.1)'
+                                }}>
+                                  <img
+                                    src={dynamicPayment.qrCodeDataUrl}
+                                    alt={`UPI QR for ₹${dynamicPayment.amountFormatted}`}
+                                    style={{ width: '180px', height: '180px', objectFit: 'contain', display: 'block', borderRadius: '6px' }}
+                                  />
+                                </div>
+
+                                {/* Order & Amount Details */}
+                                <div style={{ marginTop: '12px', textAlign: 'center', width: '100%' }}>
+                                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155' }}>
+                                    Amount to Pay: <span style={{ color: '#2563eb', fontSize: '1.15rem', fontWeight: 900 }}>₹{Number(dynamicPayment.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  </div>
+
+                                  {/* Payee Info & Copy UPI ID Button */}
+                                  <div style={{
+                                    marginTop: '8px',
+                                    padding: '8px 12px',
+                                    background: '#f8fafc',
+                                    borderRadius: '8px',
+                                    border: '1px solid #e2e8f0',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '8px'
+                                  }}>
+                                    <div style={{ textAlign: 'left', minWidth: 0 }}>
+                                      <div style={{ fontSize: '0.70rem', color: '#64748b', fontWeight: 600 }}>Payee Name</div>
+                                      <div style={{ fontSize: '0.80rem', fontWeight: 700, color: '#0f172a' }}>{dynamicPayment.payeeName}</div>
+                                      <div style={{ fontSize: '0.72rem', color: '#2563eb', fontFamily: 'monospace', fontWeight: 600, wordBreak: 'break-all' }}>
+                                        {dynamicPayment.payeeUpiId}
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyUpiId(dynamicPayment.payeeUpiId)}
+                                      className="btn btn-outline"
+                                      style={{
+                                        padding: '6px 10px',
+                                        fontSize: '0.72rem',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        flexShrink: 0
+                                      }}
+                                    >
+                                      {copiedUpi ? (
+                                        <>
+                                          <CheckCheck size={13} color="#059669" />
+                                          <span style={{ color: '#059669', fontWeight: 700 }}>Copied!</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy size={13} />
+                                          <span>Copy ID</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+
+                                  {/* Open UPI App Button for Mobile/Desktop */}
+                                  {dynamicPayment.upiUri && (
+                                    <div style={{ marginTop: '10px' }}>
+                                      <a
+                                        href={dynamicPayment.upiUri}
+                                        className="btn btn-primary"
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          gap: '6px',
+                                          width: '100%',
+                                          padding: '9px 12px',
+                                          fontSize: '0.80rem',
+                                          fontWeight: 700,
+                                          textDecoration: 'none'
+                                        }}
+                                      >
+                                        <ExternalLink size={14} /> Pay via UPI App (GPay / PhonePe / Paytm)
+                                      </a>
+                                    </div>
+                                  )}
+
+                                  {/* Payment Reference & Verification Status Notice */}
+                                  <div style={{
+                                    marginTop: '10px',
+                                    fontSize: '0.72rem',
+                                    color: '#64748b',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '4px',
+                                    alignItems: 'center'
+                                  }}>
+                                    <span style={{ fontFamily: 'monospace', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                                      Payment Ref: {dynamicPayment.paymentReference}
+                                    </span>
+                                    <span style={{ color: '#b45309', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      ● Status: Pending Verification (Submit UTR below)
+                                    </span>
+                                  </div>
+                                </div>
+                              </>
+                            ) : null}
                           </div>
 
                           {/* Transaction ID / UTR Input */}

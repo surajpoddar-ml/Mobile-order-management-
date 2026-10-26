@@ -339,6 +339,38 @@ export const initDb = async () => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
+  // Payment Attempts table for dynamic UPI QR generation & reconciliation audit
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS payment_attempts (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      paymentReference VARCHAR(100) UNIQUE NOT NULL,
+      orderNumber VARCHAR(100) DEFAULT NULL,
+      userId VARCHAR(100) DEFAULT NULL,
+      customerEmail VARCHAR(191) DEFAULT NULL,
+      userType VARCHAR(50) DEFAULT 'Customer',
+      amount DOUBLE NOT NULL,
+      currency VARCHAR(10) DEFAULT 'INR',
+      payeeUpiId VARCHAR(100) NOT NULL,
+      payeeName VARCHAR(100) NOT NULL,
+      upiUri TEXT NOT NULL,
+      status VARCHAR(50) DEFAULT 'PENDING',
+      transactionId VARCHAR(255) DEFAULT NULL,
+      screenshotUrl TEXT DEFAULT NULL,
+      itemsJson LONGTEXT DEFAULT NULL,
+      expiresAt VARCHAR(100) DEFAULT NULL,
+      reconciledBy VARCHAR(100) DEFAULT NULL,
+      reconciledAt VARCHAR(100) DEFAULT NULL,
+      createdDate VARCHAR(100) NOT NULL,
+      updatedDate VARCHAR(100) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  try {
+    await queryRun('ALTER TABLE orders ADD COLUMN paymentReference VARCHAR(100) DEFAULT NULL');
+  } catch (e) {
+    // Column already exists
+  }
+
   // Seed default reward system settings if not present
   try {
     const rateSetting = await queryGet('SELECT value FROM system_settings WHERE `key` = "points_to_cash_rate"');

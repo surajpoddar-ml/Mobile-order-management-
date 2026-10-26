@@ -391,6 +391,31 @@ export const api = {
       })
   },
 
+  // Dynamic UPI QR Payment Gateway Service
+  payments: {
+    createQR: (payload) =>
+      request('/payments/create-qr', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+
+    getStatus: (paymentReference) =>
+      request(`/payments/status/${paymentReference}`, {
+        method: 'GET'
+      }),
+
+    cancel: (paymentReference) =>
+      request('/payments/cancel', {
+        method: 'POST',
+        body: JSON.stringify({ paymentReference })
+      }),
+
+    getConfig: () =>
+      request('/payments/config', {
+        method: 'GET'
+      })
+  },
+
   // Real-time Notification System for Admin, Customer, and Distributor
   notifications: {
     getAll: () =>

@@ -12,6 +12,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import rewardRoutes from './routes/rewardRoutes.js';
 import stickerRoutes from './routes/stickerRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 import { seedDatabase } from './database/seed.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -47,6 +48,7 @@ app.use('/api/stickers', stickerRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rewards', rewardRoutes);
+app.use('/api/payments', paymentRoutes);
 
 let dbConnected = false;
 let dbError = null;
