@@ -56,7 +56,7 @@ const upload = multer({
 router.get(['/', '/active'], async (req, res) => {
   try {
     const ads = await queryAll(
-      'SELECT * FROM advertisements WHERE isActive = 1 ORDER BY orderIndex ASC, id DESC'
+      'SELECT * FROM advertisements WHERE isActive = 1 ORDER BY isDefault DESC, orderIndex ASC, id DESC'
     );
     return res.status(200).json({
       success: true,
@@ -76,7 +76,7 @@ router.get(['/', '/active'], async (req, res) => {
  */
 router.get('/all', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const ads = await queryAll('SELECT * FROM advertisements ORDER BY orderIndex ASC, id DESC');
+    const ads = await queryAll('SELECT * FROM advertisements ORDER BY isDefault DESC, orderIndex ASC, id DESC');
     return res.status(200).json({
       success: true,
       advertisements: ads
@@ -128,7 +128,7 @@ router.post('/upload', verifyToken, requireAdmin, upload.single('mediaFile'), (r
  */
 router.post('/', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const { title, description, mediaType, mediaUrl, badgeText, linkUrl, orderIndex } = req.body;
+    const { title, description, mediaType, mediaUrl, badgeText, linkUrl, orderIndex, isDefault } = req.body;
 
     if (!title || !mediaType || !mediaUrl) {
       return res.status(400).json({
@@ -144,11 +144,15 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
       });
     }
 
+    if (isDefault) {
+      await queryRun('UPDATE advertisements SET isDefault = 0');
+    }
+
     const now = new Date().toISOString();
     const result = await queryRun(
       `INSERT INTO advertisements (
-        title, description, mediaType, mediaUrl, badgeText, linkUrl, isActive, orderIndex, createdDate
-      ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+        title, description, mediaType, mediaUrl, badgeText, linkUrl, isActive, isDefault, orderIndex, createdDate
+      ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
       [
         title.trim(),
         description ? description.trim() : '',
@@ -156,6 +160,7 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
         mediaUrl.trim(),
         badgeText ? badgeText.trim().toUpperCase() : 'HOT DEAL',
         linkUrl ? linkUrl.trim() : '/login',
+        isDefault ? 1 : 0,
         Number(orderIndex) || 0,
         now
       ]
@@ -177,12 +182,46 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
 });
 
 /**
- * 5. Admin Endpoint: Update advertisement (or toggle active status)
+ * 5. Admin Endpoint: Set advertisement as Default
+ */
+router.patch('/:id/default', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await queryGet('SELECT * FROM advertisements WHERE id = ?', [id]);
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: 'Advertisement not found.'
+      });
+    }
+
+    // Reset other defaults
+    await queryRun('UPDATE advertisements SET isDefault = 0');
+    // Set this ad as default and ensure active
+    await queryRun('UPDATE advertisements SET isDefault = 1, isActive = 1 WHERE id = ?', [id]);
+
+    const updated = await queryGet('SELECT * FROM advertisements WHERE id = ?', [id]);
+    return res.status(200).json({
+      success: true,
+      message: `"${updated.title}" set as the default advertisement!`,
+      advertisement: updated
+    });
+  } catch (error) {
+    console.error('Failed to set default advertisement:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to set default advertisement.'
+    });
+  }
+});
+
+/**
+ * 6. Admin Endpoint: Update advertisement (or toggle active status)
  */
 router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, mediaType, mediaUrl, badgeText, linkUrl, isActive, orderIndex } = req.body;
+    const { title, description, mediaType, mediaUrl, badgeText, linkUrl, isActive, isDefault, orderIndex } = req.body;
 
     const existing = await queryGet('SELECT * FROM advertisements WHERE id = ?', [id]);
     if (!existing) {
@@ -190,6 +229,10 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
         success: false,
         message: 'Advertisement not found.'
       });
+    }
+
+    if (isDefault) {
+      await queryRun('UPDATE advertisements SET isDefault = 0');
     }
 
     await queryRun(
@@ -201,6 +244,7 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
         badgeText = COALESCE(?, badgeText),
         linkUrl = COALESCE(?, linkUrl),
         isActive = COALESCE(?, isActive),
+        isDefault = COALESCE(?, isDefault),
         orderIndex = COALESCE(?, orderIndex)
        WHERE id = ?`,
       [
@@ -211,6 +255,7 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
         badgeText !== undefined ? badgeText : existing.badgeText,
         linkUrl !== undefined ? linkUrl : existing.linkUrl,
         isActive !== undefined ? (isActive ? 1 : 0) : existing.isActive,
+        isDefault !== undefined ? (isDefault ? 1 : 0) : existing.isDefault,
         orderIndex !== undefined ? Number(orderIndex) : existing.orderIndex,
         id
       ]

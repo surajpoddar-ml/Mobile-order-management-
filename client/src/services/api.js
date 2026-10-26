@@ -182,6 +182,11 @@ export const api = {
         body: JSON.stringify(payload)
       }),
 
+    setDefault: (id) =>
+      request(`/advertisements/${id}/default`, {
+        method: 'PATCH'
+      }),
+
     delete: (id) =>
       request(`/advertisements/${id}`, {
         method: 'DELETE'

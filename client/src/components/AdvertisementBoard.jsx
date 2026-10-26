@@ -28,18 +28,29 @@ export const AdvertisementBoard = () => {
   const timerRef = useRef(null);
 
   // Fetch active advertisements
-  useEffect(() => {
-    let isMounted = true;
+  const fetchAds = () => {
     api.advertisements.getActive()
       .then(res => {
-        if (isMounted && res.success && res.advertisements?.length > 0) {
+        if (res.success && res.advertisements?.length > 0) {
           setAds(res.advertisements);
+        } else {
+          setAds([]);
         }
       })
       .catch(err => console.warn('Could not load advertisements:', err))
-      .finally(() => { if (isMounted) setLoading(false); });
+      .finally(() => setLoading(false));
+  };
 
-    return () => { isMounted = false; };
+  useEffect(() => {
+    fetchAds();
+    const handleSync = () => fetchAds();
+    window.addEventListener('mws_ads_updated', handleSync);
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'mws_ads_last_update') fetchAds();
+    });
+    return () => {
+      window.removeEventListener('mws_ads_updated', handleSync);
+    };
   }, []);
 
   // Autoplay slider logic (auto-advances unless paused)
@@ -116,7 +127,8 @@ export const AdvertisementBoard = () => {
       mediaType: 'image',
       mediaUrl: '/mws_main_banner.jpg',
       badgeText: '',
-      linkUrl: '#best-selling-products-section'
+      linkUrl: '#best-selling-products-section',
+      isDefault: 1
     }
   ];
 
@@ -126,11 +138,11 @@ export const AdvertisementBoard = () => {
     return (
       <div style={{
         maxWidth: '1240px',
-        margin: '12px auto 20px auto',
+        margin: '8px auto 14px auto',
         padding: '0 16px'
       }}>
         <div style={{
-          height: '240px',
+          height: '168px', // 240px decreased by 0.3 (30% reduction)
           borderRadius: '16px',
           background: 'linear-gradient(110deg, #ede8de 8%, #f6f1e9 18%, #ede8de 33%)',
           backgroundSize: '200% 100%',
@@ -158,7 +170,7 @@ export const AdvertisementBoard = () => {
     <section
       style={{
         maxWidth: '1240px',
-        margin: '10px auto 50px auto',
+        margin: '6px auto 20px auto',
         padding: '0 16px',
         position: 'relative'
       }}
@@ -237,16 +249,16 @@ export const AdvertisementBoard = () => {
           background: '#0f172a',
           boxShadow: 'var(--shadow-lg)',
           border: '1px solid var(--border-medium)',
-          minHeight: '340px',
+          minHeight: '238px',
           display: 'flex',
           flexDirection: 'column'
         }}
       >
-        {/* Media Frame (Image or Video) */}
+        {/* Media Frame (Image or Video) - Decreased by 0.3 (30%) */}
         <div style={{
           position: 'relative',
           width: '100%',
-          height: 'clamp(260px, 45vw, 460px)',
+          height: 'clamp(182px, 31.5vw, 322px)',
           background: '#090d16',
           overflow: 'hidden',
           display: 'flex',
@@ -447,61 +459,63 @@ export const AdvertisementBoard = () => {
           )}
         </div>
 
-        {/* Thumbnail & Dot Navigation Bar at bottom */}
-        <div style={{
-          background: '#090d16',
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-          padding: '10px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '8px',
-          overflowX: 'auto'
-        }}>
-          {/* Dots / Mini pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {ads.map((ad, idx) => {
-              const active = idx === currentIndex;
-              return (
-                <button
-                  key={ad.id || idx}
-                  onClick={() => setCurrentIndex(idx)}
-                  style={{
-                    height: '8px',
-                    width: active ? '28px' : '9px',
-                    borderRadius: 'var(--radius-full)',
-                    background: active ? '#4f46e5' : 'rgba(255, 255, 255, 0.25)',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.25s ease',
-                    padding: 0
-                  }}
-                  title={ad.title}
-                  aria-label={`Go to slide ${idx + 1}: ${ad.title}`}
-                />
-              );
-            })}
-          </div>
-
+        {/* Thumbnail & Dot Navigation Bar at bottom (only shown when multiple ads exist) */}
+        {activeAds.length > 1 && (
           <div style={{
-            fontSize: '0.74rem',
-            color: '#94a3b8',
+            background: '#090d16',
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            padding: '6px 14px',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            whiteSpace: 'nowrap'
+            justifyContent: 'space-between',
+            gap: '8px',
+            overflowX: 'auto'
           }}>
-            <span style={{
-              display: 'inline-block',
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              background: '#22c55e',
-              animation: 'pulseGlow 2s infinite'
-            }} />
-            Swipe or use arrows to view all {ads.length} promotions
+            {/* Dots / Mini pills */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {activeAds.map((ad, idx) => {
+                const active = idx === (currentIndex % activeAds.length);
+                return (
+                  <button
+                    key={ad.id || idx}
+                    onClick={() => setCurrentIndex(idx)}
+                    style={{
+                      height: '6px',
+                      width: active ? '22px' : '7px',
+                      borderRadius: 'var(--radius-full)',
+                      background: active ? '#0284c7' : 'rgba(255, 255, 255, 0.25)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.25s ease',
+                      padding: 0
+                    }}
+                    title={ad.title}
+                    aria-label={`Go to slide ${idx + 1}`}
+                  />
+                );
+              })}
+            </div>
+
+            <div style={{
+              fontSize: '0.70rem',
+              color: '#94a3b8',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              whiteSpace: 'nowrap'
+            }}>
+              <span style={{
+                display: 'inline-block',
+                width: '5px',
+                height: '5px',
+                borderRadius: '50%',
+                background: '#22c55e',
+                animation: 'pulseGlow 2s infinite'
+              }} />
+              Swipe or use arrows to view all {activeAds.length} promotions
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

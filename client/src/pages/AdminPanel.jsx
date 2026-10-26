@@ -128,7 +128,8 @@ export const AdminPanel = () => {
     mediaUrl: '',
     badgeText: 'FEATURED DEAL',
     linkUrl: '/login?mode=signup&role=Distributor',
-    orderIndex: 0
+    orderIndex: 0,
+    isDefault: false
   });
 
   // Category management & taxonomy state
@@ -925,14 +926,29 @@ export const AdminPanel = () => {
           mediaUrl: '',
           badgeText: 'FEATURED DEAL',
           linkUrl: '/login?mode=signup&role=Distributor',
-          orderIndex: 0
+          orderIndex: 0,
+          isDefault: false
         });
         loadAdvertisementData();
+        window.dispatchEvent(new Event('mws_ads_updated'));
       }
     } catch (err) {
       alert(err.message || 'Failed to publish advertisement.');
     } finally {
       setCreatingAd(false);
+    }
+  };
+
+  const handleSetDefaultAd = async (ad) => {
+    try {
+      const res = await api.advertisements.setDefault(ad.id);
+      if (res.success) {
+        notify(`"${ad.title}" is now the default advertisement.`);
+        loadAdvertisementData();
+        window.dispatchEvent(new Event('mws_ads_updated'));
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to set default advertisement.');
     }
   };
 
@@ -942,6 +958,7 @@ export const AdminPanel = () => {
       if (res.success) {
         notify(`Advertisement set to ${ad.isActive ? 'Inactive' : 'Active'}.`);
         loadAdvertisementData();
+        window.dispatchEvent(new Event('mws_ads_updated'));
       }
     } catch (err) {
       alert(err.message);
@@ -2974,6 +2991,18 @@ export const AdminPanel = () => {
                   </div>
                 </div>
 
+                <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.86rem', fontWeight: 700, color: '#1f2937' }}>
+                    <input
+                      type="checkbox"
+                      checked={adForm.isDefault || false}
+                      onChange={e => setAdForm({ ...adForm, isDefault: e.target.checked })}
+                      style={{ width: '17px', height: '17px', accentColor: '#ea580c' }}
+                    />
+                    <span>⭐ Set as the Default Display Board Advertisement (Shown first on mobile & desktop)</span>
+                  </label>
+                </div>
+
                 <button
                   type="submit"
                   disabled={creatingAd || uploadingFile}
@@ -3014,10 +3043,10 @@ export const AdminPanel = () => {
                       background: '#ffffff',
                       borderRadius: 'var(--radius-lg)',
                       overflow: 'hidden',
-                      border: '1px solid var(--border-medium)',
+                      border: ad.isDefault === 1 ? '2px solid #f59e0b' : '1px solid var(--border-medium)',
                       display: 'flex',
                       flexDirection: 'column',
-                      boxShadow: 'var(--shadow-card)'
+                      boxShadow: ad.isDefault === 1 ? '0 4px 16px rgba(245, 158, 11, 0.2)' : 'var(--shadow-card)'
                     }}
                   >
                     <div style={{
@@ -3044,7 +3073,12 @@ export const AdminPanel = () => {
                         />
                       )}
 
-                      <div style={{ position: 'absolute', top: '10px', left: '10px', display: 'flex', gap: '6px' }}>
+                      <div style={{ position: 'absolute', top: '10px', left: '10px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {ad.isDefault === 1 && (
+                          <span style={{ background: '#f59e0b', color: '#fff', fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 'var(--radius-full)', boxShadow: '0 2px 6px rgba(245, 158, 11, 0.4)' }}>
+                            ⭐ DEFAULT
+                          </span>
+                        )}
                         <span style={{ background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
                           {ad.badgeText || 'HOT DEAL'}
                         </span>
@@ -3062,24 +3096,57 @@ export const AdminPanel = () => {
 
                     <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, justifyContent: 'space-between' }}>
                       <div>
-                        <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px 0' }}>
-                          {ad.title}
-                        </h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                            {ad.title}
+                          </h4>
+                          {ad.isDefault === 1 && (
+                            <span style={{ fontSize: '0.70rem', color: '#d97706', fontWeight: 800, background: '#fef3c7', padding: '1px 6px', borderRadius: '4px' }}>
+                              Default Board Ad
+                            </span>
+                          )}
+                        </div>
                         <p style={{ fontSize: '0.82rem', color: 'var(--text-body)', margin: 0, lineHeight: 1.45 }}>
                           {ad.description || 'No caption provided.'}
                         </p>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
-                        <button
-                          onClick={() => handleToggleAdStatus(ad)}
-                          className={ad.isActive ? 'btn btn-secondary btn-sm' : 'btn btn-emerald btn-sm'}
-                          style={{ fontSize: '0.78rem' }}
-                        >
-                          {ad.isActive ? 'Deactivate' : 'Activate'}
-                        </button>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleAdStatus(ad)}
+                            className={ad.isActive ? 'btn btn-secondary btn-sm' : 'btn btn-emerald btn-sm'}
+                            style={{ fontSize: '0.78rem' }}
+                          >
+                            {ad.isActive ? 'Deactivate' : 'Activate'}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSetDefaultAd(ad)}
+                            disabled={ad.isDefault === 1}
+                            style={{
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              padding: '5px 12px',
+                              borderRadius: '6px',
+                              border: ad.isDefault === 1 ? '1px solid #fde68a' : 'none',
+                              background: ad.isDefault === 1 ? '#fef3c7' : '#0284c7',
+                              color: ad.isDefault === 1 ? '#92400e' : '#ffffff',
+                              cursor: ad.isDefault === 1 ? 'default' : 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            title={ad.isDefault === 1 ? 'Current Default Advertisement' : 'Make this the default advertisement'}
+                          >
+                            {ad.isDefault === 1 ? '⭐ Default Active' : 'Set as Default'}
+                          </button>
+                        </div>
 
                         <button
+                          type="button"
                           onClick={() => handleDeleteAd(ad)}
                           className="btn btn-danger btn-sm"
                           style={{ fontSize: '0.78rem' }}

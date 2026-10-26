@@ -159,10 +159,17 @@ export const initDb = async () => {
       badgeText VARCHAR(100),
       linkUrl TEXT,
       isActive INT DEFAULT 1,
+      isDefault INT DEFAULT 0,
       orderIndex INT DEFAULT 0,
       createdDate VARCHAR(100) NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+
+  try {
+    await queryRun('ALTER TABLE advertisements ADD COLUMN isDefault INT DEFAULT 0');
+  } catch (e) {
+    // Column already exists
+  }
 
   // Promotional Stickers table
   await queryRun(`
@@ -441,7 +448,34 @@ export const initDb = async () => {
       }
     }
   } catch (err) {
-    console.warn('[MySQL Init] Category sync notice:', err.message);
+    console.warn('[MySQL Init] Category seed/sync notice:', err.message);
+  }
+
+  // Ensure default advertisement is set and active
+  try {
+    const hasDefault = await queryGet('SELECT id FROM advertisements WHERE isDefault = 1');
+    if (!hasDefault) {
+      const existingBanner = await queryGet('SELECT id FROM advertisements WHERE mediaUrl LIKE "%mws_main_banner.jpg%"');
+      if (existingBanner) {
+        await queryRun('UPDATE advertisements SET isDefault = 1, isActive = 1 WHERE id = ?', [existingBanner.id]);
+      } else {
+        await queryRun(
+          `INSERT INTO advertisements (title, description, mediaType, mediaUrl, badgeText, linkUrl, isActive, isDefault, orderIndex, createdDate)
+           VALUES (?, ?, ?, ?, ?, ?, 1, 1, 0, ?)`,
+          [
+            'MWS Eagle Premium Mobile Accessories',
+            'Your One-Stop Shop for All Mobile Accessories — Smarter Connection Better Life',
+            'image',
+            '/uploads/advertisements/mws_main_banner.jpg',
+            'PREMIUM QUALITY',
+            '#best-selling-products-section',
+            new Date().toISOString()
+          ]
+        );
+      }
+    }
+  } catch (err) {
+    console.warn('[MySQL Init] Default advertisement setup notice:', err.message);
   }
 
   console.log('MySQL database tables verified and ready.');
