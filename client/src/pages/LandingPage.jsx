@@ -598,24 +598,6 @@ export const LandingPage = () => {
               </div>
             );
           })}
-
-          {/* 3-Column MWS Eagle Promo Card spanning remaining columns on row 2 */}
-          <div
-            className="cat-promo-card"
-            onClick={() => {
-              const el = document.getElementById('best-selling-products-section');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
-            title="MWS Eagle Premium Mobile Accessories"
-          >
-            <img
-              src="/mws_promo_card.jpg"
-              alt="MWS Eagle Premium Mobile Accessories"
-              onError={(e) => {
-                e.target.src = '/mws_main_banner.jpg';
-              }}
-            />
-          </div>
         </div>
       </section>
 
