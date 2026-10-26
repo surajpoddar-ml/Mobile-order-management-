@@ -202,136 +202,162 @@ export const DistributorPortal = () => {
       {/* ====== 1. AD DISPLAY TV VIEWER (CONTROLLABLE BY ADMIN) ====== */}
       <AdvertisementBoard />
 
-      {/* ====== 2. DISTRIBUTOR WELCOME BANNER & TAB CONTROLS ====== */}
+      {/* ====== 2. THREE EVENLY SPACED NAVIGATION CARDS: PRODUCT CATALOG, MY ORDERS, MY REWARD ====== */}
       <section className="portal-header-section" style={{
         maxWidth: '1240px',
-        margin: '20px auto 0 auto',
-        padding: '0 20px'
+        margin: '12px auto 0 auto',
+        padding: '0 16px'
       }}>
-        <div className="portal-partner-card" style={{
-          background: '#ffffff',
-          borderRadius: '16px',
-          border: '1px solid rgba(2, 132, 199, 0.25)',
-          padding: '22px 26px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px',
-          boxShadow: 'var(--shadow-card)'
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '10px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0, flex: '1 1 auto' }}>
-            <img
-              src="/mws_eagle_logo.jpg?v=3"
-              alt="MWS Eagle Official Logo"
-              style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '10px',
-                objectFit: 'contain',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
-                flexShrink: 0
-              }}
-            />
-            <div style={{ minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                <span className="badge badge-distributor">
-                  <Building2 size={12} /> Approved Wholesale Partner
-                </span>
-                <span className="badge badge-active">
-                  <CheckCircle size={12} /> {user?.accountStatus}
-                </span>
-              </div>
-              <h1 className="portal-title" style={{ fontSize: '1.55rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
-                {user?.businessName || user?.fullName}
-              </h1>
-              <div className="portal-subtitle" style={{ fontSize: '0.84rem', color: '#0284c7', fontWeight: 600, marginTop: '2px' }}>
-                PAN/VAT: {user?.panVatNumber || 'Verified B2B Dealer'} · Commercial wholesale rates in INR (₹)
-              </div>
+          {/* Card 1: Product Catalog */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('catalog')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '14px 6px',
+              borderRadius: '14px',
+              background: activeTab === 'catalog' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#ffffff',
+              color: activeTab === 'catalog' ? '#ffffff' : '#1e293b',
+              border: activeTab === 'catalog' ? '1px solid #0284c7' : '1px solid rgba(2, 132, 199, 0.18)',
+              boxShadow: activeTab === 'catalog' ? '0 4px 14px rgba(2, 132, 199, 0.28)' : '0 2px 8px rgba(0, 0, 0, 0.04)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              textAlign: 'center',
+              minHeight: '74px'
+            }}
+          >
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '10px',
+              background: activeTab === 'catalog' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(2, 132, 199, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: activeTab === 'catalog' ? '#ffffff' : '#0284c7'
+            }}>
+              <Layers size={17} />
             </div>
-          </div>
+            <span style={{
+              fontSize: '0.78rem',
+              fontWeight: activeTab === 'catalog' ? 800 : 700,
+              lineHeight: 1.2
+            }}>
+              Product Catalog
+            </span>
+          </button>
 
-          {/* Navigation Tabs: Wholesale Catalog vs My Invoices & Orders */}
-          <div className="portal-tabs-wrapper" style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            background: '#f1f5f9',
-            padding: '4px',
-            borderRadius: 'var(--radius-full)'
-          }}>
-            <button
-              onClick={() => setActiveTab('catalog')}
-              className="portal-tab-btn"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 20px',
-                borderRadius: 'var(--radius-full)',
-                border: 'none',
-                background: activeTab === 'catalog' ? '#0284c7' : 'transparent',
-                color: activeTab === 'catalog' ? '#ffffff' : '#475569',
-                fontSize: '0.86rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                whiteSpace: 'nowrap',
-                flexShrink: 0
-              }}
-            >
-              <TrendingUp size={15} />
-              Wholesale Catalog
-            </button>
+          {/* Card 2: My Orders */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('orders')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '14px 6px',
+              borderRadius: '14px',
+              background: activeTab === 'orders' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#ffffff',
+              color: activeTab === 'orders' ? '#ffffff' : '#1e293b',
+              border: activeTab === 'orders' ? '1px solid #0284c7' : '1px solid rgba(2, 132, 199, 0.18)',
+              boxShadow: activeTab === 'orders' ? '0 4px 14px rgba(2, 132, 199, 0.28)' : '0 2px 8px rgba(0, 0, 0, 0.04)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              textAlign: 'center',
+              minHeight: '74px',
+              position: 'relative'
+            }}
+          >
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '10px',
+              background: activeTab === 'orders' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(2, 132, 199, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: activeTab === 'orders' ? '#ffffff' : '#0284c7',
+              position: 'relative'
+            }}>
+              <Package size={17} />
+              {myOrders.length > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  right: '-6px',
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  padding: '1px 5px',
+                  borderRadius: '10px'
+                }}>
+                  {myOrders.length}
+                </span>
+              )}
+            </div>
+            <span style={{
+              fontSize: '0.78rem',
+              fontWeight: activeTab === 'orders' ? 800 : 700,
+              lineHeight: 1.2
+            }}>
+              My Orders
+            </span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab('orders')}
-              className="portal-tab-btn"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 20px',
-                borderRadius: 'var(--radius-full)',
-                border: 'none',
-                background: activeTab === 'orders' ? '#0284c7' : 'transparent',
-                color: activeTab === 'orders' ? '#ffffff' : '#475569',
-                fontSize: '0.86rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                whiteSpace: 'nowrap',
-                flexShrink: 0
-              }}
-            >
-              <Package size={15} />
-              Wholesale Orders {myOrders.length > 0 && `(${myOrders.length})`}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('rewards')}
-              className="portal-tab-btn"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 20px',
-                borderRadius: 'var(--radius-full)',
-                border: 'none',
-                background: activeTab === 'rewards' ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'transparent',
-                color: activeTab === 'rewards' ? '#ffffff' : '#475569',
-                fontSize: '0.86rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: activeTab === 'rewards' ? '0 2px 8px rgba(245, 158, 11, 0.3)' : 'none',
-                whiteSpace: 'nowrap',
-                flexShrink: 0
-              }}
-            >
-              <Gift size={15} />
-              <span>My Rewards</span>
-            </button>
-          </div>
+          {/* Card 3: My Reward */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('rewards')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '14px 6px',
+              borderRadius: '14px',
+              background: activeTab === 'rewards' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#ffffff',
+              color: activeTab === 'rewards' ? '#ffffff' : '#1e293b',
+              border: activeTab === 'rewards' ? '1px solid #0284c7' : '1px solid rgba(2, 132, 199, 0.18)',
+              boxShadow: activeTab === 'rewards' ? '0 4px 14px rgba(2, 132, 199, 0.28)' : '0 2px 8px rgba(0, 0, 0, 0.04)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              textAlign: 'center',
+              minHeight: '74px'
+            }}
+          >
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '10px',
+              background: activeTab === 'rewards' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(2, 132, 199, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: activeTab === 'rewards' ? '#ffffff' : '#0284c7'
+            }}>
+              <Gift size={17} />
+            </div>
+            <span style={{
+              fontSize: '0.78rem',
+              fontWeight: activeTab === 'rewards' ? 800 : 700,
+              lineHeight: 1.2
+            }}>
+              My Reward
+            </span>
+          </button>
         </div>
       </section>
 

@@ -221,25 +221,25 @@ export const AdvertisementBoard = () => {
           position: 'relative',
           borderRadius: 'var(--radius-xl)',
           overflow: 'hidden',
-          background: '#0f172a',
-          boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--border-medium)',
-          minHeight: '238px',
+          background: 'transparent',
+          boxShadow: 'var(--shadow-md)',
+          border: '1px solid var(--border-subtle)',
           display: 'flex',
           flexDirection: 'column',
-          cursor: currentAd?.linkUrl ? 'pointer' : 'default'
+          cursor: currentAd?.linkUrl ? 'pointer' : 'default',
+          width: '100%'
         }}
       >
-        {/* Media Frame (Image or Video) - Decreased by 0.3 (30%) */}
+        {/* Media Frame (Image or Video) - Full responsive banner */}
         <div style={{
           position: 'relative',
           width: '100%',
-          height: 'clamp(182px, 31.5vw, 322px)',
-          background: '#090d16',
+          background: 'transparent',
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          borderRadius: 'inherit'
         }}>
           {currentAd.mediaType === 'video' ? (
             <video
@@ -247,8 +247,11 @@ export const AdvertisementBoard = () => {
               src={getFullMediaUrl(currentAd.mediaUrl)}
               style={{
                 width: '100%',
-                height: '100%',
-                objectFit: 'cover'
+                height: 'auto',
+                maxHeight: '460px',
+                display: 'block',
+                objectFit: 'contain',
+                borderRadius: 'inherit'
               }}
               playsInline
               loop
@@ -266,19 +269,20 @@ export const AdvertisementBoard = () => {
           ) : (
             <img
               src={getFullMediaUrl(currentAd.mediaUrl)}
-              alt={currentAd.title ? `${currentAd.title} - MWS Eagle` : 'MWS Eagle Special Showcase'}
+              alt={currentAd.title ? `${currentAd.title} - MWS Eagle` : 'MWS Eagle'}
               style={{
                 width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                transition: 'transform 0.4s ease'
+                height: 'auto',
+                maxHeight: '460px',
+                display: 'block',
+                objectFit: 'contain',
+                borderRadius: 'inherit'
               }}
               onError={(e) => {
                 const cur = e.currentTarget.src || '';
                 if (!e.currentTarget.dataset.retried && cur.includes('/uploads/')) {
                   e.currentTarget.dataset.retried = 'true';
                   const uploadRel = '/uploads/' + cur.split('/uploads/')[1];
-                  // If it failed with full URL, retry with relative proxy path; if relative failed, retry with getMediaUrl
                   if (cur.startsWith('http')) {
                     e.currentTarget.src = uploadRel;
                   } else {
@@ -291,16 +295,6 @@ export const AdvertisementBoard = () => {
             />
           )}
 
-          {/* Dark gradient overlay only if title/description exists for subtle readability */}
-          {(currentAd.title || currentAd.description) && (
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(to top, rgba(15, 23, 42, 0.8) 0%, rgba(15, 23, 42, 0.2) 40%, transparent 100%)',
-              pointerEvents: 'none'
-            }} />
-          )}
-
           {/* Sound mute/unmute control for video ads */}
           {currentAd.mediaType === 'video' && (
             <div style={{
@@ -310,7 +304,10 @@ export const AdvertisementBoard = () => {
               zIndex: 10
             }}>
               <button
-                onClick={() => setIsMuted(!isMuted)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMuted(!isMuted);
+                }}
                 title={isMuted ? 'Unmute video audio' : 'Mute video audio'}
                 style={{
                   background: 'rgba(0, 0, 0, 0.6)',
@@ -334,77 +331,40 @@ export const AdvertisementBoard = () => {
             </div>
           )}
 
-          {/* Bottom Card Content overlay with clean, compact text */}
-          {(currentAd.title || currentAd.description) && (
+          {/* Clean minimal dot indicators when multiple ads exist */}
+          {activeAds.length > 1 && (
             <div style={{
               position: 'absolute',
-              bottom: 0,
+              bottom: '8px',
               left: 0,
               right: 0,
-              padding: '10px 14px',
-              zIndex: 10,
               display: 'flex',
-              flexDirection: 'column',
-              gap: '3px'
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              zIndex: 10,
+              pointerEvents: 'none'
             }}>
-              {currentAd.title && (
-                <h3 style={{
-                  fontSize: 'clamp(0.82rem, 1.6vw, 0.95rem)',
-                  fontWeight: 700,
-                  color: '#ffffff',
-                  lineHeight: 1.25,
-                  margin: 0,
-                  textShadow: '0 1px 4px rgba(0,0,0,0.8)'
-                }}>
-                  {currentAd.title}
-                </h3>
-              )}
-
-              {currentAd.description && (
-                <p style={{
-                  fontSize: 'clamp(0.68rem, 1.2vw, 0.76rem)',
-                  color: 'rgba(255, 255, 255, 0.82)',
-                  lineHeight: 1.35,
-                  maxWidth: '650px',
-                  margin: 0,
-                  textShadow: '0 1px 4px rgba(0,0,0,0.8)'
-                }}>
-                  {currentAd.description}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Thumbnail & Dot Navigation Bar at bottom (only shown when multiple ads exist) */}
-        {activeAds.length > 1 && (
-          <div style={{
-            background: '#090d16',
-            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-            padding: '6px 14px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '8px',
-            overflowX: 'auto'
-          }}>
-            {/* Dots / Mini pills */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               {activeAds.map((ad, idx) => {
                 const active = idx === (currentIndex % activeAds.length);
                 return (
                   <button
                     key={ad.id || idx}
-                    onClick={() => setCurrentIndex(idx)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentIndex(idx);
+                    }}
                     style={{
-                      height: '6px',
-                      width: active ? '22px' : '7px',
+                      height: '5px',
+                      width: active ? '18px' : '5px',
                       borderRadius: 'var(--radius-full)',
-                      background: active ? '#0284c7' : 'rgba(255, 255, 255, 0.25)',
+                      background: active ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
                       border: 'none',
                       cursor: 'pointer',
                       transition: 'all 0.25s ease',
-                      padding: 0
+                      padding: 0,
+                      pointerEvents: 'auto'
                     }}
                     title={ad.title}
                     aria-label={`Go to slide ${idx + 1}`}
@@ -412,27 +372,8 @@ export const AdvertisementBoard = () => {
                 );
               })}
             </div>
-
-            <div style={{
-              fontSize: '0.70rem',
-              color: '#94a3b8',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              whiteSpace: 'nowrap'
-            }}>
-              <span style={{
-                display: 'inline-block',
-                width: '5px',
-                height: '5px',
-                borderRadius: '50%',
-                background: '#22c55e',
-                animation: 'pulseGlow 2s infinite'
-              }} />
-              Swipe or use arrows to view all {activeAds.length} promotions
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </section>
   );
