@@ -560,7 +560,7 @@ export const LandingPage = () => {
         <div className="shop-by-cat-heading-wrap">
           <span className="cat-heading-line" />
           <h2 className="shop-by-cat-title">
-            <Zap size={20} className="cat-lightning-icon" /> Shop by Category
+            <Zap size={20} className="cat-lightning-icon" /> Order by Category
           </h2>
           <span className="cat-heading-line" />
         </div>

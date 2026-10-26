@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import AdvertisementBoard from '../components/AdvertisementBoard';
+import PromotionalSticker from '../components/PromotionalSticker';
 import api, { getMediaUrl } from '../services/api';
 import {
   User,
@@ -21,7 +22,8 @@ import {
   Check,
   MapPin,
   QrCode,
-  Gift
+  Gift,
+  ChevronRight
 } from 'lucide-react';
 import { RewardsSection } from '../components/rewards/RewardsSection';
 
@@ -46,7 +48,7 @@ export const CustomerPortal = () => {
   const [dbCategories, setDbCategories] = useState([]);
 
   const getCategoryImageUrl = (url) => {
-    if (!url) return 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=300&q=80';
+    if (!url) return '';
     return getMediaUrl(url);
   };
 
@@ -67,22 +69,31 @@ export const CustomerPortal = () => {
     return () => window.removeEventListener('mws_categories_updated', handleCategorySync);
   }, []);
 
-  // Circular Categories loaded dynamically from DB (with fallback defaults)
-  const circularCategories = dbCategories.length > 0
-    ? dbCategories.map(cat => ({
-        id: cat.name,
-        name: cat.name,
-        image: getCategoryImageUrl(cat.imageUrl)
-      }))
-    : [
-        { id: 'Charging', name: 'Charging', image: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=300&q=80' },
-        { id: 'Power', name: 'Power', image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=300&q=80' },
-        { id: 'Cables', name: 'Cables', image: 'https://images.unsplash.com/photo-1588508065123-287b28e013da?auto=format&fit=crop&w=300&q=80' },
-        { id: 'Audio', name: 'Audio', image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=300&q=80' },
-        { id: 'Protection', name: 'Protection', image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=300&q=80' }
-      ];
+  // Standard 9 Categories matching exact visual reference
+  const standardCategories = [
+    { id: 'Earphone', name: 'Earphone', image: '/cat_earphone.jpg' },
+    { id: 'Ear Bud', name: 'Ear Bud', image: '/cat_earbud.jpg' },
+    { id: 'Neck Band', name: 'Neck Band', image: '/cat_neckband.jpg' },
+    { id: 'Charger', name: 'Charger', image: '/cat_charger.jpg' },
+    { id: 'DC Charger', name: 'DC Charger', image: '/cat_dc_charger.jpg' },
+    { id: 'Data Cable', name: 'Data Cable', image: '/cat_data_cable.jpg' },
+    { id: 'Power Bank', name: 'Power Bank', image: '/cat_power_bank.jpg' },
+    { id: 'Bluetooth Speaker', name: 'Bluetooth Speaker', image: '/cat_bt_speaker.jpg' },
+    { id: 'OTG', name: 'OTG', image: '/cat_otg.jpg' }
+  ];
 
-  const filterTabs = ['All', ...circularCategories.map(c => c.name)];
+  const categoriesList = dbCategories.length > 0
+    ? dbCategories.map(cat => {
+        const found = standardCategories.find(s => s.name.toLowerCase() === cat.name.toLowerCase());
+        return {
+          id: cat.name,
+          name: cat.name,
+          image: cat.imageUrl ? getCategoryImageUrl(cat.imageUrl) : (found ? found.image : '/cat_earphone.jpg')
+        };
+      })
+    : standardCategories;
+
+  const filterTabs = ['All', ...categoriesList.map(c => c.name)];
 
   // Fetch Customer Products
   const fetchProducts = () => {
@@ -169,11 +180,15 @@ export const CustomerPortal = () => {
     }
   }, [activeTab]);
 
-  const handleCategoryClick = (catId) => {
-    setSelectedCategory(catId);
-    const el = document.getElementById('customer-products-grid');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const handleCategoryClick = (catName) => {
+    if (selectedCategory === catName) {
+      setSelectedCategory('All');
+    } else {
+      setSelectedCategory(catName);
+      const el = document.getElementById('customer-products-grid');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
   };
 
@@ -361,18 +376,73 @@ export const CustomerPortal = () => {
         </div>
       </section>
 
-      {/* ====== 3. CATALOG VIEW: PRODUCTS & ORDERS ====== */}
+      {/* ====== 3. CATALOG VIEW: ORDER BY CATEGORY, PROMOTIONAL STICKER & ALL PRODUCTS ====== */}
       {activeTab === 'catalog' && (
         <>
+          {/* Order by Category Section */}
+          <section
+            id="order-by-category-section"
+            style={{
+              maxWidth: '1240px',
+              margin: '16px auto 0 auto',
+              padding: '10px 16px 14px 16px'
+            }}
+          >
+            <div className="shop-by-cat-heading-wrap">
+              <span className="cat-heading-line" />
+              <h2 className="shop-by-cat-title">
+                <Zap size={20} className="cat-lightning-icon" /> Order by Category
+              </h2>
+              <span className="cat-heading-line" />
+            </div>
 
-          {/* Best Selling Products Section with Category Pills */}
+            <div className="cat-cards-grid">
+              {categoriesList.map((cat) => {
+                const active = selectedCategory === cat.name;
+                return (
+                  <div
+                    key={cat.id || cat.name}
+                    onClick={() => handleCategoryClick(cat.name)}
+                    className={`cat-product-card ${active ? 'active' : ''}`}
+                    title={`Shop ${cat.name}`}
+                  >
+                    <div className="cat-card-img-container">
+                      <img
+                        src={cat.image}
+                        alt={cat.name}
+                        onError={(e) => {
+                          e.target.src = '/mws_eagle_logo.jpg';
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="cat-pill-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCategoryClick(cat.name);
+                      }}
+                    >
+                      <span>{cat.name}</span>
+                      <ChevronRight size={12} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Promotional Sticker Strip */}
+          <PromotionalSticker />
+
+          {/* All Products Section with Category Pills */}
           <section
             id="customer-products-grid"
             className="portal-products-section"
             style={{
               maxWidth: '1240px',
               margin: '0 auto',
-              padding: '24px 20px 70px 20px'
+              padding: '10px 20px 70px 20px'
             }}
           >
             <div style={{ marginBottom: '24px' }}>
@@ -385,7 +455,7 @@ export const CustomerPortal = () => {
                 marginBottom: '16px'
               }}>
                 <h2 style={{ fontSize: 'clamp(1.35rem, 3.5vw, 2.2rem)', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
-                  Best Selling Products
+                  All Products
                 </h2>
 
                 {searchQuery && (
