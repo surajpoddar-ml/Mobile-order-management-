@@ -283,14 +283,13 @@ export const AdvertisementBoard = () => {
                 if (!e.currentTarget.dataset.retried && cur.includes('/uploads/')) {
                   e.currentTarget.dataset.retried = 'true';
                   const uploadRel = '/uploads/' + cur.split('/uploads/')[1];
-                  if (cur.startsWith('http')) {
-                    e.currentTarget.src = uploadRel;
-                  } else {
-                    e.currentTarget.src = getMediaUrl(uploadRel);
-                  }
+                  e.currentTarget.src = getMediaUrl(uploadRel);
                   return;
                 }
-                console.warn('Ad image failed to render:', cur);
+                // If uploaded asset is not found on server, fallback to official verified banner
+                if (!cur.includes('mws_main_banner.jpg')) {
+                  e.currentTarget.src = '/mws_main_banner.jpg';
+                }
               }}
             />
           )}
