@@ -220,13 +220,13 @@ export const DistributorPortal = () => {
       {/* ====== 2. THREE EVENLY SPACED NAVIGATION CARDS: PRODUCT CATALOG, MY ORDERS, MY REWARD ====== */}
       <section className="portal-header-section" style={{
         maxWidth: '1240px',
-        margin: '12px auto 0 auto',
-        padding: '0 16px'
+        margin: '8px auto 0 auto',
+        padding: '0 12px'
       }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '10px'
+          gap: '8px'
         }}>
           {/* Card 1: Product Catalog */}
           <button
@@ -237,35 +237,36 @@ export const DistributorPortal = () => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '5px',
-              padding: '11px 6px',
-              borderRadius: '14px',
+              gap: '3px',
+              padding: '7px 4px',
+              borderRadius: '11px',
               background: activeTab === 'catalog' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#ffffff',
               color: activeTab === 'catalog' ? '#ffffff' : '#1e293b',
               border: activeTab === 'catalog' ? '1px solid #0284c7' : '1px solid rgba(2, 132, 199, 0.18)',
-              boxShadow: activeTab === 'catalog' ? '0 4px 14px rgba(2, 132, 199, 0.28)' : '0 2px 8px rgba(0, 0, 0, 0.04)',
+              boxShadow: activeTab === 'catalog' ? '0 3px 10px rgba(2, 132, 199, 0.25)' : '0 1px 4px rgba(0, 0, 0, 0.04)',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               textAlign: 'center',
-              minHeight: '66px'
+              minHeight: '50px'
             }}
           >
             <div style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '7px',
+              width: '20px',
+              height: '20px',
+              borderRadius: '6px',
               background: activeTab === 'catalog' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(2, 132, 199, 0.1)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: activeTab === 'catalog' ? '#ffffff' : '#0284c7'
             }}>
-              <Layers size={17} style={{ transform: 'scale(0.6)' }} />
+              <Layers size={15} style={{ transform: 'scale(0.6)' }} />
             </div>
             <span style={{
-              fontSize: '0.78rem',
+              fontSize: '0.72rem',
               fontWeight: activeTab === 'catalog' ? 800 : 700,
-              lineHeight: 1.2
+              lineHeight: 1.15,
+              whiteSpace: 'nowrap'
             }}>
               Product Catalog
             </span>
@@ -280,24 +281,24 @@ export const DistributorPortal = () => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '5px',
-              padding: '11px 6px',
-              borderRadius: '14px',
+              gap: '3px',
+              padding: '7px 4px',
+              borderRadius: '11px',
               background: activeTab === 'orders' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#ffffff',
               color: activeTab === 'orders' ? '#ffffff' : '#1e293b',
               border: activeTab === 'orders' ? '1px solid #0284c7' : '1px solid rgba(2, 132, 199, 0.18)',
-              boxShadow: activeTab === 'orders' ? '0 4px 14px rgba(2, 132, 199, 0.28)' : '0 2px 8px rgba(0, 0, 0, 0.04)',
+              boxShadow: activeTab === 'orders' ? '0 3px 10px rgba(2, 132, 199, 0.25)' : '0 1px 4px rgba(0, 0, 0, 0.04)',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               textAlign: 'center',
-              minHeight: '66px',
+              minHeight: '50px',
               position: 'relative'
             }}
           >
             <div style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '7px',
+              width: '20px',
+              height: '20px',
+              borderRadius: '6px',
               background: activeTab === 'orders' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(2, 132, 199, 0.1)',
               display: 'flex',
               alignItems: 'center',
@@ -305,28 +306,29 @@ export const DistributorPortal = () => {
               color: activeTab === 'orders' ? '#ffffff' : '#0284c7',
               position: 'relative'
             }}>
-              <Package size={17} style={{ transform: 'scale(0.6)' }} />
+              <Package size={15} style={{ transform: 'scale(0.6)' }} />
               {myOrders.length > 0 && (
                 <span style={{
                   position: 'absolute',
-                  top: '-5px',
-                  right: '-7px',
+                  top: '-4px',
+                  right: '-6px',
                   background: '#ef4444',
                   color: '#ffffff',
-                  fontSize: '0.58rem',
+                  fontSize: '0.52rem',
                   fontWeight: 800,
-                  padding: '1px 4px',
+                  padding: '1px 3.5px',
                   borderRadius: '10px',
-                  lineHeight: 1.1
+                  lineHeight: 1
                 }}>
                   {myOrders.length}
                 </span>
               )}
             </div>
             <span style={{
-              fontSize: '0.78rem',
+              fontSize: '0.72rem',
               fontWeight: activeTab === 'orders' ? 800 : 700,
-              lineHeight: 1.2
+              lineHeight: 1.15,
+              whiteSpace: 'nowrap'
             }}>
               My Orders
             </span>
@@ -341,35 +343,36 @@ export const DistributorPortal = () => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '5px',
-              padding: '11px 6px',
-              borderRadius: '14px',
+              gap: '3px',
+              padding: '7px 4px',
+              borderRadius: '11px',
               background: activeTab === 'rewards' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#ffffff',
               color: activeTab === 'rewards' ? '#ffffff' : '#1e293b',
               border: activeTab === 'rewards' ? '1px solid #0284c7' : '1px solid rgba(2, 132, 199, 0.18)',
-              boxShadow: activeTab === 'rewards' ? '0 4px 14px rgba(2, 132, 199, 0.28)' : '0 2px 8px rgba(0, 0, 0, 0.04)',
+              boxShadow: activeTab === 'rewards' ? '0 3px 10px rgba(2, 132, 199, 0.25)' : '0 1px 4px rgba(0, 0, 0, 0.04)',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               textAlign: 'center',
-              minHeight: '66px'
+              minHeight: '50px'
             }}
           >
             <div style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '7px',
+              width: '20px',
+              height: '20px',
+              borderRadius: '6px',
               background: activeTab === 'rewards' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(2, 132, 199, 0.1)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: activeTab === 'rewards' ? '#ffffff' : '#0284c7'
             }}>
-              <Gift size={17} style={{ transform: 'scale(0.6)' }} />
+              <Gift size={15} style={{ transform: 'scale(0.6)' }} />
             </div>
             <span style={{
-              fontSize: '0.78rem',
+              fontSize: '0.72rem',
               fontWeight: activeTab === 'rewards' ? 800 : 700,
-              lineHeight: 1.2
+              lineHeight: 1.15,
+              whiteSpace: 'nowrap'
             }}>
               My Reward
             </span>
@@ -385,14 +388,14 @@ export const DistributorPortal = () => {
             id="order-by-category-section"
             style={{
               maxWidth: '1240px',
-              margin: '16px auto 0 auto',
-              padding: '10px 16px 14px 16px'
+              margin: '8px auto 0 auto',
+              padding: '2px 14px 10px 14px'
             }}
           >
-            <div className="shop-by-cat-heading-wrap">
+            <div className="shop-by-cat-heading-wrap" style={{ marginBottom: '10px' }}>
               <span className="cat-heading-line" />
-              <h2 className="shop-by-cat-title">
-                <Zap size={20} className="cat-lightning-icon" /> Order by Category
+              <h2 className="shop-by-cat-title" style={{ fontSize: 'clamp(1.1rem, 3.2vw, 1.45rem)' }}>
+                <Zap size={18} className="cat-lightning-icon" /> Order by Category
               </h2>
               <span className="cat-heading-line" />
             </div>
