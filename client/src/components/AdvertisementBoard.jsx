@@ -290,8 +290,7 @@ export const AdvertisementBoard = () => {
                 transition: 'transform 0.4s ease'
               }}
               onError={(e) => {
-                // Fallback graceful graphic if image URL broken
-                e.currentTarget.src = 'https://images.unsplash.com/photo-1597733336794-12d05021d510?auto=format&fit=crop&w=1200&q=80';
+                e.currentTarget.style.display = 'none';
               }}
             />
           )}

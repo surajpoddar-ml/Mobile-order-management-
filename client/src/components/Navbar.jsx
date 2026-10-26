@@ -366,7 +366,7 @@ export const Navbar = () => {
           <div className="navbar-row1-right">
             {/* Notification Bell */}
             {user ? (
-              <NotificationBell />
+              <NotificationBell lightMode={true} />
             ) : (
               <button
                 type="button"

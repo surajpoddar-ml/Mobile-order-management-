@@ -25,7 +25,7 @@ import {
   Wallet
 } from 'lucide-react';
 
-export const NotificationBell = () => {
+export const NotificationBell = ({ lightMode = false }) => {
   const { user, navigate } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -257,30 +257,44 @@ export const NotificationBell = () => {
         onClick={() => setIsOpen(!isOpen)}
         style={{
           position: 'relative',
-          background: isOpen ? '#f1f5f9' : 'transparent',
-          border: '1.5px solid #e2e8f0',
+          background: lightMode
+            ? (isOpen ? 'rgba(255, 255, 255, 0.28)' : 'rgba(255, 255, 255, 0.14)')
+            : (isOpen ? '#f1f5f9' : 'transparent'),
+          border: lightMode
+            ? '1.5px solid rgba(255, 255, 255, 0.45)'
+            : '1.5px solid #e2e8f0',
           borderRadius: '50%',
-          width: '38px',
-          height: '38px',
+          width: lightMode ? '34px' : '38px',
+          height: lightMode ? '34px' : '38px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          color: isOpen ? '#2563eb' : '#1e293b',
+          color: lightMode ? '#ffffff' : (isOpen ? '#2563eb' : '#1e293b'),
           transition: 'all 0.18s ease'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = '#cbd5e1';
-          e.currentTarget.style.backgroundColor = '#f8fafc';
+          if (lightMode) {
+            e.currentTarget.style.borderColor = '#ffffff';
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.28)';
+          } else {
+            e.currentTarget.style.borderColor = '#cbd5e1';
+            e.currentTarget.style.backgroundColor = '#f8fafc';
+          }
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = '#e2e8f0';
-          e.currentTarget.style.backgroundColor = isOpen ? '#f1f5f9' : 'transparent';
+          if (lightMode) {
+            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.45)';
+            e.currentTarget.style.backgroundColor = isOpen ? 'rgba(255, 255, 255, 0.28)' : 'rgba(255, 255, 255, 0.14)';
+          } else {
+            e.currentTarget.style.borderColor = '#e2e8f0';
+            e.currentTarget.style.backgroundColor = isOpen ? '#f1f5f9' : 'transparent';
+          }
         }}
         aria-label="Notifications"
         title="Notifications"
       >
-        <Bell size={19} />
+        <Bell size={lightMode ? 18 : 19} />
         {unreadCount > 0 && (
           <span
             style={{

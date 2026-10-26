@@ -52,7 +52,7 @@ export const LandingPage = () => {
   const [dbCategories, setDbCategories] = useState([]);
 
   const getCategoryImageUrl = (url) => {
-    if (!url) return 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=300&q=80';
+    if (!url) return '';
     return getMediaUrl(url);
   };
 
@@ -301,21 +301,27 @@ export const LandingPage = () => {
           )}
 
           {/* Product Image */}
-          <img
-            src={getMediaUrl(p.imageUrl) || 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80'}
-            alt={p.name ? `${p.name} - MWS Eagle` : 'MWS Eagle Mobile Spare Part & Accessory'}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              transition: 'transform 0.3s',
-              filter: !isItemInStock ? 'grayscale(45%)' : 'none',
-              opacity: !isItemInStock ? 0.75 : 1
-            }}
-            onError={(e) => {
-              e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80';
-            }}
-          />
+          {p.imageUrl ? (
+            <img
+              src={getMediaUrl(p.imageUrl)}
+              alt={p.name ? `${p.name} - MWS Eagle` : 'MWS Eagle'}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                transition: 'transform 0.3s',
+                filter: !isItemInStock ? 'grayscale(45%)' : 'none',
+                opacity: !isItemInStock ? 0.75 : 1
+              }}
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '140px', color: '#94a3b8' }}>
+              <Package size={36} strokeWidth={1.5} />
+            </div>
+          )}
         </div>
 
         {/* Card Content Area */}

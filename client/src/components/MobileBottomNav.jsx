@@ -84,7 +84,7 @@ export const MobileBottomNav = () => {
       isActive: false,
       onClick: () => setIsCartOpen(true),
       badge: cartCount,
-      badgeBg: '#2563eb'
+      badgeBg: '#ef4444'
     },
     {
       id: 'account',
@@ -120,7 +120,7 @@ export const MobileBottomNav = () => {
       {navItems.map((item) => {
         const IconComponent = item.icon;
         const active = item.isActive;
-        const color = active ? '#2563eb' : '#64748b';
+        const color = active ? '#0080ff' : '#64748b';
 
         return (
           <button
@@ -154,7 +154,7 @@ export const MobileBottomNav = () => {
                 size={21}
                 color={color}
                 strokeWidth={active ? 2.4 : 1.9}
-                fill={active && item.id === 'home' ? '#2563eb' : 'none'}
+                fill={active && item.id === 'home' ? '#0080ff' : 'none'}
               />
 
               {/* Notification / Count Badge (e.g. Cart, Wishlist) */}
