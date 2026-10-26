@@ -84,13 +84,13 @@ export const CustomerPortal = () => {
 
   const categoriesList = dbCategories.length > 0
     ? dbCategories.map(cat => {
-        const found = standardCategories.find(s => s.name.toLowerCase() === cat.name.toLowerCase());
-        return {
-          id: cat.name,
-          name: cat.name,
-          image: cat.imageUrl ? getCategoryImageUrl(cat.imageUrl) : (found ? found.image : '/cat_earphone.jpg')
-        };
-      })
+      const found = standardCategories.find(s => s.name.toLowerCase() === cat.name.toLowerCase());
+      return {
+        id: cat.name,
+        name: cat.name,
+        image: cat.imageUrl ? getCategoryImageUrl(cat.imageUrl) : (found ? found.image : '/cat_earphone.jpg')
+      };
+    })
     : standardCategories;
 
   const filterTabs = ['All', ...categoriesList.map(c => c.name)];
@@ -516,7 +516,9 @@ export const CustomerPortal = () => {
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No products match your current search or category filter.</p>
               </div>
             ) : (
-              <div className="products-responsive-grid">
+              <div className="products-responsive-grid" style={{
+                gap: '22px'
+              }}>
                 {displayedProducts.map((p) => {
                   const wish = isWishlisted(p.id);
                   const discountStr = calculateDiscount(p.price, p.originalPrice, p.discount);
@@ -528,7 +530,6 @@ export const CustomerPortal = () => {
                   return (
                     <div
                       key={p.id}
-                      className="product-card-container"
                       style={{
                         background: '#ffffff',
                         borderRadius: '12px',
@@ -563,9 +564,7 @@ export const CustomerPortal = () => {
                         justifyContent: 'center'
                       }}>
                         {badgeLabel && (
-                          <span
-                            className="product-card-badge"
-                            style={{
+                          <span style={{
                             position: 'absolute',
                             top: '8px',
                             left: '8px',
@@ -588,9 +587,7 @@ export const CustomerPortal = () => {
 
                         {/* Stock Status Pill */}
                         {!isItemInStock && (
-                          <span
-                            className="product-card-stock-pill"
-                            style={{
+                          <span style={{
                             position: 'absolute',
                             top: '8px',
                             right: '8px',
@@ -653,7 +650,7 @@ export const CustomerPortal = () => {
                         </h3>
 
                         {/* Star Rating */}
-                        <div className="product-card-rating" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
                           {[1, 2, 3, 4, 5].map((starIdx) => {
                             const isFilled = starIdx <= Math.round(p.rating || 0);
                             return (
@@ -671,7 +668,7 @@ export const CustomerPortal = () => {
                         </div>
 
                         {/* Price in INR ₹ */}
-                        <div className="product-card-pricing-row" style={{
+                        <div style={{
                           display: 'flex',
                           alignItems: 'baseline',
                           flexWrap: 'wrap',
@@ -684,13 +681,13 @@ export const CustomerPortal = () => {
                           </span>
 
                           {p.originalPrice && p.originalPrice > p.price && (
-                            <span className="product-card-original-price" style={{ fontSize: '0.78rem', color: '#9ca3af', textDecoration: 'line-through' }}>
+                            <span style={{ fontSize: '0.78rem', color: '#9ca3af', textDecoration: 'line-through' }}>
                               ₹{Number(p.originalPrice).toLocaleString()}
                             </span>
                           )}
 
                           {discountStr && (
-                            <span className="product-card-discount-tag" style={{
+                            <span style={{
                               fontSize: '0.70rem',
                               fontWeight: 800,
                               color: '#ef4444',
@@ -705,7 +702,7 @@ export const CustomerPortal = () => {
                         </div>
 
                         {/* Action Buttons: Add to Cart + Heart */}
-                        <div className="product-card-actions-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -849,16 +846,16 @@ export const CustomerPortal = () => {
                         fontWeight: 700,
                         background:
                           ord.orderStatus === 'Delivered' ? 'rgba(5, 150, 105, 0.1)' :
-                          ord.orderStatus === 'Processing' ? 'rgba(124, 58, 237, 0.1)' :
-                          ord.orderStatus === 'Dispatched' ? 'rgba(2, 132, 199, 0.1)' :
-                          ord.orderStatus === 'Cancelled' ? 'rgba(220, 38, 38, 0.1)' :
-                          'rgba(217, 119, 6, 0.1)',
+                            ord.orderStatus === 'Processing' ? 'rgba(124, 58, 237, 0.1)' :
+                              ord.orderStatus === 'Dispatched' ? 'rgba(2, 132, 199, 0.1)' :
+                                ord.orderStatus === 'Cancelled' ? 'rgba(220, 38, 38, 0.1)' :
+                                  'rgba(217, 119, 6, 0.1)',
                         color:
                           ord.orderStatus === 'Delivered' ? '#059669' :
-                          ord.orderStatus === 'Processing' ? '#7c3aed' :
-                          ord.orderStatus === 'Dispatched' ? '#0284c7' :
-                          ord.orderStatus === 'Cancelled' ? '#dc2626' :
-                          '#d97706'
+                            ord.orderStatus === 'Processing' ? '#7c3aed' :
+                              ord.orderStatus === 'Dispatched' ? '#0284c7' :
+                                ord.orderStatus === 'Cancelled' ? '#dc2626' :
+                                  '#d97706'
                       }}>
                         {ord.orderStatus}
                       </span>
@@ -899,12 +896,12 @@ export const CustomerPortal = () => {
                         borderRadius: '4px',
                         background:
                           ord.paymentStatus === 'Verified & Approved' ? '#dcfce7' :
-                          ord.paymentStatus === 'Payment Rejected' ? '#fee2e2' :
-                          ord.paymentStatus === 'Pending Verification' ? '#fef3c7' : '#f1f5f9',
+                            ord.paymentStatus === 'Payment Rejected' ? '#fee2e2' :
+                              ord.paymentStatus === 'Pending Verification' ? '#fef3c7' : '#f1f5f9',
                         color:
                           ord.paymentStatus === 'Verified & Approved' ? '#15803d' :
-                          ord.paymentStatus === 'Payment Rejected' ? '#b91c1c' :
-                          ord.paymentStatus === 'Pending Verification' ? '#b45309' : '#475569'
+                            ord.paymentStatus === 'Payment Rejected' ? '#b91c1c' :
+                              ord.paymentStatus === 'Pending Verification' ? '#b45309' : '#475569'
                       }}>
                         {ord.paymentStatus || 'Pending Verification'}
                       </span>

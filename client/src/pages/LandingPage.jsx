@@ -88,13 +88,13 @@ export const LandingPage = () => {
 
   const categoriesList = dbCategories.length > 0
     ? dbCategories.map(cat => {
-        const found = standardCategories.find(s => s.name.toLowerCase() === cat.name.toLowerCase());
-        return {
-          id: cat.name,
-          name: cat.name,
-          image: cat.imageUrl ? getCategoryImageUrl(cat.imageUrl) : (found ? found.image : '/cat_earphone.jpg')
-        };
-      })
+      const found = standardCategories.find(s => s.name.toLowerCase() === cat.name.toLowerCase());
+      return {
+        id: cat.name,
+        name: cat.name,
+        image: cat.imageUrl ? getCategoryImageUrl(cat.imageUrl) : (found ? found.image : '/cat_earphone.jpg')
+      };
+    })
     : standardCategories;
 
   // Fetch all products from catalog (applicable to existing accounts, new accounts & visitors)
@@ -227,7 +227,6 @@ export const LandingPage = () => {
     return (
       <div
         key={p.id}
-        className="product-card-container"
         onClick={() => openProductDetails(p)}
         style={{
           background: '#ffffff',
@@ -266,45 +265,39 @@ export const LandingPage = () => {
         >
           {/* Badge (Bestseller, New!) */}
           {badgeLabel && (
-            <span
-              className="product-card-badge"
-              style={{
-                position: 'absolute',
-                top: '8px',
-                left: '8px',
-                background: badgeBg,
-                color: '#ffffff',
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                padding: '2px 8px',
-                borderRadius: 'var(--radius-full)',
-                zIndex: 2,
-                boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
-              }}
-            >
+            <span style={{
+              position: 'absolute',
+              top: '8px',
+              left: '8px',
+              background: badgeBg,
+              color: '#ffffff',
+              fontSize: '0.68rem',
+              fontWeight: 700,
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-full)',
+              zIndex: 2,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+            }}>
               {badgeLabel}
             </span>
           )}
 
           {/* Stock Status Pill */}
           {!isItemInStock && (
-            <span
-              className="product-card-stock-pill"
-              style={{
-                position: 'absolute',
-                top: '12px',
-                right: '12px',
-                background: '#dc2626',
-                color: '#ffffff',
-                fontSize: '0.72rem',
-                fontWeight: 800,
-                padding: '3px 10px',
-                borderRadius: 'var(--radius-full)',
-                zIndex: 2,
-                boxShadow: '0 2px 8px rgba(220, 38, 38, 0.35)',
-                letterSpacing: '0.04em'
-              }}
-            >
+            <span style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              background: '#dc2626',
+              color: '#ffffff',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              padding: '3px 10px',
+              borderRadius: 'var(--radius-full)',
+              zIndex: 2,
+              boxShadow: '0 2px 8px rgba(220, 38, 38, 0.35)',
+              letterSpacing: '0.04em'
+            }}>
               OUT OF STOCK
             </span>
           )}
@@ -328,52 +321,42 @@ export const LandingPage = () => {
         </div>
 
         {/* Card Content Area */}
-        <div className="product-card-body" style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+        <div style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', flex: 1 }}>
           {/* Category uppercase label */}
-          <div
-            className="product-card-category"
-            style={{
-              fontSize: '0.68rem',
-              fontWeight: 700,
-              color: '#9ca3af',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              marginBottom: '6px'
-            }}
-          >
+          <div style={{
+            fontSize: '0.68rem',
+            fontWeight: 700,
+            color: '#9ca3af',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            marginBottom: '6px'
+          }}>
             {p.category || 'MWS ACCESSORIES'}
           </div>
 
           {/* Product Title */}
-          <h3
-            className="product-card-title"
-            style={{
-              fontSize: '0.92rem',
-              fontWeight: 700,
-              color: '#1f2937',
-              lineHeight: 1.35,
-              marginBottom: '8px',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-              minHeight: '2.7em'
-            }}
-            title={p.name}
-          >
+          <h3 style={{
+            fontSize: '0.92rem',
+            fontWeight: 700,
+            color: '#1f2937',
+            lineHeight: 1.35,
+            marginBottom: '8px',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            minHeight: '2.7em'
+          }} title={p.name}>
             {p.name}
           </h3>
 
           {/* Star Rating & Reviews */}
-          <div
-            className="product-card-rating"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              marginBottom: '12px'
-            }}
-          >
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            marginBottom: '12px'
+          }}>
             {[1, 2, 3, 4, 5].map((starIdx) => {
               const isFilled = starIdx <= Math.round(p.rating || 0);
               return (
@@ -391,68 +374,55 @@ export const LandingPage = () => {
           </div>
 
           {/* Pricing Row */}
-          <div
-            className="product-card-pricing-row"
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              flexWrap: 'wrap',
-              gap: '4px 6px',
-              marginBottom: '14px',
-              marginTop: 'auto'
-            }}
-          >
-            <span
-              className="product-card-price"
-              style={{
-                fontSize: 'clamp(1.05rem, 3.5vw, 1.22rem)',
-                fontWeight: 800,
-                color: '#111827'
-              }}
-            >
+          <div style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            flexWrap: 'wrap',
+            gap: '4px 6px',
+            marginBottom: '14px',
+            marginTop: 'auto'
+          }}>
+            <span style={{
+              fontSize: 'clamp(1.05rem, 3.5vw, 1.22rem)',
+              fontWeight: 800,
+              color: '#111827'
+            }}>
               ₹{Number(p.price || 0).toLocaleString()}
             </span>
 
             {p.originalPrice && p.originalPrice > p.price && (
-              <span
-                className="product-card-original-price"
-                style={{
-                  fontSize: '0.80rem',
-                  color: '#9ca3af',
-                  textDecoration: 'line-through'
-                }}
-              >
+              <span style={{
+                fontSize: '0.80rem',
+                color: '#9ca3af',
+                textDecoration: 'line-through'
+              }}>
                 ₹{Number(p.originalPrice).toLocaleString()}
               </span>
             )}
 
             {discountStr && (
-              <span
-                className="product-card-discount-tag"
-                style={{
-                  fontSize: '0.74rem',
-                  fontWeight: 800,
-                  color: '#ef4444',
-                  whiteSpace: 'nowrap',
-                  background: '#fee2e2',
-                  padding: '1px 6px',
-                  borderRadius: '4px'
-                }}
-              >
+              <span style={{
+                fontSize: '0.74rem',
+                fontWeight: 800,
+                color: '#ef4444',
+                whiteSpace: 'nowrap',
+                background: '#fee2e2',
+                padding: '1px 6px',
+                borderRadius: '4px'
+              }}>
                 {discountStr}
               </span>
             )}
           </div>
 
           {/* Buttons Row: Add to Cart + Heart Button */}
-          <div className="product-card-actions-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 addToCart(p);
               }}
               disabled={!isItemInStock}
-              className="product-card-btn"
               style={{
                 flex: 1,
                 display: 'inline-flex',
@@ -487,7 +457,6 @@ export const LandingPage = () => {
                 e.stopPropagation();
                 toggleWishlist(p);
               }}
-              className="product-card-heart-btn"
               style={{
                 width: '36px',
                 height: '36px',
@@ -636,7 +605,6 @@ export const LandingPage = () => {
       {selectedCategory !== 'All' && (
         <section
           id="category-products-section"
-          className="landing-products-section"
           style={{
             maxWidth: '1240px',
             margin: '0 auto',
@@ -736,7 +704,6 @@ export const LandingPage = () => {
       {/* ====== 5. ALL PRODUCTS SECTION ====== */}
       <section
         id="best-selling-products-section"
-        className="landing-products-section"
         style={{
           maxWidth: '1240px',
           margin: '0 auto',
