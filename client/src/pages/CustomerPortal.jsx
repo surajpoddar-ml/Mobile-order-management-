@@ -46,7 +46,7 @@ export const CustomerPortal = () => {
   const [dbCategories, setDbCategories] = useState([]);
 
   const getCategoryImageUrl = (url) => {
-    if (!url) return '';
+    if (!url) return 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=300&q=80';
     return getMediaUrl(url);
   };
 
@@ -67,12 +67,20 @@ export const CustomerPortal = () => {
     return () => window.removeEventListener('mws_categories_updated', handleCategorySync);
   }, []);
 
-  // Circular Categories loaded dynamically from DB
-  const circularCategories = dbCategories.map(cat => ({
-    id: cat.name,
-    name: cat.name,
-    image: getCategoryImageUrl(cat.imageUrl)
-  }));
+  // Circular Categories loaded dynamically from DB (with fallback defaults)
+  const circularCategories = dbCategories.length > 0
+    ? dbCategories.map(cat => ({
+        id: cat.name,
+        name: cat.name,
+        image: getCategoryImageUrl(cat.imageUrl)
+      }))
+    : [
+        { id: 'Charging', name: 'Charging', image: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=300&q=80' },
+        { id: 'Power', name: 'Power', image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=300&q=80' },
+        { id: 'Cables', name: 'Cables', image: 'https://images.unsplash.com/photo-1588508065123-287b28e013da?auto=format&fit=crop&w=300&q=80' },
+        { id: 'Audio', name: 'Audio', image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=300&q=80' },
+        { id: 'Protection', name: 'Protection', image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=300&q=80' }
+      ];
 
   const filterTabs = ['All', ...circularCategories.map(c => c.name)];
 
@@ -497,26 +505,20 @@ export const CustomerPortal = () => {
                           </span>
                         )}
 
-                        {p.imageUrl ? (
-                          <img
-                            src={getMediaUrl(p.imageUrl)}
-                            alt={p.name}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                              filter: !isItemInStock ? 'grayscale(45%)' : 'none',
-                              opacity: !isItemInStock ? 0.75 : 1
-                            }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                            }}
-                          />
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', minHeight: '140px', color: '#94a3b8' }}>
-                            <Package size={36} strokeWidth={1.5} />
-                          </div>
-                        )}
+                        <img
+                          src={getMediaUrl(p.imageUrl) || 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80'}
+                          alt={p.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            filter: !isItemInStock ? 'grayscale(45%)' : 'none',
+                            opacity: !isItemInStock ? 0.75 : 1
+                          }}
+                          onError={(e) => {
+                            e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80';
+                          }}
+                        />
                       </div>
 
                       {/* Content Area */}

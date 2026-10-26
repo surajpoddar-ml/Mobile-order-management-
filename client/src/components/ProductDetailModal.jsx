@@ -77,6 +77,9 @@ export const ProductDetailModal = () => {
       imageList = [p.imageUrl];
     }
   }
+  if (!imageList.length) {
+    imageList = ['https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80'];
+  }
 
   // Parse specifications / features / colors / models if available in p.specifications
   let parsedSpecs = [];
@@ -299,7 +302,7 @@ export const ProductDetailModal = () => {
                   filter: !isItemInStock ? 'grayscale(40%)' : 'none'
                 }}
                 onError={(e) => {
-                  e.target.style.display = 'none';
+                  e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80';
                 }}
               />
             </div>

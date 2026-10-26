@@ -400,25 +400,19 @@ export const ShopModals = () => {
                             background: '#ffffff'
                           }}
                         >
-                          {item.product.imageUrl ? (
-                            <img
-                              src={getMediaUrl(item.product.imageUrl)}
-                              alt={item.product.name}
-                              style={{
-                                width: '68px',
-                                height: '68px',
-                                objectFit: 'cover',
-                                borderRadius: '8px',
-                                background: '#f8fafc',
-                                flexShrink: 0
-                              }}
-                              onError={(e) => { e.target.style.display = 'none'; }}
-                            />
-                          ) : (
-                            <div style={{ width: '68px', height: '68px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', flexShrink: 0 }}>
-                              <Package size={24} />
-                            </div>
-                          )}
+                          <img
+                            src={getMediaUrl(item.product.imageUrl) || 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=200&q=80'}
+                            alt={item.product.name}
+                            style={{
+                              width: '68px',
+                              height: '68px',
+                              objectFit: 'cover',
+                              borderRadius: '8px',
+                              background: '#f8fafc',
+                              flexShrink: 0
+                            }}
+                            onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=200&q=80'; }}
+                          />
                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                             <div>
                               <div style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }}>
@@ -1372,18 +1366,12 @@ export const ShopModals = () => {
                         background: '#ffffff'
                       }}
                     >
-                      {item.imageUrl ? (
-                        <img
-                          src={getMediaUrl(item.imageUrl)}
-                          alt={item.name}
-                          style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px' }}
-                          onError={(e) => { e.target.style.display = 'none'; }}
-                        />
-                      ) : (
-                        <div style={{ width: '64px', height: '64px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                          <Package size={22} />
-                        </div>
-                      )}
+                      <img
+                        src={getMediaUrl(item.imageUrl) || 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=200&q=80'}
+                        alt={item.name}
+                        style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px' }}
+                        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=200&q=80'; }}
+                      />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }}>
                           {item.category}
