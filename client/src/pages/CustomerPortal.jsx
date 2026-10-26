@@ -237,8 +237,8 @@ export const CustomerPortal = () => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
-              padding: '14px 6px',
+              gap: '5px',
+              padding: '11px 6px',
               borderRadius: '14px',
               background: activeTab === 'catalog' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#ffffff',
               color: activeTab === 'catalog' ? '#ffffff' : '#1e293b',
@@ -247,20 +247,20 @@ export const CustomerPortal = () => {
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               textAlign: 'center',
-              minHeight: '74px'
+              minHeight: '66px'
             }}
           >
             <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '10px',
+              width: '24px',
+              height: '24px',
+              borderRadius: '7px',
               background: activeTab === 'catalog' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(2, 132, 199, 0.1)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: activeTab === 'catalog' ? '#ffffff' : '#0284c7'
             }}>
-              <Layers size={17} />
+              <Layers size={17} style={{ transform: 'scale(0.6)' }} />
             </div>
             <span style={{
               fontSize: '0.78rem',
@@ -280,8 +280,8 @@ export const CustomerPortal = () => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
-              padding: '14px 6px',
+              gap: '5px',
+              padding: '11px 6px',
               borderRadius: '14px',
               background: activeTab === 'orders' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#ffffff',
               color: activeTab === 'orders' ? '#ffffff' : '#1e293b',
@@ -290,14 +290,14 @@ export const CustomerPortal = () => {
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               textAlign: 'center',
-              minHeight: '74px',
+              minHeight: '66px',
               position: 'relative'
             }}
           >
             <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '10px',
+              width: '24px',
+              height: '24px',
+              borderRadius: '7px',
               background: activeTab === 'orders' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(2, 132, 199, 0.1)',
               display: 'flex',
               alignItems: 'center',
@@ -305,18 +305,19 @@ export const CustomerPortal = () => {
               color: activeTab === 'orders' ? '#ffffff' : '#0284c7',
               position: 'relative'
             }}>
-              <Package size={17} />
+              <Package size={17} style={{ transform: 'scale(0.6)' }} />
               {myOrders.length > 0 && (
                 <span style={{
                   position: 'absolute',
-                  top: '-4px',
-                  right: '-6px',
+                  top: '-5px',
+                  right: '-7px',
                   background: '#ef4444',
                   color: '#ffffff',
-                  fontSize: '0.62rem',
+                  fontSize: '0.58rem',
                   fontWeight: 800,
-                  padding: '1px 5px',
-                  borderRadius: '10px'
+                  padding: '1px 4px',
+                  borderRadius: '10px',
+                  lineHeight: 1.1
                 }}>
                   {myOrders.length}
                 </span>
@@ -340,8 +341,8 @@ export const CustomerPortal = () => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
-              padding: '14px 6px',
+              gap: '5px',
+              padding: '11px 6px',
               borderRadius: '14px',
               background: activeTab === 'rewards' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#ffffff',
               color: activeTab === 'rewards' ? '#ffffff' : '#1e293b',
@@ -350,20 +351,20 @@ export const CustomerPortal = () => {
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               textAlign: 'center',
-              minHeight: '74px'
+              minHeight: '66px'
             }}
           >
             <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '10px',
+              width: '24px',
+              height: '24px',
+              borderRadius: '7px',
               background: activeTab === 'rewards' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(2, 132, 199, 0.1)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: activeTab === 'rewards' ? '#ffffff' : '#0284c7'
             }}>
-              <Gift size={17} />
+              <Gift size={17} style={{ transform: 'scale(0.6)' }} />
             </div>
             <span style={{
               fontSize: '0.78rem',
