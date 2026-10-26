@@ -7,6 +7,7 @@ A robust, enterprise-grade authentication and user-management foundation for a B
 
 ## 🌟 Key Architecture & Highlights
 
+
 1. **Two Distinct User Types (+ Super Admin)**:
    - **Customer**: Direct signup, instant active status, immediate login, and access restricted to retail customer-targeted products.
    - **Distributor**: Detailed business signup (PAN/VAT, business address, company name, procurement contact), initially saved in **Pending** status. Awaiting Admin review.
