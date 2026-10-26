@@ -521,9 +521,7 @@ export const DistributorPortal = () => {
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No inventory matches your current search or category filter.</p>
               </div>
             ) : (
-              <div className="products-responsive-grid" style={{
-                gap: '22px'
-              }}>
+              <div className="products-responsive-grid">
                 {displayedProducts.map((p) => {
                   const wish = isWishlisted(p.id);
                   const discountStr = calculateDiscount(p.price, p.originalPrice, p.discount);
@@ -535,6 +533,7 @@ export const DistributorPortal = () => {
                   return (
                     <div
                       key={p.id}
+                      className="product-card-container"
                       style={{
                         background: '#ffffff',
                         borderRadius: '12px',
@@ -568,7 +567,9 @@ export const DistributorPortal = () => {
                         alignItems: 'center',
                         justifyContent: 'center'
                       }}>
-                        <span style={{
+                        <span
+                          className="product-card-badge"
+                          style={{
                           position: 'absolute',
                           top: '8px',
                           left: '8px',
@@ -590,7 +591,9 @@ export const DistributorPortal = () => {
 
                         {/* Stock Status Pill */}
                         {!isItemInStock && (
-                          <span style={{
+                          <span
+                            className="product-card-stock-pill"
+                            style={{
                             position: 'absolute',
                             top: '8px',
                             right: '8px',
@@ -653,7 +656,7 @@ export const DistributorPortal = () => {
                         </h3>
 
                         {/* Star Rating */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
+                        <div className="product-card-rating" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
                           {[1, 2, 3, 4, 5].map((starIdx) => {
                             const isFilled = starIdx <= Math.round(p.rating || 0);
                             return (
@@ -671,7 +674,7 @@ export const DistributorPortal = () => {
                         </div>
 
                         {/* Wholesale Price in INR ₹ */}
-                        <div style={{
+                        <div className="product-card-pricing-row" style={{
                           display: 'flex',
                           alignItems: 'baseline',
                           flexWrap: 'wrap',
@@ -684,13 +687,13 @@ export const DistributorPortal = () => {
                           </span>
 
                           {p.originalPrice && p.originalPrice > p.price && (
-                            <span style={{ fontSize: '0.78rem', color: '#9ca3af', textDecoration: 'line-through' }}>
+                            <span className="product-card-original-price" style={{ fontSize: '0.78rem', color: '#9ca3af', textDecoration: 'line-through' }}>
                               ₹{Number(p.originalPrice).toLocaleString()}
                             </span>
                           )}
 
                           {discountStr && (
-                            <span style={{ fontSize: '0.70rem', fontWeight: 700, color: '#0284c7', background: '#e0f2fe', padding: '1px 5px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                            <span className="product-card-discount-tag" style={{ fontSize: '0.70rem', fontWeight: 700, color: '#0284c7', background: '#e0f2fe', padding: '1px 5px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
                               {discountStr}
                             </span>
                           )}
@@ -709,7 +712,7 @@ export const DistributorPortal = () => {
                         </div>
 
                         {/* Action Buttons: Add to Wholesale Cart + Heart */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div className="product-card-actions-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
