@@ -417,6 +417,12 @@ export const api = {
         body: JSON.stringify(payload)
       }),
 
+    redeemProduct: (payload) =>
+      request('/rewards/redeem-product', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+
     getMyRedemptions: () =>
       request('/rewards/my-redemptions', { method: 'GET' }),
 

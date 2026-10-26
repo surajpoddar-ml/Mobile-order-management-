@@ -263,84 +263,102 @@ router.get('/my-history', verifyToken, async (req, res) => {
 });
 
 // =========================================================================
-// 3. CASH REDEMPTION REQUESTS (CUSTOMER & DISTRIBUTOR)
+// 3. PRODUCT REDEMPTION (BUY PRODUCTS WITH POINTS - 1 PT = NPR 1)
 // =========================================================================
 
 /**
- * POST /api/rewards/redeem
- * Submit a request to redeem points for cash payout
+ * POST /api/rewards/redeem-product
+ * Purchase a catalog product using earned reward points exclusively.
+ * Conversion rate: 1 Reward Point = 1 NPR.
  */
-router.post('/redeem', verifyToken, async (req, res) => {
+router.post('/redeem-product', verifyToken, async (req, res) => {
   try {
     const {
-      points,
-      fullName,
-      phoneNumber,
-      address = '',
-      bankName,
-      accountHolderName,
-      accountNumber,
-      ifscCode,
-      upiId = ''
+      productId,
+      quantity = 1,
+      shippingAddress,
+      district,
+      city = '',
+      state = '',
+      postalCode = '',
+      customerPhone,
+      customerName,
+      notes = ''
     } = req.body;
 
-    const requestedPoints = parseInt(points, 10);
-    if (!requestedPoints || requestedPoints <= 0) {
-      return res.status(400).json({ success: false, message: 'Please enter a valid points amount to redeem.' });
+    const qty = parseInt(quantity, 10);
+    if (!qty || qty <= 0) {
+      return res.status(400).json({ success: false, message: 'Quantity must be at least 1.' });
     }
 
-    if (!fullName || !fullName.trim()) {
-      return res.status(400).json({ success: false, message: 'Full Name is required.' });
-    }
-    if (!phoneNumber || !phoneNumber.trim()) {
-      return res.status(400).json({ success: false, message: 'Phone Number is required.' });
-    }
-    if (!bankName || !bankName.trim()) {
-      return res.status(400).json({ success: false, message: 'Bank Name is required.' });
-    }
-    if (!accountHolderName || !accountHolderName.trim()) {
-      return res.status(400).json({ success: false, message: 'Account Holder Name is required.' });
-    }
-    if (!accountNumber || !accountNumber.trim()) {
-      return res.status(400).json({ success: false, message: 'Account Number is required.' });
-    }
-    if (!ifscCode || !ifscCode.trim()) {
-      return res.status(400).json({ success: false, message: 'Bank IFSC / Branch Code is required.' });
+    if (!productId) {
+      return res.status(400).json({ success: false, message: 'Product ID is required.' });
     }
 
-    const settings = await getRewardSettings();
-    if (requestedPoints < settings.minPoints) {
-      return res.status(400).json({
-        success: false,
-        message: `Minimum redemption threshold is ${settings.minPoints} points.`
-      });
+    if (!shippingAddress || !shippingAddress.trim()) {
+      return res.status(400).json({ success: false, message: 'Delivery address is required for shipment.' });
     }
 
-    // Fetch user record to check current points balance
-    const user = await queryGet('SELECT id, fullName, email, userType, pointsBalance FROM users WHERE id = ?', [req.user.id]);
+    if (!district || !district.trim()) {
+      return res.status(400).json({ success: false, message: 'District is required for shipment.' });
+    }
+
+    // 1. Fetch Product from Catalog
+    const product = await queryGet('SELECT * FROM products WHERE id = ?', [productId]);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Selected product was not found in catalog.' });
+    }
+
+    if (product.productStatus === 'Inactive') {
+      return res.status(400).json({ success: false, message: 'This product is currently inactive.' });
+    }
+
+    if (product.inStock <= 0) {
+      return res.status(400).json({ success: false, message: `"${product.name}" is currently out of stock.` });
+    }
+
+    // 2. Determine Unit Price & Total NPR Value
+    // 1 Reward Point = 1 NPR.
+    const isDistributor = req.user.userType === 'Distributor';
+    let unitPrice = 0;
+    if (isDistributor && product.distributorPrice > 0) {
+      unitPrice = product.distributorPrice;
+    } else if (product.customerPrice > 0) {
+      unitPrice = product.customerPrice;
+    } else {
+      unitPrice = product.originalPrice || product.distributorPrice || product.customerPrice || 1;
+    }
+
+    const totalNpr = Math.round(unitPrice * qty * 100) / 100;
+    const requiredPoints = Math.round(totalNpr);
+
+    // 3. Check User's Points Balance
+    const user = await queryGet(
+      'SELECT id, fullName, email, phoneNumber, userType, pointsBalance FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User record not found.' });
+      return res.status(404).json({ success: false, message: 'User account not found.' });
     }
 
     const currentBalance = user.pointsBalance || 0;
-    if (currentBalance < requestedPoints) {
+    if (currentBalance < requiredPoints) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient points balance. You requested ${requestedPoints} pts, but your current balance is ${currentBalance} pts.`
+        message: `Insufficient points. You need ${requiredPoints} points (NPR ${totalNpr.toLocaleString()}), but your current balance is ${currentBalance} points.`
       });
     }
 
-    // Calculate cash payout amount
-    const cashAmount = Math.round(requestedPoints * settings.rate * 100) / 100;
     const now = new Date().toISOString();
-    const dateStr = now.slice(0, 10).replace(/-/g, '');
-    const randPart = crypto.randomBytes(2).toString('hex').toUpperCase();
-    const requestNumber = `RED-${dateStr}-${randPart}`;
+    const randDigits = Math.floor(100000 + Math.random() * 900000);
+    const orderNumber = `MWS-ORD-REW-${randDigits}`;
+    const requestNumber = `RED-${orderNumber}`;
 
-    // 1. ATOMIC DEDUCTION: Safely deduct points immediately from user to prevent double spending
+    // 4. ATOMIC POINTS DEDUCTION: Safely decrement points
     const deductRes = await queryRun(
       'UPDATE users SET pointsBalance = pointsBalance - ?, updatedDate = ? WHERE id = ? AND pointsBalance >= ?',
-      [requestedPoints, now, req.user.id, requestedPoints]
+      [requiredPoints, now, req.user.id, requiredPoints]
     );
 
     if (deductRes.changes === 0) {
@@ -350,102 +368,174 @@ router.post('/redeem', verifyToken, async (req, res) => {
       });
     }
 
-    const newBalance = currentBalance - requestedPoints;
+    const newBalance = currentBalance - requiredPoints;
 
-    // 2. Insert into redemption_requests
-    const insertRes = await queryRun(
-      `INSERT INTO redemption_requests (
-        requestNumber, userId, userType, points, cashAmount, conversionRate,
-        fullName, phoneNumber, address, bankName, accountHolderName, accountNumber,
-        ifscCode, upiId, status, createdDate, updatedDate
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?)`,
+    // 5. Create Order in orders table (Payment Method: Reward Points)
+    const orderItems = [
+      {
+        productId: product.id,
+        name: product.name,
+        price: unitPrice,
+        quantity: qty,
+        total: totalNpr,
+        imageUrl: product.imageUrl || '',
+        points: requiredPoints,
+        category: product.category || ''
+      }
+    ];
+
+    const buyerName = (customerName && customerName.trim()) || user.fullName || 'Customer';
+    const buyerPhone = (customerPhone && customerPhone.trim()) || user.phoneNumber || '';
+    const buyerEmail = user.email || '';
+
+    const orderRes = await queryRun(
+      `INSERT INTO orders (
+        orderNumber, userId, customerName, customerEmail, customerPhone, userType,
+        shippingAddress, district, city, state, postalCode, items, totalAmount, paymentMethod,
+        transactionId, paymentScreenshot, paymentStatus, orderStatus, notes, createdDate, updatedDate
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Reward Points', ?, NULL, 'Paid via Reward Points', 'Pending', ?, ?, ?)`,
       [
-        requestNumber,
-        req.user.id,
-        req.user.userType,
-        requestedPoints,
-        cashAmount,
-        settings.rate,
-        fullName.trim(),
-        phoneNumber.trim(),
-        address ? address.trim() : '',
-        bankName.trim(),
-        accountHolderName.trim(),
-        accountNumber.trim(),
-        ifscCode.trim().toUpperCase(),
-        upiId ? upiId.trim() : '',
+        orderNumber,
+        String(user.id),
+        buyerName,
+        buyerEmail,
+        buyerPhone,
+        user.userType,
+        shippingAddress.trim(),
+        district.trim(),
+        city ? city.trim() : '',
+        state ? state.trim() : '',
+        postalCode ? postalCode.trim() : '',
+        JSON.stringify(orderItems),
+        totalNpr,
+        `REW-${requiredPoints}-PTS`,
+        notes ? `${notes} (Purchased via ${requiredPoints} Reward Points)` : `Purchased via ${requiredPoints} Reward Points`,
         now,
         now
       ]
     );
 
-    // 3. Record in point_transactions
+    // 6. Record in redemption_requests (Product Redemption History)
+    await queryRun(
+      `INSERT INTO redemption_requests (
+        requestNumber, userId, userType, points, cashAmount, conversionRate,
+        fullName, phoneNumber, address, bankName, accountHolderName, accountNumber,
+        ifscCode, upiId, status, adminNotes, transactionReference, createdDate, updatedDate,
+        productId, productName, productImage, quantity, orderNumber, redemptionType
+      ) VALUES (?, ?, ?, ?, ?, 1.0, ?, ?, ?, 'Product Redemption', ?, ?, 'REWARD-PTS', '', 'Approved', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'product')`,
+      [
+        requestNumber,
+        user.id,
+        user.userType,
+        requiredPoints,
+        totalNpr,
+        buyerName,
+        buyerPhone,
+        shippingAddress.trim(),
+        buyerName,
+        orderNumber,
+        `Reward product purchased: ${product.name} (x${qty})`,
+        orderNumber,
+        now,
+        now,
+        product.id,
+        product.name,
+        product.imageUrl || '',
+        qty,
+        orderNumber
+      ]
+    );
+
+    // 7. Record in point_transactions ledger
     await queryRun(
       `INSERT INTO point_transactions (
         userId, userType, type, points, balanceAfter, referenceId, description, createdDate
-      ) VALUES (?, ?, 'redeem_request', ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, 'product_redemption', ?, ?, ?, ?, ?)`,
       [
-        req.user.id,
-        req.user.userType,
-        -requestedPoints,
+        user.id,
+        user.userType,
+        -requiredPoints,
         newBalance,
-        requestNumber,
-        `Redemption Request: ${requestNumber} for ₹${cashAmount.toLocaleString()}`,
+        orderNumber,
+        `Product Purchase: ${product.name} x${qty} (-${requiredPoints} pts)`,
         now
       ]
     );
 
-    // 4. Notifications to Admin and User
+    // 8. Notifications to Admin & User
     try {
-      // Notify Admin
+      // Admin Notification
       await createNotification({
         recipientId: 'ADMIN',
         recipientRole: 'Admin',
-        title: `💰 New Payout Request: ${requestNumber}`,
-        message: `${fullName} (${req.user.userType}) requested redemption of ${requestedPoints} points for ₹${cashAmount.toLocaleString()} to ${bankName}.`,
+        title: `🎁 New Reward Point Order: ${orderNumber}`,
+        message: `${buyerName} (${user.userType}) redeemed ${requiredPoints} points (NPR ${totalNpr.toLocaleString()}) for ${qty}x ${product.name}.`,
         type: 'payment_submitted',
-        entityId: requestNumber,
-        linkUrl: '/admin?tab=rewards-payouts',
-        dedupKey: `redeem_req_${requestNumber}_ADMIN`
+        entityId: orderNumber,
+        linkUrl: '/admin?tab=orders',
+        dedupKey: `reward_order_${orderNumber}_ADMIN`
       });
 
-      // Notify User
+      // User Notification
       await createNotification({
-        recipientId: String(req.user.id),
-        recipientRole: req.user.userType,
-        title: `Redemption Submitted: ${requestNumber}`,
-        message: `Your request to redeem ${requestedPoints} points for ₹${cashAmount.toLocaleString()} has been received and is pending admin verification.`,
-        type: 'payment_submitted',
-        entityId: requestNumber,
-        linkUrl: req.user.userType === 'Distributor' ? '/distributor?tab=rewards' : '/customer?tab=rewards',
-        dedupKey: `redeem_req_${requestNumber}_USER`
+        recipientId: String(user.id),
+        recipientRole: user.userType,
+        title: `🎉 Order Placed with Reward Points!`,
+        message: `Your order ${orderNumber} for ${qty}x "${product.name}" has been placed using ${requiredPoints} points (NPR ${totalNpr.toLocaleString()}).`,
+        type: 'product_created',
+        entityId: orderNumber,
+        linkUrl: user.userType === 'Distributor' ? '/distributor?tab=orders' : '/customer?tab=orders',
+        dedupKey: `reward_order_${orderNumber}_USER`
       });
-    } catch (e) {
-      console.error('Notification dispatch error on redemption:', e);
+    } catch (notifErr) {
+      console.error('Notification dispatch error on product redemption:', notifErr);
     }
-
-    const createdRecord = await queryGet('SELECT * FROM redemption_requests WHERE id = ?', [insertRes.lastID]);
 
     return res.status(201).json({
       success: true,
-      message: `Redemption request ${requestNumber} for ₹${cashAmount.toLocaleString()} submitted successfully!`,
-      request: createdRecord,
+      message: `🎉 Order placed! You successfully redeemed ${requiredPoints} points for "${product.name}".`,
+      order: {
+        orderId: orderRes.lastID,
+        orderNumber,
+        productName: product.name,
+        quantity: qty,
+        totalNpr,
+        pointsRedeemed: requiredPoints,
+        paymentMethod: 'Reward Points',
+        paymentStatus: 'Paid via Reward Points',
+        orderStatus: 'Pending'
+      },
       newBalance
     });
   } catch (err) {
-    console.error('Error submitting redemption request:', err);
-    return res.status(500).json({ success: false, message: err.message || 'Failed to submit redemption request.' });
+    console.error('Error redeeming product with points:', err);
+    return res.status(500).json({ success: false, message: err.message || 'Failed to process product redemption.' });
   }
 });
 
 /**
+ * POST /api/rewards/redeem
+ * Deprecated cash payout route. Redirects / rejects cash withdrawal.
+ */
+router.post('/redeem', verifyToken, async (req, res) => {
+  return res.status(400).json({
+    success: false,
+    message: 'Cash payouts have been replaced with Product Redemption. Reward points can now be redeemed directly to purchase catalog products (1 Point = NPR 1).'
+  });
+});
+
+/**
  * GET /api/rewards/my-redemptions
- * Fetch redemption requests submitted by current user
+ * Fetch product redemptions submitted by current user
  */
 router.get('/my-redemptions', verifyToken, async (req, res) => {
   try {
     const list = await queryAll(
-      'SELECT * FROM redemption_requests WHERE userId = ? ORDER BY id DESC',
+      `SELECT r.*, o.orderStatus, o.paymentStatus as orderPaymentStatus
+       FROM redemption_requests r
+       LEFT JOIN orders o ON r.orderNumber = o.orderNumber
+       WHERE r.userId = ?
+       ORDER BY r.id DESC`,
       [req.user.id]
     );
     return res.status(200).json({ success: true, redemptions: list || [] });
@@ -699,9 +789,11 @@ router.get('/admin/redemptions', verifyToken, requireAdmin, async (req, res) => 
         r.*,
         u.email as userEmail,
         u.pointsBalance as userCurrentBalance,
-        u.totalPointsEarned as userTotalEarned
+        u.totalPointsEarned as userTotalEarned,
+        o.orderStatus as linkedOrderStatus
       FROM redemption_requests r
       LEFT JOIN users u ON r.userId = u.id
+      LEFT JOIN orders o ON r.orderNumber = o.orderNumber
       WHERE 1=1
     `;
     const params = [];
@@ -712,16 +804,16 @@ router.get('/admin/redemptions', verifyToken, requireAdmin, async (req, res) => 
     }
 
     if (search && search.trim()) {
-      sql += ' AND (r.requestNumber LIKE ? OR r.fullName LIKE ? OR r.phoneNumber LIKE ? OR r.bankName LIKE ? OR u.email LIKE ?)';
+      sql += ' AND (r.requestNumber LIKE ? OR r.fullName LIKE ? OR r.phoneNumber LIKE ? OR r.productName LIKE ? OR r.orderNumber LIKE ? OR u.email LIKE ?)';
       const s = `%${search.trim()}%`;
-      params.push(s, s, s, s, s);
+      params.push(s, s, s, s, s, s);
     }
 
     sql += ' ORDER BY r.id DESC';
     const list = await queryAll(sql, params);
 
     // Summary counts
-    const statusCounts = await queryAll('SELECT status, COUNT(*) as count, SUM(cashAmount) as totalCash FROM redemption_requests GROUP BY status');
+    const statusCounts = await queryAll('SELECT status, COUNT(*) as count, SUM(cashAmount) as totalCash, SUM(points) as totalPoints FROM redemption_requests GROUP BY status');
 
     return res.status(200).json({
       success: true,

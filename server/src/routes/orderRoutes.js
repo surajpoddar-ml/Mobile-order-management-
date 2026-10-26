@@ -326,6 +326,52 @@ router.put('/admin/:id/status', verifyToken, requireAdmin, async (req, res) => {
     const newStatus = status || existing.orderStatus;
     const newPaymentStatus = paymentStatus || existing.paymentStatus;
 
+    // Point Refund Check: If an order placed with Reward Points is cancelled, safely refund points back to the user
+    if (newStatus === 'Cancelled' && existing.orderStatus !== 'Cancelled' && existing.paymentMethod === 'Reward Points') {
+      const refundPoints = Math.round(Number(existing.totalAmount) || 0);
+      if (refundPoints > 0 && existing.userId) {
+        await queryRun(
+          'UPDATE users SET pointsBalance = pointsBalance + ?, updatedDate = ? WHERE id = ?',
+          [refundPoints, now, existing.userId]
+        );
+        const userRow = await queryGet('SELECT pointsBalance FROM users WHERE id = ?', [existing.userId]);
+        const balAfter = userRow ? userRow.pointsBalance : refundPoints;
+        await queryRun(
+          `INSERT INTO point_transactions (
+            userId, userType, type, points, balanceAfter, referenceId, description, createdDate
+          ) VALUES (?, ?, 'reward_order_refund', ?, ?, ?, ?, ?)`,
+          [
+            existing.userId,
+            existing.userType,
+            refundPoints,
+            balAfter,
+            existing.orderNumber,
+            `Refund: Order ${existing.orderNumber} Cancelled (+${refundPoints} pts)`,
+            now
+          ]
+        );
+        // Synchronize linked redemption_requests record
+        await queryRun(
+          'UPDATE redemption_requests SET status = "Rejected", rejectionReason = "Order Cancelled - Points Refunded", updatedDate = ? WHERE orderNumber = ?',
+          [now, existing.orderNumber]
+        );
+
+        // Notify user of points refund
+        try {
+          await createNotification({
+            recipientId: String(existing.userId),
+            recipientRole: existing.userType,
+            title: `🔄 ${refundPoints} Reward Points Refunded`,
+            message: `Your cancelled order ${existing.orderNumber} has been refunded. ${refundPoints} points have been credited back to your balance.`,
+            type: 'order_status',
+            entityId: existing.orderNumber,
+            linkUrl: existing.userType === 'Distributor' ? '/distributor?tab=rewards' : '/customer?tab=rewards',
+            dedupKey: `refund_points_${existing.orderNumber}_${Date.now()}`
+          });
+        } catch (e) {}
+      }
+    }
+
     await queryRun(
       'UPDATE orders SET orderStatus = ?, paymentStatus = ?, updatedDate = ? WHERE id = ?',
       [newStatus, newPaymentStatus, now, id]

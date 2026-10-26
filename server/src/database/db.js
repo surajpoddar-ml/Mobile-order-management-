@@ -309,6 +309,27 @@ export const initDb = async () => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
+  // Safe schema extensions for product redemption
+  const redemptionAlterCols = [
+    'ALTER TABLE redemption_requests ADD COLUMN productId INT DEFAULT NULL',
+    'ALTER TABLE redemption_requests ADD COLUMN productName VARCHAR(255) DEFAULT NULL',
+    'ALTER TABLE redemption_requests ADD COLUMN productImage TEXT DEFAULT NULL',
+    'ALTER TABLE redemption_requests ADD COLUMN quantity INT DEFAULT 1',
+    'ALTER TABLE redemption_requests ADD COLUMN orderNumber VARCHAR(100) DEFAULT NULL',
+    'ALTER TABLE redemption_requests ADD COLUMN redemptionType VARCHAR(50) DEFAULT "product"',
+    'ALTER TABLE redemption_requests MODIFY COLUMN bankName VARCHAR(255) NULL',
+    'ALTER TABLE redemption_requests MODIFY COLUMN accountHolderName VARCHAR(255) NULL',
+    'ALTER TABLE redemption_requests MODIFY COLUMN accountNumber VARCHAR(100) NULL',
+    'ALTER TABLE redemption_requests MODIFY COLUMN ifscCode VARCHAR(100) NULL'
+  ];
+  for (const alterSql of redemptionAlterCols) {
+    try {
+      await queryRun(alterSql);
+    } catch (e) {
+      // Ignore if already applied
+    }
+  }
+
   // System Settings table
   await queryRun(`
     CREATE TABLE IF NOT EXISTS system_settings (

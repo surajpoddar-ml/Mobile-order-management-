@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Wallet,
+  ShoppingBag,
   CheckCircle2,
   XCircle,
   Clock,
@@ -18,7 +18,10 @@ import {
   ShieldCheck,
   X,
   CreditCard,
-  Send
+  Send,
+  Package,
+  Gift,
+  ExternalLink
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -30,10 +33,7 @@ export const AdminRewardsPayouts = () => {
     activeTokens: 0,
     totalPointsDistributed: 0,
     pendingPayoutsCount: 0,
-    pendingPayoutsCash: 0,
-    pendingPayoutsPoints: 0,
     completedPayoutsCount: 0,
-    totalPayoutsPaidAmount: 0,
     totalUsersWithPoints: 0,
     totalOutstandingUserBalance: 0,
     settings: { rate: 1.0, minPoints: 10 }
@@ -57,15 +57,6 @@ export const AdminRewardsPayouts = () => {
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState({ type: '', text: '' });
 
-  // Modals for Payout actions
-  const [payModalItem, setPayModalItem] = useState(null);
-  const [txnRefInput, setTxnRefInput] = useState('');
-  const [payNotesInput, setPayNotesInput] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
-
-  const [rejectModalItem, setRejectModalItem] = useState(null);
-  const [rejectReasonInput, setRejectReasonInput] = useState('');
-
   // Load Dashboard Overview Metrics
   const loadDashboardMetrics = async () => {
     try {
@@ -74,7 +65,7 @@ export const AdminRewardsPayouts = () => {
         setMetrics(res.metrics);
         if (res.metrics.settings) {
           setRateInput(String(res.metrics.settings.rate || 1.0));
-          setMinPointsInput(String(res.metrics.settings.minPoints || 50));
+          setMinPointsInput(String(res.metrics.settings.minPoints || 10));
         }
       }
     } catch (err) {
@@ -129,54 +120,30 @@ export const AdminRewardsPayouts = () => {
     }
   }, [activeTab, userRoleFilter]);
 
-  const handleUpdateStatus = async (id, status, extra = {}) => {
-    setActionLoading(true);
-    try {
-      const res = await api.rewards.admin.updateRedemptionStatus(id, {
-        status,
-        ...extra
-      });
-      if (res.success) {
-        loadRedemptions(true);
-        loadDashboardMetrics();
-        setPayModalItem(null);
-        setRejectModalItem(null);
-        setTxnRefInput('');
-        setPayNotesInput('');
-        setRejectReasonInput('');
-      } else {
-        alert(res.message || 'Failed to update redemption status.');
-      }
-    } catch (err) {
-      alert(err.message || 'Failed to update status.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
+  // Save Settings
   const handleSaveSettings = async (e) => {
     e.preventDefault();
-    setSettingsMsg({ type: '', text: '' });
     setSavingSettings(true);
-
+    setSettingsMsg({ type: '', text: '' });
     try {
       const res = await api.rewards.admin.updateSettings({
-        rate: parseFloat(rateInput),
-        minPoints: parseInt(minPointsInput, 10)
+        rate: parseFloat(rateInput) || 1.0,
+        minPoints: parseInt(minPointsInput, 10) || 10
       });
       if (res.success) {
-        setSettingsMsg({ type: 'success', text: 'Reward conversion settings updated successfully!' });
+        setSettingsMsg({ type: 'success', text: 'Reward settings updated successfully!' });
         loadDashboardMetrics();
       } else {
         setSettingsMsg({ type: 'error', text: res.message || 'Failed to update settings.' });
       }
     } catch (err) {
-      setSettingsMsg({ type: 'error', text: err.message || 'Failed to update settings.' });
+      setSettingsMsg({ type: 'error', text: err.message || 'Error updating settings.' });
     } finally {
       setSavingSettings(false);
     }
   };
 
+  // Format date helper
   const formatDate = (isoStr) => {
     if (!isoStr) return '—';
     try {
@@ -192,102 +159,63 @@ export const AdminRewardsPayouts = () => {
     }
   };
 
+  // Status badge styling helper
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'Paid':
-        return { bg: '#ecfdf5', border: '#a7f3d0', color: '#059669', label: 'Paid' };
       case 'Approved':
-        return { bg: '#eff6ff', border: '#bfdbfe', color: '#2563eb', label: 'Approved' };
+      case 'Paid':
+        return {
+          bg: '#ecfdf5',
+          border: '#a7f3d0',
+          color: '#059669',
+          label: 'Approved'
+        };
       case 'Processing':
-        return { bg: '#fef3c7', border: '#fde68a', color: '#d97706', label: 'Processing' };
+        return {
+          bg: '#eff6ff',
+          border: '#bfdbfe',
+          color: '#2563eb',
+          label: 'Processing'
+        };
+      case 'Delivered':
+        return {
+          bg: '#f0fdf4',
+          border: '#bbf7d0',
+          color: '#16a34a',
+          label: 'Delivered'
+        };
+      case 'Cancelled':
       case 'Rejected':
-        return { bg: '#fef2f2', border: '#fecaca', color: '#dc2626', label: 'Rejected' };
+        return {
+          bg: '#fef2f2',
+          border: '#fecaca',
+          color: '#dc2626',
+          label: 'Cancelled / Refunded'
+        };
       default:
-        return { bg: '#f1f5f9', border: '#cbd5e1', color: '#64748b', label: 'Pending' };
+        return {
+          bg: '#fef3c7',
+          border: '#fde68a',
+          color: '#d97706',
+          label: 'Pending'
+        };
     }
   };
 
-  return (
-    <div style={{ maxWidth: '1320px', margin: '0 auto', paddingBottom: '50px' }}>
-      {/* Title */}
-      <div style={{ marginBottom: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-          <span
-            style={{
-              backgroundColor: 'rgba(16, 185, 129, 0.12)',
-              color: '#059669',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              padding: '3px 10px',
-              borderRadius: '12px',
-              fontSize: '0.74rem',
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px'
-            }}
-          >
-            <Wallet size={12} /> Financial Payouts & Audit
-          </span>
-        </div>
-        <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-          Rewards, Payouts & User Balances
-        </h1>
-        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>
-          Audit customer & distributor point balances, approve cash redemptions, and configure rewards conversion rates.
-        </div>
-      </div>
+  // Calculate total NPR value redeemed
+  const totalValueRedeemedNpr = redemptions.reduce((acc, r) => acc + (Number(r.cashAmount) || 0), 0);
+  const totalPointsRedeemedSum = redemptions.reduce((acc, r) => acc + (Number(r.points) || 0), 0);
 
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* 1. TOP METRICS DASHBOARD */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-          gap: '16px',
-          marginBottom: '28px'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '16px'
         }}
       >
-        {/* Outstanding Pending Payouts */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #ffffff 0%, #fefce8 100%)',
-            borderRadius: '18px',
-            border: '1.5px solid #fde047',
-            padding: '18px 20px',
-            boxShadow: '0 4px 12px rgba(234, 179, 8, 0.1)'
-          }}
-        >
-          <div style={{ fontSize: '0.72rem', color: '#854d0e', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>
-            Pending Payout Requests
-          </div>
-          <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#ca8a04', lineHeight: 1.1 }}>
-            ₹{Number(metrics.pendingPayoutsCash || 0).toLocaleString()}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: '#a16207', marginTop: '4px' }}>
-            {metrics.pendingPayoutsCount} requests ({Number(metrics.pendingPayoutsPoints || 0).toLocaleString()} pts)
-          </div>
-        </div>
-
-        {/* Total Cash Paid Out */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%)',
-            borderRadius: '18px',
-            border: '1.5px solid #a7f3d0',
-            padding: '18px 20px',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.1)'
-          }}
-        >
-          <div style={{ fontSize: '0.72rem', color: '#065f46', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>
-            Total Payouts Completed
-          </div>
-          <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#059669', lineHeight: 1.1 }}>
-            ₹{Number(metrics.totalPayoutsPaidAmount || 0).toLocaleString()}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: '#047857', marginTop: '4px' }}>
-            {metrics.completedPayoutsCount} payouts settled
-          </div>
-        </div>
-
         {/* Total Points Distributed */}
         <div
           style={{
@@ -329,6 +257,48 @@ export const AdminRewardsPayouts = () => {
             Held by {metrics.totalUsersWithPoints} active users
           </div>
         </div>
+
+        {/* Total Product Redemptions */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '18px',
+            border: '1.5px solid #e2e8f0',
+            padding: '18px 20px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>
+            Total Product Purchases
+          </div>
+          <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#059669', lineHeight: 1.1 }}>
+            {redemptions.length} <span style={{ fontSize: '0.85rem' }}>orders</span>
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+            {totalPointsRedeemedSum.toLocaleString()} points redeemed
+          </div>
+        </div>
+
+        {/* Total Redeemed Value in NPR */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '18px',
+            border: '1.5px solid #e2e8f0',
+            padding: '18px 20px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>
+            Total Redeemed Value
+          </div>
+          <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#d97706', lineHeight: 1.1 }}>
+            NPR {totalValueRedeemedNpr.toLocaleString()}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+            Exact conversion: 1 Pt = NPR 1
+          </div>
+        </div>
       </div>
 
       {/* 2. NAVIGATION TABS */}
@@ -363,25 +333,24 @@ export const AdminRewardsPayouts = () => {
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              whiteSpace: 'nowrap'
             }}
           >
-            <Wallet size={17} color={activeTab === 'redemptions' ? '#059669' : '#94a3b8'} />
-            <span>Cash Redemption Requests</span>
-            {metrics.pendingPayoutsCount > 0 && (
-              <span
-                style={{
-                  backgroundColor: '#fef3c7',
-                  color: '#b45309',
-                  fontSize: '0.7rem',
-                  fontWeight: 800,
-                  padding: '2px 8px',
-                  borderRadius: '10px'
-                }}
-              >
-                {metrics.pendingPayoutsCount} pending
-              </span>
-            )}
+            <ShoppingBag size={17} color={activeTab === 'redemptions' ? '#059669' : '#94a3b8'} />
+            <span>Reward Product Redemption History</span>
+            <span
+              style={{
+                backgroundColor: '#ecfdf5',
+                color: '#059669',
+                fontSize: '0.7rem',
+                fontWeight: 800,
+                padding: '2px 8px',
+                borderRadius: '10px'
+              }}
+            >
+              {redemptions.length}
+            </span>
           </button>
 
           <button
@@ -398,7 +367,8 @@ export const AdminRewardsPayouts = () => {
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              whiteSpace: 'nowrap'
             }}
           >
             <Users size={17} color={activeTab === 'users' ? '#059669' : '#94a3b8'} />
@@ -419,7 +389,8 @@ export const AdminRewardsPayouts = () => {
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              whiteSpace: 'nowrap'
             }}
           >
             <Settings size={17} color={activeTab === 'settings' ? '#059669' : '#94a3b8'} />
@@ -427,7 +398,7 @@ export const AdminRewardsPayouts = () => {
           </button>
         </div>
 
-        {/* TAB 1: REDEMPTION REQUESTS */}
+        {/* TAB 1: PRODUCT REDEMPTION HISTORY */}
         {activeTab === 'redemptions' && (
           <div>
             {/* Toolbar */}
@@ -444,7 +415,7 @@ export const AdminRewardsPayouts = () => {
               }}
             >
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {['All', 'Pending', 'Approved', 'Processing', 'Paid', 'Rejected'].map((st) => (
+                {['All', 'Approved', 'Pending', 'Processing', 'Delivered', 'Cancelled'].map((st) => (
                   <button
                     key={st}
                     type="button"
@@ -468,7 +439,7 @@ export const AdminRewardsPayouts = () => {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                   type="text"
-                  placeholder="Search request #, user, bank..."
+                  placeholder="Search order #, user, product..."
                   value={redemptionSearch}
                   onChange={(e) => setRedemptionSearch(e.target.value)}
                   onKeyDown={(e) => {
@@ -506,42 +477,46 @@ export const AdminRewardsPayouts = () => {
             <div style={{ overflowX: 'auto' }}>
               {loadingRedemptions ? (
                 <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-                  Loading redemption requests...
+                  Loading product redemption history...
                 </div>
               ) : redemptions.length === 0 ? (
                 <div style={{ padding: '48px 20px', textAlign: 'center', color: '#64748b' }}>
-                  <Wallet size={32} style={{ margin: '0 auto 10px', color: '#94a3b8' }} />
-                  <div style={{ fontWeight: 800, color: '#334155' }}>No Redemption Requests Found</div>
+                  <ShoppingBag size={32} style={{ margin: '0 auto 10px', color: '#94a3b8' }} />
+                  <div style={{ fontWeight: 800, color: '#334155' }}>No Product Redemptions Found</div>
                   <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '2px' }}>
-                    {redemptionStatusFilter !== 'All' ? `No requests matching "${redemptionStatusFilter}"` : 'Requests will appear here when users redeem points.'}
+                    {redemptionStatusFilter !== 'All'
+                      ? `No records matching "${redemptionStatusFilter}"`
+                      : 'Records will appear here when customers or distributors buy products using reward points.'}
                   </div>
                 </div>
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ borderBottom: '1.5px solid #e2e8f0', color: '#64748b', fontSize: '0.74rem', textTransform: 'uppercase' }}>
-                      <th style={{ padding: '12px 16px' }}>Request ID</th>
+                      <th style={{ padding: '12px 16px' }}>Order Reference</th>
                       <th style={{ padding: '12px 16px' }}>Date</th>
                       <th style={{ padding: '12px 16px' }}>User Details</th>
-                      <th style={{ padding: '12px 16px' }}>Points & Cash</th>
-                      <th style={{ padding: '12px 16px' }}>Bank Account</th>
+                      <th style={{ padding: '12px 16px' }}>Purchased Product</th>
+                      <th style={{ padding: '12px 16px' }}>Points Deducted</th>
+                      <th style={{ padding: '12px 16px' }}>NPR Equivalent</th>
                       <th style={{ padding: '12px 16px' }}>Status</th>
                       <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {redemptions.map((item) => {
-                      const badge = getStatusBadge(item.status);
-                      const isPending = item.status === 'Pending';
-                      const isApproved = item.status === 'Approved';
-                      const isProcessing = item.status === 'Processing';
+                      const displayStatus = item.linkedOrderStatus || item.status || 'Approved';
+                      const badge = getStatusBadge(displayStatus);
 
                       return (
                         <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '0.84rem' }}>
-                          {/* Request Number */}
+                          {/* Order Reference */}
                           <td style={{ padding: '14px 16px' }}>
-                            <div style={{ fontWeight: 800, fontFamily: 'monospace', color: '#0f172a' }}>
-                              {item.requestNumber}
+                            <div style={{ fontWeight: 800, fontFamily: 'monospace', color: '#2563eb' }}>
+                              {item.orderNumber || item.requestNumber}
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
+                              Ref: {item.requestNumber}
                             </div>
                           </td>
 
@@ -554,42 +529,69 @@ export const AdminRewardsPayouts = () => {
                           <td style={{ padding: '14px 16px' }}>
                             <div style={{ fontWeight: 700, color: '#0f172a' }}>
                               {item.fullName}{' '}
-                              <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 500 }}>
-                                ({item.userType})
+                              <span style={{
+                                fontSize: '0.68rem',
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                background: item.userType === 'Distributor' ? 'rgba(2, 132, 199, 0.1)' : 'rgba(5, 150, 105, 0.1)',
+                                color: item.userType === 'Distributor' ? '#0284c7' : '#059669',
+                                fontWeight: 700
+                              }}>
+                                {item.userType}
                               </span>
                             </div>
                             <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
                               {item.phoneNumber} {item.userEmail && `| ${item.userEmail}`}
                             </div>
                             {item.address && (
-                              <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{item.address}</div>
-                            )}
-                          </td>
-
-                          {/* Points & Cash */}
-                          <td style={{ padding: '14px 16px' }}>
-                            <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#059669' }}>
-                              ₹{Number(item.cashAmount).toLocaleString()}
-                            </div>
-                            <div style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: 700 }}>
-                              {item.points} pts
-                            </div>
-                          </td>
-
-                          {/* Bank details */}
-                          <td style={{ padding: '14px 16px' }}>
-                            <div style={{ fontWeight: 700, color: '#334155' }}>{item.bankName}</div>
-                            <div style={{ fontSize: '0.74rem', color: '#64748b', fontFamily: 'monospace' }}>
-                              A/C: {item.accountNumber}
-                            </div>
-                            <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                              Holder: {item.accountHolderName} | IFSC: {item.ifscCode}
-                            </div>
-                            {item.upiId && (
-                              <div style={{ fontSize: '0.7rem', color: '#0284c7', fontWeight: 600 }}>
-                                UPI: {item.upiId}
+                              <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                                Dest: {item.address}
                               </div>
                             )}
+                          </td>
+
+                          {/* Purchased Product */}
+                          <td style={{ padding: '14px 16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              {item.productImage && (
+                                <img
+                                  src={item.productImage}
+                                  alt={item.productName || 'Product'}
+                                  style={{ width: '38px', height: '38px', borderRadius: '6px', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    e.target.src = '/mws_eagle_logo.jpg?v=3';
+                                  }}
+                                />
+                              )}
+                              <div>
+                                <div style={{ fontWeight: 800, color: '#0f172a' }}>
+                                  {item.quantity ? `${item.quantity}x ` : '1x '}{item.productName || 'Catalog Item'}
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>
+                                  Payment Method: Reward Points
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Points Deducted */}
+                          <td style={{ padding: '14px 16px' }}>
+                            <div style={{ fontSize: '1rem', fontWeight: 900, color: '#dc2626' }}>
+                              -{item.points} pts
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                              Deducted atomically
+                            </div>
+                          </td>
+
+                          {/* NPR Equivalent */}
+                          <td style={{ padding: '14px 16px' }}>
+                            <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#059669' }}>
+                              NPR {Number(item.cashAmount).toLocaleString()}
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                              1 pt = NPR 1
+                            </div>
                           </td>
 
                           {/* Status */}
@@ -608,105 +610,39 @@ export const AdminRewardsPayouts = () => {
                             >
                               {badge.label}
                             </span>
-                            {item.transactionReference && (
-                              <div style={{ fontSize: '0.7rem', color: '#475569', marginTop: '4px', fontFamily: 'monospace' }}>
-                                Ref: {item.transactionReference}
-                              </div>
-                            )}
                             {item.rejectionReason && (
                               <div style={{ fontSize: '0.7rem', color: '#dc2626', marginTop: '4px' }}>
-                                Reason: {item.rejectionReason}
+                                {item.rejectionReason}
                               </div>
                             )}
                           </td>
 
                           {/* Actions */}
                           <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                              {isPending && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateStatus(item.id, 'Approved')}
-                                  disabled={actionLoading}
-                                  style={{
-                                    padding: '5px 10px',
-                                    borderRadius: '8px',
-                                    border: '1px solid #bfdbfe',
-                                    backgroundColor: '#eff6ff',
-                                    color: '#1d4ed8',
-                                    fontSize: '0.74rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  Approve
-                                </button>
-                              )}
-
-                              {(isPending || isApproved) && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateStatus(item.id, 'Processing')}
-                                  disabled={actionLoading}
-                                  style={{
-                                    padding: '5px 10px',
-                                    borderRadius: '8px',
-                                    border: '1px solid #fde68a',
-                                    backgroundColor: '#fef3c7',
-                                    color: '#b45309',
-                                    fontSize: '0.74rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  Process
-                                </button>
-                              )}
-
-                              {item.status !== 'Paid' && item.status !== 'Rejected' && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setPayModalItem(item);
-                                    setTxnRefInput('');
-                                  }}
-                                  style={{
-                                    padding: '5px 12px',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    backgroundColor: '#059669',
-                                    color: '#ffffff',
-                                    fontSize: '0.74rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  Mark Paid
-                                </button>
-                              )}
-
-                              {item.status !== 'Rejected' && item.status !== 'Paid' && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setRejectModalItem(item);
-                                    setRejectReasonInput('');
-                                  }}
-                                  style={{
-                                    padding: '5px 10px',
-                                    borderRadius: '8px',
-                                    border: '1px solid #fecaca',
-                                    backgroundColor: '#fef2f2',
-                                    color: '#dc2626',
-                                    fontSize: '0.74rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  Reject
-                                </button>
-                              )}
-                            </div>
+                            <a
+                              href={`/admin?tab=orders&search=${encodeURIComponent(item.orderNumber || '')}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                window.location.href = `/admin?tab=orders&search=${encodeURIComponent(item.orderNumber || '')}`;
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                backgroundColor: '#f1f5f9',
+                                color: '#2563eb',
+                                fontSize: '0.76rem',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                cursor: 'pointer',
+                                border: '1px solid #cbd5e1'
+                              }}
+                            >
+                              <span>Manage in Orders</span>
+                              <ExternalLink size={12} />
+                            </a>
                           </td>
                         </tr>
                       );
@@ -770,7 +706,7 @@ export const AdminRewardsPayouts = () => {
                     border: '1.5px solid #cbd5e1',
                     fontSize: '0.82rem',
                     outline: 'none',
-                    width: '240px'
+                    width: '260px'
                   }}
                 />
                 <button
@@ -794,20 +730,23 @@ export const AdminRewardsPayouts = () => {
 
             <div style={{ overflowX: 'auto' }}>
               {loadingUsers ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading reward users...</div>
+                <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                  Loading reward accounts...
+                </div>
               ) : rewardUsers.length === 0 ? (
-                <div style={{ padding: '48px 20px', textAlign: 'center', color: '#64748b' }}>No users found.</div>
+                <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                  No reward accounts found matching criteria.
+                </div>
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ borderBottom: '1.5px solid #e2e8f0', color: '#64748b', fontSize: '0.74rem', textTransform: 'uppercase' }}>
-                      <th style={{ padding: '12px 16px' }}>User</th>
+                      <th style={{ padding: '12px 16px' }}>User Details</th>
                       <th style={{ padding: '12px 16px' }}>Role</th>
-                      <th style={{ padding: '12px 16px' }}>Current Points Balance</th>
+                      <th style={{ padding: '12px 16px' }}>Current Balance</th>
                       <th style={{ padding: '12px 16px' }}>Lifetime Earned</th>
-                      <th style={{ padding: '12px 16px' }}>QR Codes Claimed</th>
-                      <th style={{ padding: '12px 16px' }}>Redemptions</th>
-                      <th style={{ padding: '12px 16px' }}>Cash Paid Out</th>
+                      <th style={{ padding: '12px 16px' }}>QR Claims</th>
+                      <th style={{ padding: '12px 16px' }}>Product Redemptions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -815,7 +754,7 @@ export const AdminRewardsPayouts = () => {
                       <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '0.84rem' }}>
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ fontWeight: 800, color: '#0f172a' }}>{u.fullName}</div>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
                             {u.email} {u.phoneNumber && `| ${u.phoneNumber}`}
                           </div>
                         </td>
@@ -823,33 +762,32 @@ export const AdminRewardsPayouts = () => {
                           <span
                             style={{
                               padding: '2px 8px',
-                              borderRadius: '8px',
-                              backgroundColor: u.userType === 'Distributor' ? '#f0f9ff' : '#f8fafc',
-                              color: u.userType === 'Distributor' ? '#0284c7' : '#334155',
-                              border: '1px solid #e2e8f0',
+                              borderRadius: '4px',
                               fontSize: '0.72rem',
-                              fontWeight: 700
+                              fontWeight: 700,
+                              background: u.userType === 'Distributor' ? '#e0f2fe' : '#ecfdf5',
+                              color: u.userType === 'Distributor' ? '#0369a1' : '#047857'
                             }}
                           >
                             {u.userType}
                           </span>
                         </td>
                         <td style={{ padding: '14px 16px' }}>
-                          <span style={{ fontSize: '1rem', fontWeight: 900, color: '#059669' }}>
-                            {Number(u.pointsBalance).toLocaleString()} pts
-                          </span>
+                          <div style={{ fontWeight: 900, color: '#f59e0b', fontSize: '1.05rem' }}>
+                            {Number(u.pointsBalance || 0).toLocaleString()} <span style={{ fontSize: '0.75rem' }}>pts</span>
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                            NPR {Number(u.pointsBalance || 0).toLocaleString()} value
+                          </div>
                         </td>
-                        <td style={{ padding: '14px 16px', color: '#475569', fontWeight: 700 }}>
-                          {Number(u.totalPointsEarned).toLocaleString()} pts
+                        <td style={{ padding: '14px 16px', fontWeight: 700, color: '#334155' }}>
+                          {Number(u.totalPointsEarned || 0).toLocaleString()} pts
                         </td>
-                        <td style={{ padding: '14px 16px', color: '#334155', fontWeight: 600 }}>
-                          {u.totalClaims} offers
+                        <td style={{ padding: '14px 16px', color: '#475569' }}>
+                          {u.totalClaims || 0} claims
                         </td>
-                        <td style={{ padding: '14px 16px', color: '#334155', fontWeight: 600 }}>
-                          {u.totalRedemptions} requests
-                        </td>
-                        <td style={{ padding: '14px 16px', fontWeight: 800, color: '#059669' }}>
-                          ₹{Number(u.totalCashPaid || 0).toLocaleString()}
+                        <td style={{ padding: '14px 16px', color: '#475569' }}>
+                          {u.totalRedemptions || 0} purchases
                         </td>
                       </tr>
                     ))}
@@ -860,375 +798,82 @@ export const AdminRewardsPayouts = () => {
           </div>
         )}
 
-        {/* TAB 3: CONFIGURABLE SETTINGS */}
+        {/* TAB 3: SYSTEM SETTINGS */}
         {activeTab === 'settings' && (
-          <div style={{ padding: '28px', maxWidth: '640px' }}>
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#0f172a' }}>
-                Reward & Cash Conversion Settings
-              </div>
-              <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
-                These rates dictate the cash conversion formula for all customer and distributor redemptions.
-              </div>
+          <div style={{ padding: '24px', maxWidth: '640px' }}>
+            <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#0f172a', marginBottom: '6px' }}>
+              Reward Point Conversion Rate
+            </div>
+            <div style={{ fontSize: '0.84rem', color: '#64748b', marginBottom: '24px' }}>
+              The reward system allows customers and distributors to earn points via QR codes and redeem those points exclusively for catalog products at a fixed rate of 1 Point = NPR 1.
             </div>
 
-            <form onSubmit={handleSaveSettings}>
-              {/* Conversion Rate */}
-              <div style={{ marginBottom: '18px' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  Points-to-Cash Rate (₹ per 1 Point) *
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ position: 'relative', width: '160px' }}>
-                    <span style={{ position: 'absolute', left: '12px', top: '10px', color: '#64748b', fontWeight: 700 }}>₹</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      required
-                      value={rateInput}
-                      onChange={(e) => setRateInput(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px 10px 28px',
-                        borderRadius: '10px',
-                        border: '1.5px solid #cbd5e1',
-                        fontSize: '0.92rem',
-                        fontWeight: 800,
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                  <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                    Example: At ₹{rateInput || '1'}, 100 points = <strong>₹{100 * (parseFloat(rateInput) || 1)}</strong>
-                  </span>
-                </div>
+            {settingsMsg.text && (
+              <div
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  marginBottom: '20px',
+                  backgroundColor: settingsMsg.type === 'success' ? '#ecfdf5' : '#fef2f2',
+                  border: settingsMsg.type === 'success' ? '1px solid #a7f3d0' : '1px solid #fecaca',
+                  color: settingsMsg.type === 'success' ? '#065f46' : '#991b1b',
+                  fontSize: '0.85rem'
+                }}
+              >
+                {settingsMsg.text}
               </div>
+            )}
 
-              {/* Minimum Redemption Threshold */}
-              <div style={{ marginBottom: '22px' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  Minimum Points Required to Request Redemption *
+            <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Points-to-NPR Rate (1 Point = NPR X)
                 </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <input
                     type="number"
-                    min="1"
+                    step="0.01"
+                    min="0.1"
                     required
-                    value={minPointsInput}
-                    onChange={(e) => setMinPointsInput(e.target.value)}
+                    value={rateInput}
+                    onChange={(e) => setRateInput(e.target.value)}
                     style={{
                       width: '160px',
-                      padding: '10px 12px',
+                      padding: '10px 14px',
                       borderRadius: '10px',
                       border: '1.5px solid #cbd5e1',
-                      fontSize: '0.92rem',
-                      fontWeight: 800,
+                      fontSize: '0.9rem',
                       outline: 'none'
                     }}
                   />
-                  <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                    Users cannot submit payout requests below this threshold.
+                  <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>
+                    Standard Conversion: 1 Point = NPR 1.00
                   </span>
                 </div>
               </div>
 
-              {/* Message */}
-              {settingsMsg.text && (
-                <div
+              <div>
+                <button
+                  type="submit"
+                  disabled={savingSettings}
                   style={{
-                    padding: '10px 14px',
-                    borderRadius: '10px',
-                    backgroundColor: settingsMsg.type === 'success' ? '#ecfdf5' : '#fef2f2',
-                    border: settingsMsg.type === 'success' ? '1px solid #a7f3d0' : '1px solid #fecaca',
-                    color: settingsMsg.type === 'success' ? '#059669' : '#dc2626',
-                    fontSize: '0.82rem',
-                    marginBottom: '18px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
+                    padding: '12px 24px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: '#059669',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '0.88rem',
+                    cursor: savingSettings ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {settingsMsg.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                  <span>{settingsMsg.text}</span>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={savingSettings}
-                style={{
-                  padding: '12px 28px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                  color: '#ffffff',
-                  fontSize: '0.9rem',
-                  fontWeight: 800,
-                  cursor: savingSettings ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
-                }}
-              >
-                {savingSettings ? 'Saving...' : 'Save Configuration'}
-              </button>
+                  {savingSettings ? 'Saving...' : 'Save Settings'}
+                </button>
+              </div>
             </form>
           </div>
         )}
       </div>
-
-      {/* MARK AS PAID MODAL */}
-      {payModalItem && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            backgroundColor: 'rgba(15, 23, 42, 0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setPayModalItem(null);
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '480px',
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              padding: '24px',
-              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#0f172a' }}>
-                Confirm Bank Payout Sent
-              </div>
-              <button
-                onClick={() => setPayModalItem(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ backgroundColor: '#f8fafc', borderRadius: '12px', padding: '14px', marginBottom: '16px', fontSize: '0.84rem' }}>
-              <div><strong>Beneficiary:</strong> {payModalItem.fullName} ({payModalItem.phoneNumber})</div>
-              <div><strong>Bank:</strong> {payModalItem.bankName} (A/C: {payModalItem.accountNumber})</div>
-              <div><strong>IFSC:</strong> {payModalItem.ifscCode}</div>
-              <div style={{ marginTop: '6px', fontSize: '1.1rem', fontWeight: 900, color: '#059669' }}>
-                Amount to Transfer: ₹{Number(payModalItem.cashAmount).toLocaleString()}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                Bank Transaction Reference / UTR Number *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. UTR1234567890 or IMPS ref"
-                value={txnRefInput}
-                onChange={(e) => setTxnRefInput(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: '1.5px solid #cbd5e1',
-                  fontSize: '0.85rem',
-                  outline: 'none',
-                  fontFamily: 'monospace'
-                }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                Admin Notes (Optional)
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Paid via HDFC Corporate NetBanking"
-                value={payNotesInput}
-                onChange={(e) => setPayNotesInput(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: '1.5px solid #cbd5e1',
-                  fontSize: '0.85rem',
-                  outline: 'none'
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                type="button"
-                onClick={() => setPayModalItem(null)}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  handleUpdateStatus(payModalItem.id, 'Paid', {
-                    transactionReference: txnRefInput.trim(),
-                    adminNotes: payNotesInput.trim()
-                  })
-                }
-                disabled={actionLoading || !txnRefInput.trim()}
-                style={{
-                  flex: 2,
-                  padding: '12px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: '#059669',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  cursor: actionLoading || !txnRefInput.trim() ? 'not-allowed' : 'pointer',
-                  opacity: actionLoading || !txnRefInput.trim() ? 0.6 : 1
-                }}
-              >
-                {actionLoading ? 'Saving...' : 'Confirm Paid'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* REJECT & REFUND MODAL */}
-      {rejectModalItem && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            backgroundColor: 'rgba(15, 23, 42, 0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setRejectModalItem(null);
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '480px',
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              padding: '24px',
-              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#dc2626' }}>
-                Reject Redemption Request
-              </div>
-              <button
-                onClick={() => setRejectModalItem(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div
-              style={{
-                backgroundColor: '#fef2f2',
-                border: '1px solid #fecaca',
-                borderRadius: '12px',
-                padding: '14px',
-                marginBottom: '16px',
-                fontSize: '0.82rem',
-                color: '#991b1b',
-                lineHeight: 1.45
-              }}
-            >
-              <strong>Notice:</strong> Rejecting this request will automatically refund{' '}
-              <strong>{rejectModalItem.points} points</strong> back to {rejectModalItem.fullName}'s account balance immediately.
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                Rejection Reason *
-              </label>
-              <textarea
-                required
-                rows={3}
-                placeholder="e.g. Invalid bank account number or IFSC code"
-                value={rejectReasonInput}
-                onChange={(e) => setRejectReasonInput(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: '1.5px solid #cbd5e1',
-                  fontSize: '0.85rem',
-                  outline: 'none',
-                  resize: 'vertical'
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                type="button"
-                onClick={() => setRejectModalItem(null)}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  handleUpdateStatus(rejectModalItem.id, 'Rejected', {
-                    rejectionReason: rejectReasonInput.trim()
-                  })
-                }
-                disabled={actionLoading || !rejectReasonInput.trim()}
-                style={{
-                  flex: 2,
-                  padding: '12px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: '#dc2626',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  cursor: actionLoading || !rejectReasonInput.trim() ? 'not-allowed' : 'pointer',
-                  opacity: actionLoading || !rejectReasonInput.trim() ? 0.6 : 1
-                }}
-              >
-                {actionLoading ? 'Refunding...' : 'Confirm Rejection & Refund'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

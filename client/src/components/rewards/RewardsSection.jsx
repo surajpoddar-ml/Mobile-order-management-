@@ -15,7 +15,9 @@ import {
   RefreshCw,
   Gift,
   HelpCircle,
-  ExternalLink
+  ExternalLink,
+  ShoppingBag,
+  Package
 } from 'lucide-react';
 import api from '../../services/api';
 import { QRScannerModal } from './QRScannerModal';
@@ -199,7 +201,7 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
                   My Rewards & Points
                 </div>
                 <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                  Scan official QR codes on products to earn instant points & cash out anytime
+                  Scan official QR codes on products to earn reward points & buy products with points
                 </div>
               </div>
             </div>
@@ -219,7 +221,7 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
               }}
             >
               <Sparkles size={14} color="#f59e0b" />
-              <span>Conversion Rate: <strong>1 Point = ₹{summary.conversionRate}</strong></span>
+              <span>Conversion Rate: <strong>1 Point = NPR 1</strong></span>
             </div>
           </div>
 
@@ -260,10 +262,10 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
               }}
             >
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '4px' }}>
-                Equivalent Cash Value
+                Equivalent Value in NPR
               </div>
               <div style={{ fontSize: 'clamp(1.8rem, 4vw, 2.4rem)', fontWeight: 900, color: '#10b981', lineHeight: 1.1 }}>
-                ₹{summary.cashValue.toLocaleString()}
+                NPR {summary.pointsBalance.toLocaleString()}
               </div>
             </div>
 
@@ -316,7 +318,7 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
             <button
               type="button"
               onClick={() => setIsRedeemOpen(true)}
-              disabled={summary.pointsBalance < summary.minRedemptionPoints}
+              disabled={summary.pointsBalance <= 0}
               style={{
                 padding: '14px 28px',
                 borderRadius: '14px',
@@ -325,21 +327,21 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
                 color: '#ffffff',
                 fontSize: '0.95rem',
                 fontWeight: 800,
-                cursor: summary.pointsBalance < summary.minRedemptionPoints ? 'not-allowed' : 'pointer',
-                opacity: summary.pointsBalance < summary.minRedemptionPoints ? 0.5 : 1,
+                cursor: summary.pointsBalance <= 0 ? 'not-allowed' : 'pointer',
+                opacity: summary.pointsBalance <= 0 ? 0.5 : 1,
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '10px',
                 transition: 'all 0.15s ease'
               }}
               title={
-                summary.pointsBalance < summary.minRedemptionPoints
-                  ? `Minimum ${summary.minRedemptionPoints} points required to redeem cash`
-                  : 'Redeem points for cash transfer'
+                summary.pointsBalance <= 0
+                  ? 'Earn points by scanning QR codes to buy products'
+                  : 'Buy catalog products using your earned reward points'
               }
             >
-              <Wallet size={20} color="#10b981" />
-              <span>Redeem Points for Cash</span>
+              <ShoppingBag size={20} color="#10b981" />
+              <span>Buy Products with Points</span>
             </button>
           </div>
         </div>
@@ -404,8 +406,8 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
               whiteSpace: 'nowrap'
             }}
           >
-            <Wallet size={17} color={activeTab === 'redemptions' ? '#2563eb' : '#94a3b8'} />
-            <span>Cash Redemptions ({history.redemptions.length})</span>
+            <ShoppingBag size={17} color={activeTab === 'redemptions' ? '#2563eb' : '#94a3b8'} />
+            <span>Product Redemptions ({history.redemptions.length})</span>
           </button>
 
           <button
@@ -541,7 +543,7 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
           </div>
         )}
 
-        {/* Tab 2: Cash Redemptions */}
+        {/* Tab 2: Product Redemptions */}
         {activeTab === 'redemptions' && (
           <div style={{ padding: '24px' }}>
             {history.redemptions.length === 0 ? (
@@ -559,31 +561,35 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
                     color: '#94a3b8'
                   }}
                 >
-                  <Wallet size={28} />
+                  <ShoppingBag size={28} />
                 </div>
                 <div style={{ fontWeight: 800, color: '#334155', fontSize: '1rem', marginBottom: '6px' }}>
-                  No Cash Redemptions Yet
+                  No Product Redemptions Yet
                 </div>
-                <div style={{ fontSize: '0.82rem', maxWidth: '320px', margin: '0 auto 18px', color: '#94a3b8' }}>
-                  Convert your accumulated points directly into bank payouts once you reach {summary.minRedemptionPoints} points.
+                <div style={{ fontSize: '0.82rem', maxWidth: '360px', margin: '0 auto 18px', color: '#94a3b8' }}>
+                  Redeem your earned points to purchase mobile accessories directly from the catalog (1 Point = NPR 1).
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsRedeemOpen(true)}
-                  disabled={summary.pointsBalance < summary.minRedemptionPoints}
+                  disabled={summary.pointsBalance <= 0}
                   style={{
                     padding: '10px 20px',
                     borderRadius: '10px',
                     border: 'none',
-                    background: '#10b981',
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                     color: '#ffffff',
                     fontWeight: 700,
                     fontSize: '0.85rem',
-                    cursor: summary.pointsBalance < summary.minRedemptionPoints ? 'not-allowed' : 'pointer',
-                    opacity: summary.pointsBalance < summary.minRedemptionPoints ? 0.6 : 1
+                    cursor: summary.pointsBalance <= 0 ? 'not-allowed' : 'pointer',
+                    opacity: summary.pointsBalance <= 0 ? 0.6 : 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
                   }}
                 >
-                  Request Cash Payout
+                  <ShoppingBag size={16} />
+                  <span>Buy Products with Points</span>
                 </button>
               </div>
             ) : (
@@ -591,37 +597,53 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ borderBottom: '1.5px solid #e2e8f0', color: '#64748b', fontSize: '0.74rem', textTransform: 'uppercase' }}>
-                      <th style={{ padding: '12px 14px' }}>Request ID</th>
+                      <th style={{ padding: '12px 14px' }}>Order Reference</th>
                       <th style={{ padding: '12px 14px' }}>Date</th>
-                      <th style={{ padding: '12px 14px' }}>Points</th>
-                      <th style={{ padding: '12px 14px' }}>Cash Payout</th>
-                      <th style={{ padding: '12px 14px' }}>Beneficiary Bank</th>
+                      <th style={{ padding: '12px 14px' }}>Purchased Product</th>
+                      <th style={{ padding: '12px 14px' }}>Points Redeemed</th>
+                      <th style={{ padding: '12px 14px' }}>NPR Value</th>
                       <th style={{ padding: '12px 14px' }}>Status</th>
-                      <th style={{ padding: '12px 14px' }}>Transaction Ref</th>
                     </tr>
                   </thead>
                   <tbody>
                     {history.redemptions.map((red) => {
-                      const badge = getStatusBadge(red.status);
+                      const displayStatus = red.orderStatus || red.status || 'Pending';
+                      const badge = getStatusBadge(displayStatus);
                       return (
                         <tr key={red.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '0.84rem' }}>
-                          <td style={{ padding: '14px', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a' }}>
-                            {red.requestNumber}
+                          <td style={{ padding: '14px', fontWeight: 800, fontFamily: 'monospace', color: '#2563eb' }}>
+                            {red.orderNumber || red.requestNumber}
                           </td>
                           <td style={{ padding: '14px', color: '#64748b', fontSize: '0.78rem' }}>
                             {formatDate(red.createdDate)}
                           </td>
-                          <td style={{ padding: '14px', fontWeight: 700, color: '#dc2626' }}>
+                          <td style={{ padding: '14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              {red.productImage && (
+                                <img
+                                  src={red.productImage}
+                                  alt={red.productName || 'Product'}
+                                  style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    e.target.src = '/mws_eagle_logo.jpg?v=3';
+                                  }}
+                                />
+                              )}
+                              <div>
+                                <div style={{ fontWeight: 800, color: '#0f172a' }}>
+                                  {red.quantity ? `${red.quantity}x ` : ''}{red.productName || 'Catalog Product'}
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                  Payment: Reward Points
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: '14px', fontWeight: 800, color: '#dc2626' }}>
                             -{red.points} pts
                           </td>
                           <td style={{ padding: '14px', fontWeight: 900, color: '#059669', fontSize: '0.95rem' }}>
-                            ₹{Number(red.cashAmount).toLocaleString()}
-                          </td>
-                          <td style={{ padding: '14px', color: '#334155' }}>
-                            <div style={{ fontWeight: 700 }}>{red.bankName}</div>
-                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                              A/C: ••••{red.accountNumber.slice(-4)} | {red.ifscCode}
-                            </div>
+                            NPR {Number(red.cashAmount).toLocaleString()}
                           </td>
                           <td style={{ padding: '14px' }}>
                             <span
@@ -640,12 +662,9 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
                             </span>
                             {red.rejectionReason && (
                               <div style={{ fontSize: '0.7rem', color: '#dc2626', marginTop: '4px' }}>
-                                Reason: {red.rejectionReason}
+                                {red.rejectionReason}
                               </div>
                             )}
-                          </td>
-                          <td style={{ padding: '14px', color: '#475569', fontSize: '0.78rem', fontFamily: 'monospace' }}>
-                            {red.transactionReference || '—'}
                           </td>
                         </tr>
                       );
@@ -743,6 +762,7 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
         currentPoints={summary.pointsBalance}
         conversionRate={summary.conversionRate}
         minPoints={summary.minRedemptionPoints}
+        userType={userType}
         onRedeemSuccess={() => loadRewardData(true)}
       />
     </div>

@@ -7,7 +7,7 @@ import {
   Film, Image as ImageIcon, Upload, Plus, ExternalLink, Sparkles,
   LayoutDashboard, Package, Menu, Edit, ArrowLeft, AlertCircle,
   ShoppingCart, Truck, FileText, QrCode, Calculator, Percent, Tag, EyeOff, Info, ArrowRightLeft, ToggleLeft, ToggleRight,
-  FolderTree, Battery, BatteryCharging, Cable, Headphones, Shield, Smartphone, Cpu, Zap, Wallet
+  FolderTree, Battery, BatteryCharging, Cable, Headphones, Shield, Smartphone, Cpu, Zap, Wallet, Gift
 } from 'lucide-react';
 import { AdminCreateOffers } from '../components/rewards/AdminCreateOffers';
 import { AdminRewardsPayouts } from '../components/rewards/AdminRewardsPayouts';
@@ -1089,7 +1089,7 @@ export const AdminPanel = () => {
     { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard, badge: null, color: 'var(--primary)' },
     { id: 'orders', label: 'Orders', icon: ShoppingCart, badge: orders?.length ?? 0, color: '#2563eb' },
     { id: 'create-offers', label: 'Create Offers', icon: QrCode, badge: null, color: '#f59e0b' },
-    { id: 'rewards-payouts', label: 'Rewards & Payouts', icon: Wallet, badge: null, color: '#10b981' },
+    { id: 'rewards-payouts', label: 'Reward Redemptions', icon: Gift, badge: null, color: '#10b981' },
     { id: 'pending', label: 'Pending Approvals', icon: Clock, badge: metrics?.distributors?.pending ?? 0, color: 'var(--status-pending)' },
     { id: 'distributors', label: 'Distributors', icon: Building2, badge: metrics?.distributors?.approved ?? 0, color: 'var(--distributor-accent)' },
     { id: 'customers', label: 'Customers', icon: Users, badge: metrics?.customers?.active ?? 0, color: 'var(--customer-accent)' },
@@ -1858,11 +1858,35 @@ export const AdminPanel = () => {
                           {/* Payment & Proof Details */}
                           <td style={{ padding: '12px 14px', verticalAlign: 'top', minWidth: '180px' }}>
                             <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>
-                              ₹{Number(ord.totalAmount).toLocaleString()}
+                              NPR {Number(ord.totalAmount).toLocaleString()}
                             </div>
-                            <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '1px' }}>
-                              {ord.paymentMethod}
-                            </div>
+
+                            {ord.paymentMethod === 'Reward Points' ? (
+                              <div style={{ marginTop: '4px' }}>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                                  border: '1px solid #f59e0b',
+                                  color: '#b45309',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 800
+                                }}>
+                                  <Gift size={13} color="#b45309" />
+                                  <span>Reward Points</span>
+                                </span>
+                                <div style={{ fontSize: '0.72rem', color: '#b45309', fontWeight: 700, marginTop: '2px' }}>
+                                  Redeemed: {Math.round(ord.totalAmount)} pts
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '1px' }}>
+                                {ord.paymentMethod}
+                              </div>
+                            )}
 
                             {/* Payment Status Badge */}
                             <div style={{ marginTop: '4px' }}>
@@ -1873,15 +1897,17 @@ export const AdminPanel = () => {
                                 padding: '2px 8px',
                                 borderRadius: '4px',
                                 background:
+                                  ord.paymentMethod === 'Reward Points' ? '#ecfdf5' :
                                   ord.paymentStatus === 'Verified & Approved' ? '#dcfce7' :
                                   ord.paymentStatus === 'Payment Rejected' ? '#fee2e2' :
                                   ord.paymentStatus === 'Pending Verification' ? '#fef3c7' : '#f1f5f9',
                                 color:
+                                  ord.paymentMethod === 'Reward Points' ? '#047857' :
                                   ord.paymentStatus === 'Verified & Approved' ? '#15803d' :
                                   ord.paymentStatus === 'Payment Rejected' ? '#b91c1c' :
                                   ord.paymentStatus === 'Pending Verification' ? '#b45309' : '#475569'
                               }}>
-                                {ord.paymentStatus || 'Pending Verification'}
+                                {ord.paymentMethod === 'Reward Points' ? 'Paid via Reward Points' : (ord.paymentStatus || 'Pending Verification')}
                               </span>
                             </div>
 
