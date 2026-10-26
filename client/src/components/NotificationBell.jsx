@@ -22,7 +22,8 @@ import {
   Eye,
   RefreshCw,
   Gift,
-  Wallet
+  Wallet,
+  X
 } from 'lucide-react';
 
 export const NotificationBell = ({ lightMode = false }) => {
@@ -85,9 +86,11 @@ export const NotificationBell = ({ lightMode = false }) => {
     };
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [isOpen]);
 
@@ -321,51 +324,45 @@ export const NotificationBell = ({ lightMode = false }) => {
         )}
       </button>
 
-      {/* Notifications Dropdown Panel */}
+      {/* Mobile Backdrop */}
       {isOpen && (
         <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 10px)',
-            right: 0,
-            width: 'clamp(320px, 92vw, 410px)',
-            maxHeight: '520px',
-            backgroundColor: '#ffffff',
-            borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 20px 40px -8px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.05)',
-            zIndex: 1000,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            animation: 'fadeInSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
-          }}
-        >
+          className="notification-backdrop"
+          onClick={() => setIsOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Notifications Dropdown Panel */}
+      {isOpen && (
+        <div className="notification-dropdown-panel">
           {/* Header */}
           <div
             style={{
-              padding: '14px 16px',
+              padding: '12px 14px',
               borderBottom: '1px solid #f1f5f9',
               background: '#f8fafc',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              gap: '12px'
+              gap: '8px',
+              flexShrink: 0
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flexWrap: 'nowrap' }}>
               <img
                 src="/mws_eagle_logo.jpg?v=3"
                 alt="MWS EAGLE"
                 style={{
-                  width: '28px',
-                  height: '28px',
+                  width: '26px',
+                  height: '26px',
                   borderRadius: '6px',
                   objectFit: 'contain',
-                  border: '1px solid #e2e8f0'
+                  border: '1px solid #e2e8f0',
+                  flexShrink: 0
                 }}
               />
-              <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a' }}>
+              <div style={{ fontSize: '0.90rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap' }}>
                 Notifications
               </div>
               {unreadCount > 0 && (
@@ -373,10 +370,13 @@ export const NotificationBell = ({ lightMode = false }) => {
                   style={{
                     backgroundColor: '#dbeafe',
                     color: '#1d4ed8',
-                    fontSize: '0.7rem',
+                    fontSize: '0.68rem',
                     fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: '12px'
+                    padding: '2px 7px',
+                    borderRadius: '10px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    lineHeight: 1.3
                   }}
                 >
                   {unreadCount} unread
@@ -384,41 +384,68 @@ export const NotificationBell = ({ lightMode = false }) => {
               )}
             </div>
 
-            {unreadCount > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleMarkAllAsRead}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#2563eb',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 6px',
+                    borderRadius: '6px',
+                    whiteSpace: 'nowrap'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#eff6ff')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  title="Mark all notifications as read"
+                >
+                  <CheckCheck size={14} />
+                  <span>Mark all read</span>
+                </button>
+              )}
+
               <button
                 type="button"
-                onClick={handleMarkAllAsRead}
+                onClick={() => setIsOpen(false)}
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#2563eb',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
+                  color: '#64748b',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  padding: '4px 8px',
+                  justifyContent: 'center',
+                  padding: '4px',
                   borderRadius: '6px'
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#eff6ff')}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                aria-label="Close notifications"
+                title="Close"
               >
-                <CheckCheck size={14} />
-                <span>Mark all read</span>
+                <X size={16} />
               </button>
-            )}
+            </div>
           </div>
 
           {/* Filter Pills (All / Unread) */}
           <div
             style={{
-              padding: '8px 16px',
+              padding: '8px 14px',
               borderBottom: '1px solid #f1f5f9',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              background: '#ffffff'
+              background: '#ffffff',
+              flexShrink: 0
             }}
           >
             <button
@@ -427,7 +454,7 @@ export const NotificationBell = ({ lightMode = false }) => {
               style={{
                 padding: '4px 12px',
                 borderRadius: '20px',
-                fontSize: '0.76rem',
+                fontSize: '0.74rem',
                 fontWeight: 700,
                 border: filter === 'all' ? '1px solid #2563eb' : '1px solid #e2e8f0',
                 backgroundColor: filter === 'all' ? '#2563eb' : '#f8fafc',
@@ -444,7 +471,7 @@ export const NotificationBell = ({ lightMode = false }) => {
               style={{
                 padding: '4px 12px',
                 borderRadius: '20px',
-                fontSize: '0.76rem',
+                fontSize: '0.74rem',
                 fontWeight: 700,
                 border: filter === 'unread' ? '1px solid #2563eb' : '1px solid #e2e8f0',
                 backgroundColor: filter === 'unread' ? '#2563eb' : '#f8fafc',
@@ -459,10 +486,13 @@ export const NotificationBell = ({ lightMode = false }) => {
 
           {/* Notifications List */}
           <div
+            className="notification-list-scrollable"
             style={{
               overflowY: 'auto',
-              maxHeight: '360px',
-              backgroundColor: '#ffffff'
+              flex: 1,
+              minHeight: 0,
+              backgroundColor: '#ffffff',
+              WebkitOverflowScrolling: 'touch'
             }}
           >
             {loading && notifications.length === 0 ? (

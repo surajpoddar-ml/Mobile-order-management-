@@ -81,7 +81,7 @@ export const Navbar = () => {
       <header style={{
         position: 'sticky',
         top: 0,
-        zIndex: 100,
+        zIndex: 1005,
         backgroundColor: '#ffffff',
         borderBottom: '1.5px solid var(--border-medium)',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
@@ -297,7 +297,7 @@ export const Navbar = () => {
     <header style={{
       position: 'sticky',
       top: 0,
-      zIndex: 100,
+      zIndex: 1005,
       backgroundColor: '#ffffff',
       borderBottom: '1px solid #e5e7eb',
       boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)'

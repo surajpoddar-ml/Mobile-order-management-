@@ -356,6 +356,74 @@ input::placeholder, textarea::placeholder {
   }
 }
 
+/* ===== NOTIFICATION DROPDOWN RESPONSIVE STYLING ===== */
+.notification-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 390px;
+  max-height: 520px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 40px -8px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeInSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.notification-backdrop {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .notification-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.32);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 1090;
+  }
+
+  .notification-dropdown-panel {
+    position: fixed;
+    top: 56px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: 420px;
+    margin: 0 auto;
+    max-height: min(480px, calc(100vh - 76px));
+    box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(15, 23, 42, 0.08);
+  }
+}
+
+.notification-list-scrollable {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.notification-list-scrollable::-webkit-scrollbar {
+  width: 5px;
+}
+.notification-list-scrollable::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+.notification-list-scrollable::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.notification-list-scrollable::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 /* ======================================================== */
 /* ===== MOBILE RESPONSIVE ENHANCEMENTS (ZERO DESKTOP BREAK) ===== */
 /* ======================================================== */
