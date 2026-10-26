@@ -119,45 +119,12 @@ export const AdvertisementBoard = () => {
     if (isRightSwipe) handlePrev();
   };
 
-  const defaultAds = [
-    {
-      id: 'default-main-banner',
-      title: '',
-      description: '',
-      mediaType: 'image',
-      mediaUrl: '/mws_main_banner.jpg',
-      badgeText: '',
-      linkUrl: '#best-selling-products-section',
-      isDefault: 1
-    }
-  ];
-
-  const activeAds = ads.length > 0 ? ads : defaultAds;
-
-  if (loading) {
-    return (
-      <div style={{
-        maxWidth: '1240px',
-        margin: '8px auto 14px auto',
-        padding: '0 16px'
-      }}>
-        <div style={{
-          height: '168px', // 240px decreased by 0.3 (30% reduction)
-          borderRadius: '16px',
-          background: 'linear-gradient(110deg, #ede8de 8%, #f6f1e9 18%, #ede8de 33%)',
-          backgroundSize: '200% 100%',
-          animation: 'shine 1.5s linear infinite',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--text-muted)'
-        }}>
-          Loading live showcase board...
-        </div>
-      </div>
-    );
+  // If loading or if admin has not inserted any advertisement, remain blank / show nothing
+  if (loading || !ads || ads.length === 0) {
+    return null;
   }
 
+  const activeAds = ads;
   const currentAd = activeAds[currentIndex % activeAds.length] || activeAds[0];
   // Determine mediaUrl using dynamic API helper
   const getFullMediaUrl = (url) => {

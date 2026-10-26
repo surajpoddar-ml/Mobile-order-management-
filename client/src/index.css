@@ -87,14 +87,15 @@ html {
 
 body {
   font-family: var(--font-main);
-  background-color: var(--bg-app);
+  background-color: #0070ea;
   color: var(--text-main);
   min-height: 100vh;
   line-height: 1.55;
-  background-image:
-    radial-gradient(at 0% 0%, rgba(0, 149, 255, 0.07) 0px, transparent 55%),
-    radial-gradient(at 100% 0%, rgba(56, 189, 248, 0.07) 0px, transparent 55%),
-    radial-gradient(at 50% 100%, rgba(14, 165, 233, 0.05) 0px, transparent 55%);
+  background:
+    radial-gradient(ellipse at 85% 10%, rgba(255, 255, 255, 0.28) 0%, transparent 40%),
+    radial-gradient(ellipse at 15% 35%, rgba(0, 229, 255, 0.22) 0%, transparent 45%),
+    radial-gradient(ellipse at 80% 65%, rgba(0, 149, 255, 0.2) 0%, transparent 50%),
+    linear-gradient(180deg, #0070ea 0%, #0080ff 16%, #0091ff 36%, #0ea5e9 60%, #0284c7 82%, #0056cc 100%);
   background-attachment: fixed;
   overflow-x: hidden;
 }
@@ -608,9 +609,9 @@ html, body {
   margin: 10px auto 20px auto;
   padding: 10px 14px;
   background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 18px rgba(0, 35, 100, 0.16);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 8px;
@@ -622,9 +623,9 @@ html, body {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    padding: 8px 10px;
+    padding: 9px 12px;
     gap: 12px;
-    margin: 6px 12px 16px 12px;
+    margin: 6px 12px 18px 12px;
   }
   .trust-badges-bar-container::-webkit-scrollbar {
     display: none;
@@ -638,8 +639,8 @@ html, body {
   flex-shrink: 0;
 }
 .trust-badge-icon-box {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 8px;
   background: #f0f9ff;
   border: 1px solid #bae6fd;
@@ -678,25 +679,26 @@ html, body {
 .cat-heading-line {
   flex: 1;
   max-width: 140px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #38bdf8);
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent, #00e5ff);
 }
 .cat-heading-line:last-child {
-  background: linear-gradient(90deg, #38bdf8, transparent);
+  background: linear-gradient(90deg, #00e5ff, transparent);
 }
 .shop-by-cat-title {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: clamp(1.15rem, 3.2vw, 1.45rem);
+  gap: 8px;
+  font-size: clamp(1.2rem, 3.4vw, 1.55rem);
   font-weight: 900;
-  color: #0f172a;
+  color: #002b66;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.4);
   margin: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 .cat-lightning-icon {
-  color: #0284c7;
-  fill: #0284c7;
+  color: #00d4ff;
+  fill: #00d4ff;
 }
 
 .cat-cards-grid {
@@ -718,26 +720,26 @@ html, body {
 
 .cat-product-card {
   background: #ffffff;
-  border-radius: 12px;
-  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
   padding: 8px 6px 6px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 16px rgba(0, 35, 100, 0.14);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   user-select: none;
 }
 .cat-product-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(2, 132, 199, 0.12);
-  border-color: #38bdf8;
+  box-shadow: 0 8px 20px rgba(0, 40, 120, 0.22);
+  border-color: #00e5ff;
 }
 .cat-product-card.active {
-  border-color: #0284c7;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+  border-color: #0084ff;
+  box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.3);
 }
 .cat-card-img-container {
   width: 100%;
@@ -761,8 +763,8 @@ html, body {
 }
 .cat-pill-btn {
   width: 100%;
-  padding: 4px 6px;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  padding: 5px 8px;
+  background: linear-gradient(135deg, #0088ff 0%, #005ce6 100%);
   color: #ffffff;
   border: none;
   border-radius: 9999px;
@@ -771,17 +773,22 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 2px 5px rgba(2, 132, 199, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 80, 200, 0.3);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.cat-pill-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 80, 200, 0.42);
 }
 .cat-promo-card {
   grid-column: span 3;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
-  border: 1.5px solid #e2e8f0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 16px rgba(0, 35, 100, 0.14);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -791,7 +798,7 @@ html, body {
 }
 .cat-promo-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(2, 132, 199, 0.15);
+  box-shadow: 0 8px 20px rgba(0, 40, 120, 0.22);
 }
 .cat-promo-card img {
   width: 100%;

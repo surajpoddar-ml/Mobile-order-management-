@@ -451,32 +451,10 @@ export const initDb = async () => {
     console.warn('[MySQL Init] Category seed/sync notice:', err.message);
   }
 
-  // Ensure default advertisement is set and active
+  // Clean up auto-seeded advertisement so ads board remains completely blank until admin inserts a picture
   try {
-    const hasDefault = await queryGet('SELECT id FROM advertisements WHERE isDefault = 1');
-    if (!hasDefault) {
-      const existingBanner = await queryGet('SELECT id FROM advertisements WHERE mediaUrl LIKE "%mws_main_banner.jpg%"');
-      if (existingBanner) {
-        await queryRun('UPDATE advertisements SET isDefault = 1, isActive = 1 WHERE id = ?', [existingBanner.id]);
-      } else {
-        await queryRun(
-          `INSERT INTO advertisements (title, description, mediaType, mediaUrl, badgeText, linkUrl, isActive, isDefault, orderIndex, createdDate)
-           VALUES (?, ?, ?, ?, ?, ?, 1, 1, 0, ?)`,
-          [
-            'MWS Eagle Premium Mobile Accessories',
-            'Your One-Stop Shop for All Mobile Accessories — Smarter Connection Better Life',
-            'image',
-            '/uploads/advertisements/mws_main_banner.jpg',
-            'PREMIUM QUALITY',
-            '#best-selling-products-section',
-            new Date().toISOString()
-          ]
-        );
-      }
-    }
-  } catch (err) {
-    console.warn('[MySQL Init] Default advertisement setup notice:', err.message);
-  }
+    await queryRun('DELETE FROM advertisements WHERE mediaUrl LIKE "%mws_main_banner.jpg%"');
+  } catch (err) {}
 
   console.log('MySQL database tables verified and ready.');
 };
