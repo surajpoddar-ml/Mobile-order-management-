@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
-import { getMediaUrl } from '../services/api';
+import { getMediaUrl, getProductFallbackImage } from '../services/api';
 import {
   X,
   ShoppingCart,
@@ -78,7 +78,7 @@ export const ProductDetailModal = () => {
     }
   }
   if (!imageList.length) {
-    imageList = ['https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80'];
+    imageList = [getProductFallbackImage(p.category)];
   }
 
   // Parse specifications / features / colors / models if available in p.specifications
@@ -302,7 +302,10 @@ export const ProductDetailModal = () => {
                   filter: !isItemInStock ? 'grayscale(40%)' : 'none'
                 }}
                 onError={(e) => {
-                  e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80';
+                  const fallback = getProductFallbackImage(p.category);
+                  if (e.target.src !== fallback && !e.target.src.endsWith(fallback)) {
+                    e.target.src = fallback;
+                  }
                 }}
               />
             </div>

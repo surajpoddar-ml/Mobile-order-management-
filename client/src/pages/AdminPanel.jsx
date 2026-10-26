@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api, { getMediaUrl } from '../services/api';
+import api, { getMediaUrl, getProductFallbackImage } from '../services/api';
 import {
   ShieldCheck, Users, User, Building2, Clock, CheckCircle, XCircle,
   Search, Eye, Trash2, Check, X, PauseCircle, PlayCircle, RefreshCw, Layers,
@@ -2325,10 +2325,15 @@ export const AdminPanel = () => {
                                 border: '1px solid #e2e8f0'
                               }}>
                                 <img
-                                  src={getMediaUrl(p.imageUrl) || 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=120&q=80'}
+                                  src={getMediaUrl(p.imageUrl) || getProductFallbackImage(p.category)}
                                   alt={p.name}
                                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                  onError={e => { e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=120&q=80'; }}
+                                  onError={e => {
+                                    const fallback = getProductFallbackImage(p.category);
+                                    if (e.target.src !== fallback && !e.target.src.endsWith(fallback)) {
+                                      e.target.src = fallback;
+                                    }
+                                  }}
                                 />
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
@@ -3568,7 +3573,12 @@ export const AdminPanel = () => {
                           src={getMediaUrl(productForm.imageUrl)}
                           alt="Product"
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=300&q=80'; }}
+                          onError={(e) => {
+                            const fallback = getProductFallbackImage(productForm.category);
+                            if (e.target.src !== fallback && !e.target.src.endsWith(fallback)) {
+                              e.target.src = fallback;
+                            }
+                          }}
                         />
                       </div>
 

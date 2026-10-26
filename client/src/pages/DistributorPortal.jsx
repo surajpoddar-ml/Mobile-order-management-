@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import AdvertisementBoard from '../components/AdvertisementBoard';
 import PromotionalSticker from '../components/PromotionalSticker';
-import api, { getMediaUrl } from '../services/api';
+import api, { getMediaUrl, getProductFallbackImage } from '../services/api';
 import {
   Building2,
   ShieldCheck,
@@ -609,7 +609,7 @@ export const DistributorPortal = () => {
                         )}
 
                         <img
-                          src={getMediaUrl(p.imageUrl) || 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80'}
+                          src={getMediaUrl(p.imageUrl) || getProductFallbackImage(p.category)}
                           alt={p.name}
                           style={{
                             width: '100%',
@@ -619,7 +619,10 @@ export const DistributorPortal = () => {
                             opacity: !isItemInStock ? 0.75 : 1
                           }}
                           onError={(e) => {
-                            e.target.src = 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=600&q=80';
+                            const fallback = getProductFallbackImage(p.category);
+                            if (e.target.src !== fallback && !e.target.src.endsWith(fallback)) {
+                              e.target.src = fallback;
+                            }
                           }}
                         />
                       </div>
