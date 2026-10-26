@@ -120,15 +120,15 @@ export const AdvertisementBoard = () => {
   };
 
   // If loading or if admin has not inserted any advertisement, remain blank / show nothing
-  if (loading || !ads || ads.length === 0) {
+  const activeAds = (ads || []).filter(a => a && a.mediaUrl);
+  if (loading || activeAds.length === 0) {
     return null;
   }
 
-  const activeAds = ads;
   const currentAd = activeAds[currentIndex % activeAds.length] || activeAds[0];
-  // Determine mediaUrl using dynamic API helper
+  // Determine mediaUrl using dynamic API helper (zero default/placeholder fallbacks)
   const getFullMediaUrl = (url) => {
-    if (!url) return '/mws_main_banner.jpg';
+    if (!url) return '';
     if (url.startsWith('/')) return url;
     return getMediaUrl(url);
   };

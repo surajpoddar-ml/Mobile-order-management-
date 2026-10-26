@@ -451,9 +451,9 @@ export const initDb = async () => {
     console.warn('[MySQL Init] Category seed/sync notice:', err.message);
   }
 
-  // Clean up auto-seeded advertisement so ads board remains completely blank until admin inserts a picture
+  // Clean up all existing advertisements and photos so ads board and media are 100% controlled by admin
   try {
-    await queryRun('DELETE FROM advertisements WHERE mediaUrl LIKE "%mws_main_banner.jpg%"');
+    await queryRun('DELETE FROM advertisements');
   } catch (err) {}
 
   console.log('MySQL database tables verified and ready.');
