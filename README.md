@@ -19,6 +19,7 @@ A robust, enterprise-grade authentication and user-management foundation for a B
    - Suspended distributor login triggers: `"Your distributor account has been suspended. Please contact the administrator."`
    - Real-time token validation: Active JWT sessions are immediately blocked if an admin marks the user as Suspended.
 
+
 3. **Portal Segregation & Protected Routes**:
    - `Customer Portal` (`/portal/customer`): Customer profile dossier & catalog filtered strictly for Customer + Both.
    - `Distributor Portal` (`/portal/distributor`): Distributor trade terminal, verified business credentials, and wholesale B2B parts catalog.
