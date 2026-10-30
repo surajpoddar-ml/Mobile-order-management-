@@ -100,6 +100,8 @@ adminWarrantyRouter.post('/', async (req, res) => {
   try {
     const {
       productId,
+      productName,
+      productSku,
       productCode,
       brand,
       model,
@@ -111,13 +113,31 @@ adminWarrantyRouter.post('/', async (req, res) => {
       terms
     } = req.body;
 
-    if (!productId) {
-      return res.status(400).json({ success: false, message: 'Product selection is required.' });
+    if (!productId && !productName) {
+      return res.status(400).json({ success: false, message: 'Product selection or product name is required.' });
     }
 
-    const product = await queryGet('SELECT * FROM products WHERE id = ?', [productId]);
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Selected product not found.' });
+    let finalProductId = 0;
+    let finalProductName = (productName || '').trim();
+    let finalSku = (productSku || '').trim();
+    let finalBrand = (brand || '').trim() || 'MWS Eagle';
+    let finalDesc = (description || '').trim();
+    let productImageUrl = null;
+
+    if (productId && productId !== 'custom' && productId !== 0 && productId !== '0') {
+      const product = await queryGet('SELECT * FROM products WHERE id = ?', [productId]);
+      if (product) {
+        finalProductId = product.id;
+        finalProductName = finalProductName || product.name;
+        finalSku = finalSku || product.sku || '';
+        finalBrand = brand || product.brand || 'MWS Eagle';
+        finalDesc = finalDesc || product.description || '';
+        productImageUrl = product.imageUrl || null;
+      }
+    }
+
+    if (!finalProductName) {
+      return res.status(400).json({ success: false, message: 'Product or material name is required.' });
     }
 
     const cleanProductCode = (productCode || '').trim();
@@ -177,16 +197,16 @@ adminWarrantyRouter.post('/', async (req, res) => {
     const result = await queryRun(insertSql, [
       warrantyToken,
       warrantyCode,
-      product.id,
+      finalProductId,
       cleanProductCode,
-      product.name,
-      product.sku || null,
-      brand || product.brand || 'MWS Eagle',
+      finalProductName,
+      finalSku || null,
+      finalBrand,
       model || null,
       cleanType,
       numDuration,
       cleanUnit,
-      description || product.description || null,
+      finalDesc || null,
       purchaseInfo || null,
       terms || 'Standard MWS Eagle Official Warranty. Valid for manufacturing defects and operational failures. Physical breakage or liquid immersion voids warranty.',
       now,
@@ -200,12 +220,170 @@ adminWarrantyRouter.post('/', async (req, res) => {
       message: 'Product Warranty QR generated successfully.',
       warranty: {
         ...createdRecord,
-        productImageUrl: product.imageUrl || null
+        productImageUrl: productImageUrl
       }
     });
   } catch (error) {
     console.error('Error creating warranty QR:', error);
     return res.status(500).json({ success: false, message: 'Failed to create warranty record.', error: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/warranties/batch
+ * Batch generate multiple Warranty QR records with custom count
+ */
+adminWarrantyRouter.post('/batch', async (req, res) => {
+  try {
+    const {
+      productId,
+      productName,
+      productSku,
+      brand,
+      model,
+      warrantyType = 'Warranty',
+      warrantyDuration,
+      warrantyDurationUnit = 'Months',
+      description,
+      purchaseInfo,
+      terms,
+      count = 1,
+      serialPrefix = '',
+      startSequence = 1
+    } = req.body;
+
+    const totalCount = Math.max(1, Math.min(500, parseInt(count, 10) || 1));
+
+    let finalProductId = 0;
+    let finalProductName = (productName || '').trim();
+    let finalSku = (productSku || '').trim();
+    let finalBrand = (brand || '').trim() || 'MWS Eagle';
+    let finalDesc = (description || '').trim();
+    let productImageUrl = null;
+
+    if (productId && productId !== 'custom' && productId !== 0 && productId !== '0') {
+      const product = await queryGet('SELECT * FROM products WHERE id = ?', [productId]);
+      if (product) {
+        finalProductId = product.id;
+        finalProductName = finalProductName || product.name;
+        finalSku = finalSku || product.sku || '';
+        finalBrand = brand || product.brand || 'MWS Eagle';
+        finalDesc = finalDesc || product.description || '';
+        productImageUrl = product.imageUrl || null;
+      }
+    }
+
+    if (!finalProductName) {
+      return res.status(400).json({ success: false, message: 'Product or material name is required.' });
+    }
+
+    const numDuration = parseInt(warrantyDuration, 10);
+    if (isNaN(numDuration) || numDuration <= 0) {
+      return res.status(400).json({ success: false, message: 'Warranty duration must be a positive number.' });
+    }
+
+    const cleanUnit = warrantyDurationUnit === 'Years' ? 'Years' : 'Months';
+    const cleanType = warrantyType === 'Guarantee' ? 'Guarantee' : 'Warranty';
+    const baseTerms = terms || 'Standard MWS Eagle Official Warranty. Valid for manufacturing defects and operational failures. Physical breakage or liquid immersion voids warranty.';
+
+    const now = new Date().toISOString();
+    const createdWarranties = [];
+
+    // Prefix for serial numbers
+    const cleanPrefix = (serialPrefix || '').trim() || `SN-${finalSku ? finalSku.replace(/[^a-zA-Z0-9]/g, '') + '-' : ''}`;
+    let seq = parseInt(startSequence, 10) || 1;
+
+    for (let i = 0; i < totalCount; i++) {
+      // Cryptographically secure random token (48 hex chars)
+      const warrantyToken = 'w_' + crypto.randomBytes(24).toString('hex');
+      const randomHex = crypto.randomBytes(4).toString('hex').toUpperCase();
+      const warrantyCode = `MWS-WAR-${randomHex}`;
+
+      // Unique serial number for each card in the batch
+      let currentSerial = `${cleanPrefix}${String(seq + i).padStart(4, '0')}`;
+      
+      // Check collision
+      const existingSerial = await queryGet(
+        'SELECT id FROM product_warranties WHERE product_code = ? AND status != "Expired"',
+        [currentSerial]
+      );
+      if (existingSerial) {
+        currentSerial = `${cleanPrefix}${String(seq + i).padStart(4, '0')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+      }
+
+      const insertSql = `
+        INSERT INTO product_warranties (
+          warranty_token,
+          warranty_code,
+          product_id,
+          product_code,
+          product_name,
+          product_sku,
+          brand,
+          model,
+          warranty_type,
+          warranty_duration,
+          warranty_duration_unit,
+          description,
+          purchase_info,
+          terms,
+          status,
+          created_at,
+          updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Not Activated', ?, ?)
+      `;
+
+      const result = await queryRun(insertSql, [
+        warrantyToken,
+        warrantyCode,
+        finalProductId,
+        currentSerial,
+        finalProductName,
+        finalSku || null,
+        finalBrand,
+        model || null,
+        cleanType,
+        numDuration,
+        cleanUnit,
+        finalDesc || null,
+        purchaseInfo || null,
+        baseTerms,
+        now,
+        now
+      ]);
+
+      createdWarranties.push({
+        id: result.lastID,
+        warranty_token: warrantyToken,
+        warranty_code: warrantyCode,
+        product_id: finalProductId,
+        product_code: currentSerial,
+        product_name: finalProductName,
+        product_sku: finalSku || null,
+        brand: finalBrand,
+        model: model || null,
+        warranty_type: cleanType,
+        warranty_duration: numDuration,
+        warranty_duration_unit: cleanUnit,
+        description: finalDesc || null,
+        purchase_info: purchaseInfo || null,
+        terms: baseTerms,
+        status: 'Not Activated',
+        created_at: now,
+        updated_at: now,
+        product_image: productImageUrl
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: `Successfully generated ${createdWarranties.length} product warranty QR code${createdWarranties.length > 1 ? 's' : ''}.`,
+      count: createdWarranties.length,
+      warranties: createdWarranties
+    });
+  } catch (error) {
+    console.error('Error generating batch warranty QRs:', error);
+    return res.status(500).json({ success: false, message: 'Failed to generate batch warranties.', error: error.message });
   }
 });
 

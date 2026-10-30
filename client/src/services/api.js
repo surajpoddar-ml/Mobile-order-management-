@@ -260,6 +260,11 @@ export const api = {
 
   // Role-Based Product Catalog & Admin Authority
   products: {
+    getAll: (role = 'Admin') =>
+      request('/products?role=' + encodeURIComponent(role), {
+        method: 'GET'
+      }),
+
     getVisibleProducts: (role, category) => {
       const params = new URLSearchParams();
       if (role) params.append('role', role);
@@ -531,6 +536,12 @@ export const api = {
   // Product Warranty QR & Verification System
   warranties: {
     admin: {
+      createBatch: (payload) =>
+        request('/admin/warranties/batch', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        }),
+
       create: (payload) =>
         request('/admin/warranties', {
           method: 'POST',
