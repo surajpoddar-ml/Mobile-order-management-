@@ -7,6 +7,7 @@ import { AuthPage } from './pages/AuthPage';
 import { CustomerPortal } from './pages/CustomerPortal';
 import { DistributorPortal } from './pages/DistributorPortal';
 import { AdminPanel } from './pages/AdminPanel';
+import { WarrantyVerificationPage } from './pages/WarrantyVerificationPage';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { Phone, MessageCircle, MapPin } from 'lucide-react';
 
@@ -35,6 +36,9 @@ function AppContent() {
     } else if (path === '/admin' || path === '/admin-access' || path === '/portal/admin') {
       title = 'Administration Suite | MWS Eagle';
       isNoindex = true;
+    } else if (path.startsWith('/verify-warranty')) {
+      title = 'Product Warranty Verification | MWS Eagle Official';
+      isNoindex = false;
     } else {
       title = 'MWS Eagle | Official Website — Mobile Spare-Parts Marketplace & Accessories';
     }
@@ -95,6 +99,11 @@ function AppContent() {
     // ---- Auth: /login ----
     if (path === '/login') {
       return <AuthPage prefillData={prefillDemo} />;
+    }
+
+    // ---- Warranty Verification (Public & Customer QR Scan) ----
+    if (path.startsWith('/verify-warranty')) {
+      return <WarrantyVerificationPage />;
     }
 
     // ---- Default: Landing Page (or user portal if authenticated) ----

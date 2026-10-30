@@ -26,6 +26,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { RewardsSection } from '../components/rewards/RewardsSection';
+import { CustomerWarrantySection } from '../components/warranty/CustomerWarrantySection';
 
 export const CustomerPortal = () => {
   const { user } = useAuth();
@@ -225,7 +226,7 @@ export const CustomerPortal = () => {
       }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(4, 1fr)',
           gap: '8px'
         }}>
           {/* Card 1: Product Catalog */}
@@ -375,6 +376,50 @@ export const CustomerPortal = () => {
               whiteSpace: 'nowrap'
             }}>
               My Reward
+            </span>
+          </button>
+
+          {/* Card 4: Verify Warranty */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('warranty')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '3px',
+              padding: '7px 4px',
+              borderRadius: '11px',
+              background: activeTab === 'warranty' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#ffffff',
+              color: activeTab === 'warranty' ? '#ffffff' : '#1e293b',
+              border: activeTab === 'warranty' ? '1px solid #0284c7' : '1px solid rgba(2, 132, 199, 0.18)',
+              boxShadow: activeTab === 'warranty' ? '0 3px 10px rgba(2, 132, 199, 0.25)' : '0 1px 4px rgba(0, 0, 0, 0.04)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              textAlign: 'center',
+              minHeight: '50px'
+            }}
+          >
+            <div style={{
+              width: '20px',
+              height: '20px',
+              borderRadius: '6px',
+              background: activeTab === 'warranty' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(2, 132, 199, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: activeTab === 'warranty' ? '#ffffff' : '#0284c7'
+            }}>
+              <ShieldCheck size={15} style={{ transform: 'scale(0.8)' }} />
+            </div>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: activeTab === 'warranty' ? 800 : 700,
+              lineHeight: 1.15,
+              whiteSpace: 'nowrap'
+            }}>
+              Verify Warranty
             </span>
           </button>
         </div>
@@ -1008,6 +1053,13 @@ export const CustomerPortal = () => {
       {activeTab === 'rewards' && (
         <section style={{ maxWidth: '1240px', margin: '30px auto 80px', padding: '0 20px' }}>
           <RewardsSection userType="Customer" />
+        </section>
+      )}
+
+      {/* ====== 6. VERIFY PRODUCT WARRANTY VIEW ====== */}
+      {activeTab === 'warranty' && (
+        <section style={{ maxWidth: '1240px', margin: '20px auto 80px', padding: '0 16px' }}>
+          <CustomerWarrantySection />
         </section>
       )}
     </div>

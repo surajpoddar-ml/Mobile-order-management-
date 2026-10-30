@@ -13,6 +13,7 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import rewardRoutes from './routes/rewardRoutes.js';
 import stickerRoutes from './routes/stickerRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
+import customerWarrantyRouter, { adminWarrantyRouter } from './routes/warrantyRoutes.js';
 import { seedDatabase } from './database/seed.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -49,6 +50,12 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rewards', rewardRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/admin/warranties', adminWarrantyRouter);
+app.use('/api/warranties', customerWarrantyRouter);
+app.use('/api/my/warranties', (req, res, next) => {
+  req.url = '/my' + (req.url === '/' ? '' : req.url);
+  customerWarrantyRouter(req, res, next);
+});
 
 let dbConnected = false;
 let dbError = null;

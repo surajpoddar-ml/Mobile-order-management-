@@ -11,8 +11,12 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config();
 
 const getCleanEnv = (key, fallback = '') => {
-  const val = process.env[key] !== undefined ? process.env[key] : process.env[key.trim()];
-  return val !== undefined && val !== null && String(val).trim() !== '' ? String(val).trim() : fallback;
+  const val = process.env[key] !== undefined ? process.env[key] : (process.env[key.trim()] !== undefined ? process.env[key.trim()] : undefined);
+  if (val !== undefined && val !== null) {
+    if (key === 'DB_PASSWORD') return String(val).trim();
+    if (String(val).trim() !== '') return String(val).trim();
+  }
+  return fallback;
 };
 
 const databaseUrl = getCleanEnv('DATABASE_URL') || getCleanEnv('MYSQL_URL') || getCleanEnv('JAWSDB_URL');
@@ -521,6 +525,59 @@ export const initDb = async () => {
       OR mediaUrl LIKE '%mws_main_banner%'
     `);
   } catch (err) {}
+
+  // Product Warranties Table (MWS Eagle Product Warranty QR & Verification System)
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS product_warranties (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      warranty_token VARCHAR(191) UNIQUE NOT NULL,
+      warranty_code VARCHAR(100) UNIQUE NOT NULL,
+      product_id INT NOT NULL,
+      product_code VARCHAR(100) NOT NULL,
+      product_name VARCHAR(255) NOT NULL,
+      product_sku VARCHAR(100) DEFAULT NULL,
+      brand VARCHAR(100) DEFAULT 'MWS Eagle',
+      model VARCHAR(100) DEFAULT NULL,
+      warranty_type VARCHAR(50) DEFAULT 'Warranty',
+      warranty_duration INT NOT NULL,
+      warranty_duration_unit VARCHAR(50) DEFAULT 'Months',
+      description TEXT DEFAULT NULL,
+      purchase_info TEXT DEFAULT NULL,
+      terms TEXT DEFAULT NULL,
+      status VARCHAR(50) DEFAULT 'Not Activated',
+      created_at VARCHAR(100) NOT NULL,
+      activated_at VARCHAR(100) DEFAULT NULL,
+      warranty_start_date VARCHAR(100) DEFAULT NULL,
+      warranty_end_date VARCHAR(100) DEFAULT NULL,
+      activated_by_user_id INT DEFAULT NULL,
+      activated_by_name VARCHAR(255) DEFAULT NULL,
+      activated_by_email VARCHAR(191) DEFAULT NULL,
+      updated_at VARCHAR(100) NOT NULL,
+      INDEX idx_pw_prod (product_id),
+      INDEX idx_pw_token (warranty_token),
+      INDEX idx_pw_code (product_code),
+      INDEX idx_pw_status (status),
+      INDEX idx_pw_user (activated_by_user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  // Warranty Scan Logs Table (Scan history, timestamps, IP/device, verification events)
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS warranty_scan_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      warranty_id INT NOT NULL,
+      user_id INT DEFAULT NULL,
+      user_name VARCHAR(255) DEFAULT NULL,
+      event_type VARCHAR(100) NOT NULL,
+      ip_address VARCHAR(100) DEFAULT NULL,
+      user_agent TEXT DEFAULT NULL,
+      scanned_at VARCHAR(100) NOT NULL,
+      created_at VARCHAR(100) NOT NULL,
+      INDEX idx_wsl_warranty (warranty_id),
+      INDEX idx_wsl_event (event_type),
+      INDEX idx_wsl_user (user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
 
   console.log('MySQL database tables verified and ready.');
 };

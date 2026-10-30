@@ -73,6 +73,14 @@ export const AuthProvider = ({ children }) => {
       setToken(res.token);
       setUser(res.user);
 
+      // Check if returnUrl is provided (e.g. from /verify-warranty/:token)
+      const urlParams = new URLSearchParams(window.location.search);
+      const returnUrl = urlParams.get('returnUrl');
+      if (returnUrl && returnUrl.startsWith('/')) {
+        navigate(returnUrl);
+        return res;
+      }
+
       // Portal Redirection Rule (Section 6)
       if (res.user.userType === 'Customer') {
         navigate('/portal/customer');
@@ -92,6 +100,14 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('mobile_parts_token', res.token);
       setToken(res.token);
       setUser(res.user);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const returnUrl = urlParams.get('returnUrl');
+      if (returnUrl && returnUrl.startsWith('/')) {
+        navigate(returnUrl);
+        return res;
+      }
+
       navigate('/portal/customer');
     }
     return res;

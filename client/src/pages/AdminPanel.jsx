@@ -12,6 +12,7 @@ import {
 import { AdminCreateOffers } from '../components/rewards/AdminCreateOffers';
 import { AdminRewardsPayouts } from '../components/rewards/AdminRewardsPayouts';
 import { AdminStickers } from '../components/AdminStickers';
+import { AdminProductWarranty } from '../components/warranty/AdminProductWarranty';
 
 export const AdminPanel = () => {
   const { user, navigate, logout } = useAuth();
@@ -33,7 +34,7 @@ export const AdminPanel = () => {
       try {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get('tab');
-        if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'advertisements', 'categories', 'create-offers', 'rewards-payouts', 'stickers'].includes(tab)) {
+        if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'warranties', 'advertisements', 'categories', 'create-offers', 'rewards-payouts', 'stickers'].includes(tab)) {
           setActiveTab(tab);
         }
       } catch (e) {}
@@ -47,7 +48,7 @@ export const AdminPanel = () => {
         if (path.includes('?')) {
           const params = new URLSearchParams(path.split('?')[1]);
           const tab = params.get('tab');
-          if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'advertisements', 'categories', 'create-offers', 'rewards-payouts'].includes(tab)) {
+          if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'warranties', 'advertisements', 'categories', 'create-offers', 'rewards-payouts', 'stickers'].includes(tab)) {
             setActiveTab(tab);
           }
         }
@@ -1094,6 +1095,7 @@ export const AdminPanel = () => {
     { id: 'distributors', label: 'Distributors', icon: Building2, badge: metrics?.distributors?.approved ?? 0, color: 'var(--distributor-accent)' },
     { id: 'customers', label: 'Customers', icon: Users, badge: metrics?.customers?.active ?? 0, color: 'var(--customer-accent)' },
     { id: 'products', label: 'Product Management', icon: Package, badge: allProducts?.length ?? 0, color: '#0d9488' },
+    { id: 'warranties', label: 'Product Warranty', icon: ShieldCheck, badge: null, color: '#0284c7' },
     { id: 'categories', label: 'Categories', icon: FolderTree, badge: categories?.length ?? 0, color: '#8b5cf6' },
     { id: 'advertisements', label: 'Ad Board & Media', icon: Film, badge: advertisements?.length ?? 0, color: '#ea580c' },
     { id: 'stickers', label: 'Promotional Stickers', icon: Sparkles, badge: null, color: '#ec4899' },
@@ -2797,6 +2799,13 @@ export const AdminPanel = () => {
         {/* ======================================================== */}
         {activeTab === 'rewards-payouts' && (
           <AdminRewardsPayouts />
+        )}
+
+        {/* ======================================================== */}
+        {/* ============ VIEW: PRODUCT WARRANTY MANAGEMENT ========= */}
+        {/* ======================================================== */}
+        {activeTab === 'warranties' && (
+          <AdminProductWarranty />
         )}
 
         {/* ======================================================== */}

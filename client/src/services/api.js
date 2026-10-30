@@ -526,6 +526,54 @@ export const api = {
           body: JSON.stringify(payload)
         })
     }
+  },
+
+  // Product Warranty QR & Verification System
+  warranties: {
+    admin: {
+      create: (payload) =>
+        request('/admin/warranties', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        }),
+
+      getAll: ({ search = '', status = 'All', warrantyType = 'All', page = 1, limit = 50 } = {}) => {
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (status && status !== 'All') params.append('status', status);
+        if (warrantyType && warrantyType !== 'All') params.append('warrantyType', warrantyType);
+        params.append('page', page);
+        params.append('limit', limit);
+        return request(`/admin/warranties?${params.toString()}`, { method: 'GET' });
+      },
+
+      getById: (id) =>
+        request(`/admin/warranties/${id}`, { method: 'GET' }),
+
+      getScans: (id) =>
+        request(`/admin/warranties/${id}/scans`, { method: 'GET' }),
+
+      updateStatus: (id, status) =>
+        request(`/admin/warranties/${id}/status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status })
+        }),
+
+      delete: (id) =>
+        request(`/admin/warranties/${id}`, { method: 'DELETE' })
+    },
+
+    verify: (token) =>
+      request(`/warranties/verify/${token}`, { method: 'GET' }),
+
+    recordScan: (token) =>
+      request(`/warranties/${token}/scan`, { method: 'POST' }),
+
+    activate: (token) =>
+      request(`/warranties/${token}/activate`, { method: 'POST' }),
+
+    getMyWarranties: () =>
+      request('/my/warranties', { method: 'GET' })
   }
 };
 
