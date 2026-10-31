@@ -106,6 +106,7 @@ export const AdminProductWarranty = () => {
     warrantyType: 'Warranty', // 'Warranty' | 'Guarantee'
     warrantyDuration: 6,
     warrantyDurationUnit: 'Months', // 'Months' | 'Years'
+    qrExpiryDate: '',
     description: '',
     purchaseInfo: '',
     terms: 'Standard MWS Eagle Official Warranty. Valid for manufacturing defects and operational failures. Physical breakage or liquid immersion voids warranty.'
@@ -201,6 +202,7 @@ export const AdminProductWarranty = () => {
       warrantyType: 'Warranty',
       warrantyDuration: 6,
       warrantyDurationUnit: 'Months',
+      qrExpiryDate: '',
       description: '',
       purchaseInfo: '',
       terms: 'Standard MWS Eagle Official Warranty. Valid for manufacturing defects and operational failures. Physical breakage or liquid immersion voids warranty.'
@@ -1039,7 +1041,19 @@ export const AdminProductWarranty = () => {
                             <div style={{ color: isExp ? '#ef4444' : '#15803d', fontWeight: 600 }}>End: {formatDate(w.warranty_end_date)}</div>
                           </>
                         ) : (
-                          <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>Pending Customer Scan</span>
+                          <div>
+                            <div style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>Pending Scan</div>
+                            {w.qr_expiry_date && (
+                              <div style={{
+                                color: new Date(w.qr_expiry_date) < new Date() ? '#ef4444' : '#64748b',
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                marginTop: '2px'
+                              }}>
+                                QR Exp: {formatDate(w.qr_expiry_date)}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </td>
 
@@ -1710,6 +1724,51 @@ export const AdminProductWarranty = () => {
                     <option value="Months">Months</option>
                     <option value="Years">Years</option>
                   </select>
+                </div>
+              </div>
+
+              {/* QR Expiration Date */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  QR Expiration Date
+                </label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="date"
+                    value={formData.qrExpiryDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, qrExpiryDate: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1.5px solid var(--border-medium)',
+                      fontSize: '0.88rem',
+                      background: '#ffffff',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  {formData.qrExpiryDate && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, qrExpiryDate: '' }))}
+                      style={{
+                        padding: '9px 12px',
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        color: '#475569',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px' }}>
+                  Admin-selected expiration date. After this date, scanning this specific QR code will be rejected as expired on the backend.
                 </div>
               </div>
 
@@ -2517,6 +2576,15 @@ export const AdminProductWarranty = () => {
                 <div>
                   <span style={{ color: '#64748b', fontSize: '0.74rem' }}>Effective Status:</span>
                   <div style={{ fontWeight: 800, color: '#15803d' }}>{selectedDetails.warranty?.effectiveStatus || selectedDetails.warranty?.status}</div>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.74rem' }}>QR Expiration:</span>
+                  <div style={{
+                    fontWeight: 700,
+                    color: selectedDetails.warranty?.qr_expiry_date && new Date(selectedDetails.warranty.qr_expiry_date) < new Date() ? '#ef4444' : '#0f172a'
+                  }}>
+                    {formatDate(selectedDetails.warranty?.qr_expiry_date) || 'No Expiration Set'}
+                  </div>
                 </div>
               </div>
 

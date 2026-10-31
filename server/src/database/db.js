@@ -544,6 +544,7 @@ export const initDb = async () => {
       description TEXT DEFAULT NULL,
       purchase_info TEXT DEFAULT NULL,
       terms TEXT DEFAULT NULL,
+      qr_expiry_date VARCHAR(100) DEFAULT NULL,
       status VARCHAR(50) DEFAULT 'Not Activated',
       created_at VARCHAR(100) NOT NULL,
       activated_at VARCHAR(100) DEFAULT NULL,
@@ -578,6 +579,10 @@ export const initDb = async () => {
       INDEX idx_wsl_user (user_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+
+  try {
+    await queryRun('ALTER TABLE product_warranties ADD COLUMN qr_expiry_date VARCHAR(100) DEFAULT NULL');
+  } catch (e) {}
 
   console.log('MySQL database tables verified and ready.');
 };

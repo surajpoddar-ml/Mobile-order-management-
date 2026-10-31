@@ -6,18 +6,13 @@ import {
   Clock,
   AlertTriangle,
   XCircle,
-  Calendar,
   Package,
-  Award,
-  Lock,
-  ArrowRight
+  Lock
 } from 'lucide-react';
 
 export const WarrantyVerificationCard = ({
   verificationData,
   loading = false,
-  activating = false,
-  onActivate = null,
   isAuthenticated = false,
   onRequireLogin = null
 }) => {
@@ -51,11 +46,124 @@ export const WarrantyVerificationCard = ({
 
   const {
     invalid,
+    expiredQR,
     message,
     warranty
   } = verificationData;
 
-  // 1. Invalid Product QR
+  const formatDateTime = (isoStr) => {
+    if (!isoStr) return '—';
+    try {
+      const d = new Date(isoStr);
+      return d.toLocaleString('en-US', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (e) {
+      return isoStr;
+    }
+  };
+
+  const formatDate = (isoStr) => {
+    if (!isoStr) return '—';
+    try {
+      const d = new Date(isoStr);
+      return d.toLocaleDateString('en-US', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch (e) {
+      return isoStr;
+    }
+  };
+
+  // =========================================================================
+  // 1. EXPIRED QR STATE
+  // =========================================================================
+  if (expiredQR || (warranty && (warranty.status === 'QR Expired' || warranty.status === 'Expired QR'))) {
+    return (
+      <div style={{
+        maxWidth: '460px',
+        margin: '0 auto',
+        background: '#ffffff',
+        borderRadius: '16px',
+        border: '2px solid #ef4444',
+        padding: '32px 20px',
+        textAlign: 'center',
+        boxShadow: '0 8px 24px rgba(239, 68, 68, 0.12)'
+      }}>
+        <div style={{
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          background: '#fee2e2',
+          margin: '0 auto 16px auto',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#dc2626'
+        }}>
+          <XCircle size={36} />
+        </div>
+
+        <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#991b1b', margin: '0 0 8px 0' }}>
+          QR Expired
+        </h3>
+
+        <p style={{ fontSize: '0.96rem', fontWeight: 700, color: '#dc2626', margin: '0 0 16px 0', lineHeight: 1.4 }}>
+          This product warranty QR is no longer valid.
+        </p>
+
+        {warranty && (
+          <div style={{
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '10px',
+            padding: '12px 14px',
+            textAlign: 'left',
+            marginBottom: '16px',
+            fontSize: '0.82rem',
+            color: '#475569'
+          }}>
+            <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>
+              {warranty.productName}
+            </div>
+            {warranty.productCode && (
+              <div style={{ fontFamily: 'monospace', fontSize: '0.76rem', color: '#64748b' }}>
+                Serial / Code: {warranty.productCode}
+              </div>
+            )}
+            {warranty.qrExpiryDate && (
+              <div style={{ fontSize: '0.76rem', color: '#b91c1c', marginTop: '6px', fontWeight: 600 }}>
+                QR Expiration Date: {formatDate(warranty.qrExpiryDate)}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div style={{
+          padding: '10px 14px',
+          background: '#fef2f2',
+          borderRadius: '8px',
+          border: '1px solid #fecaca',
+          fontSize: '0.78rem',
+          color: '#b91c1c',
+          lineHeight: 1.4
+        }}>
+          This warranty QR code has expired and can no longer be used. If you recently purchased this item, please contact MWS Eagle support or your authorized distributor.
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // 2. INVALID PRODUCT QR
+  // =========================================================================
   if (invalid || !warranty) {
     return (
       <div style={{
@@ -111,20 +219,7 @@ export const WarrantyVerificationCard = ({
   const isSuspended = status === 'Suspended';
   const isOwner = warranty.isOwner;
   const isAlreadyActivated = warranty.isAlreadyActivated;
-
-  const formatDate = (isoStr) => {
-    if (!isoStr) return '—';
-    try {
-      const d = new Date(isoStr);
-      return d.toLocaleDateString('en-US', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch (e) {
-      return isoStr;
-    }
-  };
+  const hasStarted = isActive || !!warranty.warrantyStartDate;
 
   return (
     <div style={{
@@ -145,7 +240,7 @@ export const WarrantyVerificationCard = ({
         position: 'relative'
       }}>
         {/* MWS Eagle Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '12px' }}>
           <img
             src="/mws_eagle_logo.jpg?v=3"
             alt="MWS Eagle"
@@ -154,22 +249,47 @@ export const WarrantyVerificationCard = ({
           <span style={{ fontWeight: 900, fontSize: '0.9rem', letterSpacing: '0.06em' }}>MWS EAGLE</span>
         </div>
 
-        {/* Verification Title */}
+        {/* Verification Status Badges */}
         <div style={{
-          display: 'inline-flex',
+          display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           gap: '6px',
-          padding: '4px 12px',
-          borderRadius: '20px',
-          background: isActive || isNotActivated ? 'rgba(34, 197, 94, 0.2)' : isExpired ? 'rgba(148, 163, 184, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-          border: `1px solid ${isActive || isNotActivated ? '#22c55e' : isExpired ? '#94a3b8' : '#ef4444'}`,
-          fontSize: '0.8rem',
-          fontWeight: 800,
-          color: isActive || isNotActivated ? '#4ade80' : isExpired ? '#cbd5e1' : '#f87171',
-          marginBottom: '6px'
+          marginBottom: '8px'
         }}>
-          <ShieldCheck size={16} />
-          ✓ Product Verified
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 14px',
+            borderRadius: '20px',
+            background: 'rgba(34, 197, 94, 0.25)',
+            border: '1.5px solid #22c55e',
+            fontSize: '0.86rem',
+            fontWeight: 800,
+            color: '#4ade80'
+          }}>
+            <ShieldCheck size={17} />
+            Product Verified ✓
+          </div>
+
+          {hasStarted && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 14px',
+              borderRadius: '20px',
+              background: 'rgba(56, 189, 248, 0.22)',
+              border: '1px solid #38bdf8',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              color: '#7dd3fc'
+            }}>
+              <CheckCircle2 size={15} />
+              Warranty/Guarantee Started ✓
+            </div>
+          )}
         </div>
 
         <div style={{ fontSize: '0.74rem', color: '#cbd5e1' }}>
@@ -274,7 +394,7 @@ export const WarrantyVerificationCard = ({
             borderRadius: '10px',
             border: '1px solid #e2e8f0'
           }}>
-            <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>Warranty Status</div>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>Coverage Status</div>
             <div style={{
               fontSize: '0.88rem',
               fontWeight: 800,
@@ -293,148 +413,140 @@ export const WarrantyVerificationCard = ({
           </div>
         </div>
 
-        {/* Lifecycle Dates Display (If activated or expired) */}
-        {(isActive || isExpired || warranty.warrantyStartDate) && (
+        {/* ================================================================= */}
+        {/* AUTOMATIC WARRANTY LIFECYCLE DATES                                */}
+        {/* Product Verified ✓                                                */}
+        {/* Warranty/Guarantee Started ✓                                     */}
+        {/* Started: [exact date and time]                                    */}
+        {/* Valid Until: [calculated expiry date]                             */}
+        {/* ================================================================= */}
+        {hasStarted && (
           <div style={{
             background: isExpired ? '#f8fafc' : '#f0fdf4',
-            border: `1px solid ${isExpired ? '#e2e8f0' : '#bbf7d0'}`,
-            borderRadius: '10px',
-            padding: '12px 14px',
-            marginBottom: '16px'
+            border: `1.5px solid ${isExpired ? '#e2e8f0' : '#86efac'}`,
+            borderRadius: '12px',
+            padding: '14px 16px',
+            marginBottom: '16px',
+            boxShadow: '0 2px 8px rgba(34, 197, 94, 0.08)'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Warranty Started:</span>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>
-                {formatDate(warranty.warrantyStartDate)}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: 800,
+              fontSize: '0.88rem',
+              color: '#15803d',
+              marginBottom: '10px',
+              paddingBottom: '8px',
+              borderBottom: '1px solid #bbf7d0'
+            }}>
+              <CheckCircle2 size={16} />
+              Warranty/Guarantee Started ✓
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>Started:</span>
+              <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0f172a' }}>
+                {formatDateTime(warranty.warrantyStartDate)}
               </span>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Warranty Expires:</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>Valid Until:</span>
               <span style={{
-                fontSize: '0.82rem',
+                fontSize: '0.86rem',
                 fontWeight: 800,
                 color: isExpired ? '#dc2626' : '#15803d'
               }}>
-                {formatDate(warranty.warrantyEndDate)}
+                {formatDateTime(warranty.warrantyEndDate)}
               </span>
             </div>
 
             {isActive && (
               <div style={{
-                marginTop: '8px',
-                paddingTop: '6px',
+                marginTop: '10px',
+                paddingTop: '8px',
                 borderTop: '1px dashed #bbf7d0',
-                fontSize: '0.72rem',
+                fontSize: '0.74rem',
                 color: '#15803d',
                 fontWeight: 700,
                 textAlign: 'center'
               }}>
-                ✓ Active Official Coverage
+                ✓ Registered Automatically to Customer Account
               </div>
             )}
           </div>
         )}
 
-        {/* ======================================================== */}
-        {/* =============== ACTION STATES / BUTTONS ================ */}
-        {/* ======================================================== */}
-
-        {/* Case A: Not Activated -> Eligible for Activation */}
-        {isNotActivated && (
-          <div>
+        {/* If user is guest/unauthenticated and warranty is not yet started */}
+        {verificationData.requiresAuth && !hasStarted && (
+          <div style={{
+            background: '#eff6ff',
+            border: '1.5px solid #bfdbfe',
+            borderRadius: '12px',
+            padding: '16px',
+            textAlign: 'center',
+            marginBottom: '16px'
+          }}>
             <div style={{
-              background: '#fffbeb',
-              border: '1px solid #fef08a',
-              borderRadius: '8px',
-              padding: '10px 12px',
-              fontSize: '0.76rem',
-              color: '#854d0e',
-              marginBottom: '16px',
-              lineHeight: 1.4
+              fontWeight: 800,
+              fontSize: '0.92rem',
+              color: '#1e40af',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              marginBottom: '6px'
             }}>
-              This product is genuine and has not been activated yet. Tap <strong>"Activate Warranty"</strong> below to begin your official {warranty.warrantyDuration} {warranty.warrantyDurationUnit} warranty period from today.
+              <Lock size={16} />
+              Sign In to Register Warranty
             </div>
-
-            {isAuthenticated ? (
-              <button
-                type="button"
-                onClick={onActivate}
-                disabled={activating}
-                style={{
-                  width: '100%',
-                  padding: '13px 20px',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontWeight: 800,
-                  fontSize: '0.94rem',
-                  cursor: activating ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 14px rgba(22, 163, 74, 0.35)'
-                }}
-              >
-                {activating ? (
-                  <>Activating Warranty...</>
-                ) : (
-                  <>
-                    <CheckCircle2 size={18} />
-                    Activate Warranty
-                  </>
-                )}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onRequireLogin}
-                style={{
-                  width: '100%',
-                  padding: '13px 20px',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontWeight: 800,
-                  fontSize: '0.92rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 14px rgba(2, 132, 199, 0.35)'
-                }}
-              >
-                <Lock size={16} />
-                Sign In to Activate Warranty
-              </button>
-            )}
+            <div style={{ fontSize: '0.78rem', color: '#3b82f6', marginBottom: '14px', lineHeight: 1.4 }}>
+              Sign in to your customer account to automatically start and register your official {warranty.warrantyDuration} {warranty.warrantyDurationUnit} {warranty.warrantyType}.
+            </div>
+            <button
+              type="button"
+              onClick={onRequireLogin}
+              style={{
+                width: '100%',
+                padding: '12px 18px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 800,
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)'
+              }}
+            >
+              <Lock size={16} />
+              Sign In to Start Warranty
+            </button>
           </div>
         )}
 
-        {/* Case B: Active & User is Registered Owner */}
+        {/* Case: Active & User is Registered Owner */}
         {isActive && isOwner && (
           <div style={{
             background: '#f0fdf4',
             border: '1px solid #86efac',
             borderRadius: '10px',
-            padding: '14px',
+            padding: '12px 14px',
             textAlign: 'center'
           }}>
-            <div style={{ fontWeight: 800, fontSize: '0.96rem', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-              <CheckCircle2 size={18} />
+            <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <CheckCircle2 size={16} />
               Warranty Registered to Your Account
-            </div>
-            <div style={{ fontSize: '0.78rem', color: '#15803d', marginTop: '4px' }}>
-              Your warranty period has started from {formatDate(warranty.warrantyStartDate)} and is valid until {formatDate(warranty.warrantyEndDate)}.
             </div>
           </div>
         )}
 
-        {/* Case C: Already Activated by Another Customer */}
+        {/* Case: Already Activated by Another Customer */}
         {isActive && !isOwner && isAlreadyActivated && (
           <div style={{
             background: '#fefce8',
@@ -448,12 +560,12 @@ export const WarrantyVerificationCard = ({
               Warranty Already Registered
             </div>
             <div style={{ fontSize: '0.78rem', color: '#713f12', marginTop: '4px', lineHeight: 1.4 }}>
-              This product warranty has already been activated on <strong>{formatDate(warranty.warrantyStartDate)}</strong>. Multiple registrations are not permitted.
+              This product warranty has already been registered on <strong>{formatDateTime(warranty.warrantyStartDate)}</strong>. Multiple customer registrations are not permitted.
             </div>
           </div>
         )}
 
-        {/* Case D: Expired */}
+        {/* Case: Expired Warranty Duration */}
         {isExpired && (
           <div style={{
             background: '#f8fafc',
@@ -467,12 +579,12 @@ export const WarrantyVerificationCard = ({
               Warranty Expired
             </div>
             <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
-              The coverage period for this product expired on {formatDate(warranty.warrantyEndDate)}.
+              The coverage period for this product expired on {formatDateTime(warranty.warrantyEndDate)}.
             </div>
           </div>
         )}
 
-        {/* Case E: Suspended */}
+        {/* Case: Suspended */}
         {isSuspended && (
           <div style={{
             background: '#fef2f2',

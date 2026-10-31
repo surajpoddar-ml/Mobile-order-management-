@@ -4,12 +4,9 @@ import api from '../services/api';
 import { WarrantyVerificationCard } from '../components/warranty/WarrantyVerificationCard';
 import { CustomerWarrantyScanner } from '../components/warranty/CustomerWarrantyScanner';
 import {
-  ShieldCheck,
   Camera,
   ArrowLeft,
-  CheckCircle2,
-  RefreshCw,
-  Home
+  CheckCircle2
 } from 'lucide-react';
 
 export const WarrantyVerificationPage = ({ urlToken = null }) => {
@@ -30,7 +27,6 @@ export const WarrantyVerificationPage = ({ urlToken = null }) => {
   const [currentToken, setCurrentToken] = useState(getTokenFromUrl());
   const [verificationData, setVerificationData] = useState(null);
   const [loading, setLoading] = useState(!!getTokenFromUrl());
-  const [activating, setActivating] = useState(false);
   const [activationSuccessMsg, setActivationSuccessMsg] = useState('');
   const [showScanner, setShowScanner] = useState(!getTokenFromUrl());
 
@@ -41,12 +37,23 @@ export const WarrantyVerificationPage = ({ urlToken = null }) => {
     try {
       const res = await api.warranties.verify(tokenToVerify);
       setVerificationData(res);
+      if (res?.justActivated) {
+        setActivationSuccessMsg('Product Verified ✓ Warranty/Guarantee Started ✓');
+      }
       setShowScanner(false);
     } catch (err) {
-      setVerificationData({
-        invalid: true,
-        message: err.data?.message || err.message || 'Invalid product warranty QR code.'
-      });
+      if (err.data?.expiredQR || err.status === 410) {
+        setVerificationData({
+          expiredQR: true,
+          message: err.data?.message || 'QR Expired. This product warranty QR is no longer valid.',
+          warranty: err.data?.warranty || null
+        });
+      } else {
+        setVerificationData({
+          invalid: true,
+          message: err.data?.message || err.message || 'Invalid product warranty QR code.'
+        });
+      }
       setShowScanner(false);
     } finally {
       setLoading(false);
@@ -67,23 +74,6 @@ export const WarrantyVerificationPage = ({ urlToken = null }) => {
     // Sync browser URL cleanly without page reload
     window.history.pushState({}, '', `/verify-warranty/${detectedToken}`);
     fetchVerification(detectedToken);
-  };
-
-  const handleActivateWarranty = async () => {
-    if (!currentToken) return;
-    setActivating(true);
-    try {
-      const res = await api.warranties.activate(currentToken);
-      if (res.success) {
-        setActivationSuccessMsg(res.message || '✓ Warranty Activated Successfully! Your warranty period has started from today.');
-        // Refresh verification state with updated warranty
-        fetchVerification(currentToken);
-      }
-    } catch (err) {
-      alert(err.data?.message || err.message || 'Failed to activate warranty.');
-    } finally {
-      setActivating(false);
-    }
   };
 
   const handleRequireLogin = () => {
@@ -136,6 +126,7 @@ export const WarrantyVerificationPage = ({ urlToken = null }) => {
               onClick={() => {
                 setShowScanner(true);
                 setVerificationData(null);
+                setActivationSuccessMsg('');
               }}
               style={{
                 background: '#f0f9ff',
@@ -157,7 +148,7 @@ export const WarrantyVerificationPage = ({ urlToken = null }) => {
           )}
         </div>
 
-        {/* Success Alert Banner on Activation */}
+        {/* Celebratory Alert Banner on Automatic Activation */}
         {activationSuccessMsg && (
           <div style={{
             background: '#dcfce7',
@@ -169,8 +160,8 @@ export const WarrantyVerificationPage = ({ urlToken = null }) => {
             alignItems: 'center',
             gap: '10px',
             color: '#15803d',
-            fontWeight: 700,
-            fontSize: '0.9rem',
+            fontWeight: 800,
+            fontSize: '0.92rem',
             boxShadow: '0 4px 12px rgba(22, 163, 74, 0.15)'
           }}>
             <CheckCircle2 size={22} color="#16a34a" style={{ flexShrink: 0 }} />
@@ -185,8 +176,6 @@ export const WarrantyVerificationPage = ({ urlToken = null }) => {
           <WarrantyVerificationCard
             verificationData={verificationData}
             loading={loading}
-            activating={activating}
-            onActivate={handleActivateWarranty}
             isAuthenticated={!!user}
             onRequireLogin={handleRequireLogin}
           />

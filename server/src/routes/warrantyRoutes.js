@@ -10,6 +10,32 @@ const JWT_SECRET = process.env.JWT_SECRET || 'mobile_parts_super_secret_jwt_key_
  * Robust date calculation helper for warranty expiration.
  * Correctly adds months or years and handles end-of-month adjustments.
  */
+/**
+ * Helper to parse and standardize QR expiration date
+ */
+export const parseQrExpiryDate = (val) => {
+  if (!val) return null;
+  const str = String(val).trim();
+  if (!str) return null;
+  // If YYYY-MM-DD date only format, set to end-of-day 23:59:59.999 UTC
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const d = new Date(`${str}T23:59:59.999Z`);
+    return !isNaN(d.getTime()) ? d.toISOString() : null;
+  }
+  const d = new Date(str);
+  return !isNaN(d.getTime()) ? d.toISOString() : null;
+};
+
+/**
+ * Checks if QR has expired
+ */
+export const isQrExpired = (qrExpiryDate) => {
+  if (!qrExpiryDate) return false;
+  const exp = new Date(qrExpiryDate);
+  if (isNaN(exp.getTime())) return false;
+  return Date.now() > exp.getTime();
+};
+
 export const calculateWarrantyEndDate = (startDateStr, duration, unit = 'Months') => {
   const start = new Date(startDateStr);
   if (isNaN(start.getTime())) {
@@ -110,7 +136,8 @@ adminWarrantyRouter.post('/', async (req, res) => {
       warrantyDurationUnit = 'Months',
       description,
       purchaseInfo,
-      terms
+      terms,
+      qrExpiryDate
     } = req.body;
 
     if (!productId && !productName) {
@@ -172,6 +199,8 @@ adminWarrantyRouter.post('/', async (req, res) => {
 
     const now = new Date().toISOString();
 
+    const finalQrExpiryDate = parseQrExpiryDate(qrExpiryDate);
+
     const insertSql = `
       INSERT INTO product_warranties (
         warranty_token,
@@ -188,10 +217,11 @@ adminWarrantyRouter.post('/', async (req, res) => {
         description,
         purchase_info,
         terms,
+        qr_expiry_date,
         status,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Not Activated', ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Not Activated', ?, ?)
     `;
 
     const result = await queryRun(insertSql, [
@@ -209,6 +239,7 @@ adminWarrantyRouter.post('/', async (req, res) => {
       finalDesc || null,
       purchaseInfo || null,
       terms || 'Standard MWS Eagle Official Warranty. Valid for manufacturing defects and operational failures. Physical breakage or liquid immersion voids warranty.',
+      finalQrExpiryDate,
       now,
       now
     ]);
@@ -247,6 +278,7 @@ adminWarrantyRouter.post('/batch', async (req, res) => {
       description,
       purchaseInfo,
       terms,
+      qrExpiryDate,
       count = 1,
       serialPrefix = '',
       startSequence = 1
@@ -285,6 +317,7 @@ adminWarrantyRouter.post('/batch', async (req, res) => {
     const cleanUnit = warrantyDurationUnit === 'Years' ? 'Years' : 'Months';
     const cleanType = warrantyType === 'Guarantee' ? 'Guarantee' : 'Warranty';
     const baseTerms = terms || 'Standard MWS Eagle Official Warranty. Valid for manufacturing defects and operational failures. Physical breakage or liquid immersion voids warranty.';
+    const finalQrExpiryDate = parseQrExpiryDate(qrExpiryDate);
 
     const now = new Date().toISOString();
     const createdWarranties = [];
@@ -327,10 +360,11 @@ adminWarrantyRouter.post('/batch', async (req, res) => {
           description,
           purchase_info,
           terms,
+          qr_expiry_date,
           status,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Not Activated', ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Not Activated', ?, ?)
       `;
 
       const result = await queryRun(insertSql, [
@@ -348,6 +382,7 @@ adminWarrantyRouter.post('/batch', async (req, res) => {
         finalDesc || null,
         purchaseInfo || null,
         baseTerms,
+        finalQrExpiryDate,
         now,
         now
       ]);
@@ -368,6 +403,7 @@ adminWarrantyRouter.post('/batch', async (req, res) => {
         description: finalDesc || null,
         purchase_info: purchaseInfo || null,
         terms: baseTerms,
+        qr_expiry_date: finalQrExpiryDate,
         status: 'Not Activated',
         created_at: now,
         updated_at: now,
@@ -615,7 +651,7 @@ export const customerWarrantyRouter = express.Router();
 
 /**
  * GET /api/warranties/verify/:token
- * Public QR verification endpoint
+ * Public QR verification and automatic activation endpoint
  */
 customerWarrantyRouter.get('/verify/:token', async (req, res) => {
   try {
@@ -647,32 +683,142 @@ customerWarrantyRouter.get('/verify/:token', async (req, res) => {
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown IP';
     const userAgent = req.headers['user-agent'] || 'Unknown Device';
 
-    try {
+    const qrExpired = isQrExpired(warranty.qr_expiry_date);
+    const isAlreadyActivated = warranty.status === 'Active' || (warranty.status === 'Expired' && !!warranty.warranty_start_date) || !!warranty.warranty_start_date;
+
+    // 1. QR Expired Check (Enforced on backend - Reject scan if QR expired and not already activated)
+    if (qrExpired && !isAlreadyActivated) {
+      try {
+        await queryRun(`
+          INSERT INTO warranty_scan_logs (
+            warranty_id, user_id, user_name, event_type, ip_address, user_agent, scanned_at, created_at
+          ) VALUES (?, ?, ?, 'QR Expired Scan Attempt', ?, ?, ?, ?)
+        `, [
+          warranty.id,
+          optionalUser ? optionalUser.id : null,
+          optionalUser ? optionalUser.fullName : 'Guest Visitor',
+          String(ip).slice(0, 99),
+          String(userAgent).slice(0, 500),
+          now,
+          now
+        ]);
+      } catch (e) {}
+
+      return res.status(410).json({
+        success: false,
+        expiredQR: true,
+        message: 'QR Expired. This product warranty QR is no longer valid.',
+        warranty: {
+          warrantyCode: warranty.warranty_code,
+          productName: warranty.product_name,
+          brand: warranty.brand,
+          productCode: warranty.product_code,
+          qrExpiryDate: warranty.qr_expiry_date,
+          status: 'QR Expired'
+        }
+      });
+    }
+
+    // 2. Suspended Check
+    if (warranty.status === 'Suspended') {
+      return res.status(403).json({
+        success: false,
+        suspended: true,
+        message: 'This product warranty has been suspended by administration. Please contact support.',
+        warranty: {
+          productName: warranty.product_name,
+          warrantyCode: warranty.warranty_code,
+          status: 'Suspended'
+        }
+      });
+    }
+
+    let justActivated = false;
+
+    // 3. AUTOMATIC WARRANTY START:
+    // If not yet activated, QR is valid, and customer is authenticated:
+    if (!isAlreadyActivated && optionalUser) {
+      const startDate = now;
+      const endDate = calculateWarrantyEndDate(startDate, warranty.warranty_duration, warranty.warranty_duration_unit);
+
       await queryRun(`
-        INSERT INTO warranty_scan_logs (
-          warranty_id, user_id, user_name, event_type, ip_address, user_agent, scanned_at, created_at
-        ) VALUES (?, ?, ?, 'QR Scanned', ?, ?, ?, ?)
+        UPDATE product_warranties SET 
+          status = 'Active',
+          activated_at = ?,
+          warranty_start_date = ?,
+          warranty_end_date = ?,
+          activated_by_user_id = ?,
+          activated_by_name = ?,
+          activated_by_email = ?,
+          updated_at = ?
+        WHERE id = ? AND (status = 'Not Activated' OR warranty_start_date IS NULL)
       `, [
-        warranty.id,
-        optionalUser ? optionalUser.id : null,
-        optionalUser ? optionalUser.fullName : 'Guest Visitor',
-        String(ip).slice(0, 99),
-        String(userAgent).slice(0, 500),
         now,
-        now
+        startDate,
+        endDate,
+        optionalUser.id,
+        optionalUser.fullName || 'Valued Customer',
+        optionalUser.email || '',
+        now,
+        warranty.id
       ]);
-    } catch (e) {
-      console.warn('Scan logging notice:', e.message);
+
+      try {
+        await queryRun(`
+          INSERT INTO warranty_scan_logs (
+            warranty_id, user_id, user_name, event_type, ip_address, user_agent, scanned_at, created_at
+          ) VALUES (?, ?, ?, 'Warranty Started Automatically', ?, ?, ?, ?)
+        `, [
+          warranty.id,
+          optionalUser.id,
+          optionalUser.fullName || 'Valued Customer',
+          String(ip).slice(0, 99),
+          String(userAgent).slice(0, 500),
+          now,
+          now
+        ]);
+      } catch (e) {}
+
+      warranty.status = 'Active';
+      warranty.activated_at = now;
+      warranty.warranty_start_date = startDate;
+      warranty.warranty_end_date = endDate;
+      warranty.activated_by_user_id = optionalUser.id;
+      warranty.activated_by_name = optionalUser.fullName;
+      warranty.activated_by_email = optionalUser.email;
+      justActivated = true;
+    } else {
+      // Normal scan log
+      try {
+        await queryRun(`
+          INSERT INTO warranty_scan_logs (
+            warranty_id, user_id, user_name, event_type, ip_address, user_agent, scanned_at, created_at
+          ) VALUES (?, ?, ?, 'QR Scanned', ?, ?, ?, ?)
+        `, [
+          warranty.id,
+          optionalUser ? optionalUser.id : null,
+          optionalUser ? optionalUser.fullName : 'Guest Visitor',
+          String(ip).slice(0, 99),
+          String(userAgent).slice(0, 500),
+          now,
+          now
+        ]);
+      } catch (e) {
+        console.warn('Scan logging notice:', e.message);
+      }
     }
 
     const effectiveStatus = getEffectiveStatus(warranty);
     const isOwner = optionalUser && warranty.activated_by_user_id === optionalUser.id;
-    const isAlreadyActivated = effectiveStatus === 'Active' || effectiveStatus === 'Expired' || !!warranty.warranty_start_date;
+    const isNowActivated = effectiveStatus === 'Active' || effectiveStatus === 'Expired' || !!warranty.warranty_start_date;
 
     return res.status(200).json({
       success: true,
       verified: true,
+      justActivated,
+      requiresAuth: !optionalUser && !isNowActivated,
       warranty: {
+        id: warranty.id,
         warrantyToken: warranty.warranty_token,
         warrantyCode: warranty.warranty_code,
         productId: warranty.product_id,
@@ -690,11 +836,12 @@ customerWarrantyRouter.get('/verify/:token', async (req, res) => {
         status: effectiveStatus,
         createdAt: warranty.created_at,
         activatedAt: warranty.activated_at,
+        qrExpiryDate: warranty.qr_expiry_date,
         warrantyStartDate: warranty.warranty_start_date,
         warrantyEndDate: warranty.warranty_end_date,
-        isAlreadyActivated,
+        isAlreadyActivated: isNowActivated,
         isOwner,
-        registeredOwnerMasked: isAlreadyActivated && warranty.activated_by_name ? `${warranty.activated_by_name.split(' ')[0]}***` : null
+        registeredOwnerMasked: isNowActivated && warranty.activated_by_name ? `${warranty.activated_by_name.split(' ')[0]}***` : null
       }
     });
   } catch (error) {
@@ -762,6 +909,14 @@ customerWarrantyRouter.post('/:token/activate', verifyToken, async (req, res) =>
       return res.status(404).json({
         success: false,
         message: 'Invalid warranty token. Product warranty not found.'
+      });
+    }
+
+    if (isQrExpired(warranty.qr_expiry_date) && warranty.status !== 'Active') {
+      return res.status(410).json({
+        success: false,
+        expiredQR: true,
+        message: 'QR Expired. This product warranty QR is no longer valid.'
       });
     }
 

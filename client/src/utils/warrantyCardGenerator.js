@@ -218,7 +218,12 @@ export const generateWarrantyCardBlob = async (warranty) => {
 
   ctx.fillStyle = '#64748b';
   ctx.font = '500 11px sans-serif';
-  ctx.fillText('Warranty start date begins dynamically on initial customer scan.', width / 2, 714);
+  if (warranty.qr_expiry_date) {
+    const expDate = new Date(warranty.qr_expiry_date).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+    ctx.fillText(`Warranty starts automatically upon scan • QR Valid Until: ${expDate}`, width / 2, 714);
+  } else {
+    ctx.fillText('Warranty starts automatically on initial customer scan.', width / 2, 714);
+  }
 
   ctx.fillStyle = '#94a3b8';
   ctx.font = '500 10.5px sans-serif';
