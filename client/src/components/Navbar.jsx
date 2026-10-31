@@ -25,6 +25,7 @@ import {
   X,
   Phone,
   MessageCircle,
+  MessageSquare,
   Bell,
   Home as HomeIcon,
   Store,
@@ -844,20 +845,32 @@ export const Navbar = () => {
                 Instant Contact
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <a
-                  href="tel:+919507677590"
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', borderRadius: '8px', background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', fontSize: '0.84rem', fontWeight: 700 }}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    if (user?.userType === 'Customer') navigate('/portal/customer?tab=messages');
+                    else if (user?.userType === 'Distributor') navigate('/portal/distributor?tab=messages');
+                    else if (user?.userType === 'Admin') navigate('/admin?tab=messages');
+                    else navigate('/login?returnUrl=/portal/customer?tab=messages');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                    color: '#ffffff',
+                    fontSize: '0.86rem',
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
                 >
-                  <Phone size={15} /> Call: +91 95076 77590
-                </a>
-                <a
-                  href="https://wa.me/919507677590?text=Hello%20MWS%20EAGLE%2C%20I%20have%20an%20inquiry%20regarding%20mobile%20spare%20parts%20and%20orders."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', borderRadius: '8px', background: 'rgba(37, 211, 102, 0.12)', color: '#16a34a', fontSize: '0.84rem', fontWeight: 700 }}
-                >
-                  <MessageCircle size={15} /> WhatsApp Support
-                </a>
+                  <MessageSquare size={16} /> Chat with Us (Live Support)
+                </button>
               </div>
 
               {user && (

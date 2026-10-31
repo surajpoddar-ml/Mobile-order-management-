@@ -9,7 +9,7 @@ import { DistributorPortal } from './pages/DistributorPortal';
 import { AdminPanel } from './pages/AdminPanel';
 import { WarrantyVerificationPage } from './pages/WarrantyVerificationPage';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { Phone, MessageCircle, MapPin } from 'lucide-react';
+import { MessageSquare, MapPin, Building2 } from 'lucide-react';
 
 function AppContent() {
   const { currentRoute, user, navigate } = useAuth();
@@ -143,75 +143,39 @@ function AppContent() {
               </div>
             </div>
 
-            {/* Direct Contact Links: Call, WhatsApp, Location */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '14px' }}>
-              {/* Phone Call */}
-              <a
-                href="tel:+919507677590"
+            {/* Direct Live Chat & Separate Manufacturing / Branch Locations */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
+              {/* Chat with Us Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (user?.userType === 'Customer') navigate('/portal/customer?tab=messages');
+                  else if (user?.userType === 'Distributor') navigate('/portal/distributor?tab=messages');
+                  else if (user?.userType === 'Admin') navigate('/admin?tab=messages');
+                  else navigate('/login?returnUrl=/portal/customer?tab=messages');
+                }}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  padding: '8px 14px',
+                  padding: '9px 16px',
                   borderRadius: '24px',
-                  backgroundColor: 'rgba(37, 99, 235, 0.15)',
-                  border: '1px solid rgba(37, 99, 235, 0.35)',
-                  color: '#60a5fa',
+                  backgroundColor: '#0284c7',
+                  border: '1.5px solid #38bdf8',
+                  color: '#ffffff',
                   fontSize: '0.82rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 10px rgba(2, 132, 199, 0.3)',
                   transition: 'all 0.18s ease'
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.3)';
-                  e.currentTarget.style.color = '#ffffff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.15)';
-                  e.currentTarget.style.color = '#60a5fa';
-                }}
               >
-                <Phone size={15} />
-                <span>Call: +91 95076 77590</span>
-              </a>
+                <MessageSquare size={15} />
+                <span>Chat with Us (Live Support)</span>
+              </button>
 
-              {/* WhatsApp Chat */}
-              <a
-                href="https://wa.me/919507677590?text=Hello%20MWS%20EAGLE%2C%20I%20have%20an%20inquiry%20regarding%20mobile%20spare%20parts%20and%20orders."
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 14px',
-                  borderRadius: '24px',
-                  backgroundColor: 'rgba(37, 211, 102, 0.15)',
-                  border: '1px solid rgba(37, 211, 102, 0.35)',
-                  color: '#4ade80',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  transition: 'all 0.18s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(37, 211, 102, 0.3)';
-                  e.currentTarget.style.color = '#ffffff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(37, 211, 102, 0.15)';
-                  e.currentTarget.style.color = '#4ade80';
-                }}
-              >
-                <MessageCircle size={15} />
-                <span>WhatsApp: +91 95076 77590</span>
-              </a>
-
-              {/* Location: Manufacture from Kathmandu Nepal, Branch Office Delhi, Mumbai */}
-              <a
-                href="https://maps.google.com/?q=Kathmandu,+Nepal"
-                target="_blank"
-                rel="noopener noreferrer"
+              {/* 1. SEPARATE LOCATION: Manufactured at Kathmandu, Nepal */}
+              <div
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -221,29 +185,38 @@ function AppContent() {
                   backgroundColor: 'rgba(255, 255, 255, 0.08)',
                   border: '1px solid rgba(255, 255, 255, 0.15)',
                   color: '#e2e8f0',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  transition: 'all 0.18s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.16)';
-                  e.currentTarget.style.color = '#ffffff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
-                  e.currentTarget.style.color = '#e2e8f0';
+                  fontSize: '0.8rem',
+                  fontWeight: 700
                 }}
               >
-                <MapPin size={15} color="#fbbf24" />
-                <span>Manufacture from Kathmandu Nepal, Branch Office Delhi, Mumbai</span>
-              </a>
+                <MapPin size={14} color="#fbbf24" />
+                <span>Manufactured at: Kathmandu, Nepal</span>
+              </div>
+
+              {/* 2. SEPARATE LOCATION: Branch Office at Mumbai, Delhi, Chennai */}
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '7px',
+                  padding: '8px 14px',
+                  borderRadius: '24px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#e2e8f0',
+                  fontSize: '0.8rem',
+                  fontWeight: 700
+                }}
+              >
+                <Building2 size={14} color="#818cf8" />
+                <span>Branch Offices: Mumbai • Delhi • Chennai</span>
+              </div>
             </div>
 
             {/* Copyright & Info */}
             <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', textAlign: 'right', lineHeight: 1.6 }}>
               <div>© 2026 MWS EAGLE Mobile Spare-Parts Marketplace. All rights reserved.</div>
-              <div>Secure authentication · Role-based access control · Manufacture from Kathmandu Nepal, Branch Office Delhi, Mumbai</div>
+              <div>Manufactured at Kathmandu, Nepal · Branch Offices: Mumbai, Delhi, Chennai</div>
             </div>
           </div>
         </footer>
