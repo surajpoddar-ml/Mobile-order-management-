@@ -143,80 +143,85 @@ function AppContent() {
               </div>
             </div>
 
-            {/* Direct Live Chat & Separate Manufacturing / Branch Locations */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
-              {/* Chat with Us Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (user?.userType === 'Customer') navigate('/portal/customer?tab=messages');
-                  else if (user?.userType === 'Distributor') navigate('/portal/distributor?tab=messages');
-                  else if (user?.userType === 'Admin') navigate('/admin?tab=messages');
-                  else navigate('/login?returnUrl=/portal/customer?tab=messages');
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '9px 16px',
-                  borderRadius: '24px',
-                  backgroundColor: '#0284c7',
-                  border: '1.5px solid #38bdf8',
-                  color: '#ffffff',
-                  fontSize: '0.82rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 10px rgba(2, 132, 199, 0.3)',
-                  transition: 'all 0.18s ease'
-                }}
-              >
-                <MessageSquare size={15} />
-                <span>Chat with Us (Live Support)</span>
-              </button>
-
-              {/* 1. SEPARATE LOCATION: Manufactured at Kathmandu, Nepal */}
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '7px',
-                  padding: '8px 14px',
-                  borderRadius: '24px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: '#e2e8f0',
-                  fontSize: '0.8rem',
-                  fontWeight: 700
-                }}
-              >
-                <MapPin size={14} color="#fbbf24" />
-                <span>Manufactured at: Kathmandu, Nepal</span>
+            {/* Direct Live Chat & Separate Manufacturing / Head Office Locations */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {/* Chat with Us (Live Chat) - Exactly in place */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (user?.userType === 'Customer') navigate('/portal/customer?tab=messages');
+                    else if (user?.userType === 'Distributor') navigate('/portal/distributor?tab=messages');
+                    else if (user?.userType === 'Admin') navigate('/admin?tab=messages');
+                    else navigate('/login?returnUrl=/portal/customer?tab=messages');
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '9px 18px',
+                    borderRadius: '24px',
+                    backgroundColor: '#0284c7',
+                    border: '1.5px solid #38bdf8',
+                    color: '#ffffff',
+                    fontSize: '0.84rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 10px rgba(2, 132, 199, 0.3)',
+                    transition: 'all 0.18s ease'
+                  }}
+                >
+                  <MessageSquare size={16} />
+                  <span>Chat with Us (Live Chat)</span>
+                </button>
               </div>
 
-              {/* 2. SEPARATE LOCATION: Branch Office at Mumbai, Delhi, Chennai */}
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '7px',
-                  padding: '8px 14px',
-                  borderRadius: '24px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: '#e2e8f0',
-                  fontSize: '0.8rem',
-                  fontWeight: 700
-                }}
-              >
-                <Building2 size={14} color="#818cf8" />
-                <span>Branch Offices: Mumbai • Delhi • Chennai</span>
+              {/* Separately in below: Manufacture and Head Office */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
+                {/* 1. SEPARATE LOCATION: Manufacture from Kathmandu, Nepal */}
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    padding: '7px 13px',
+                    borderRadius: '20px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#e2e8f0',
+                    fontSize: '0.78rem',
+                    fontWeight: 700
+                  }}
+                >
+                  <MapPin size={14} color="#fbbf24" />
+                  <span>Manufacture from: Kathmandu, Nepal</span>
+                </div>
+
+                {/* 2. SEPARATE LOCATION: Head Office: Mumbai, Delhi, Chennai, Hyderabad */}
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    padding: '7px 13px',
+                    borderRadius: '20px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#e2e8f0',
+                    fontSize: '0.78rem',
+                    fontWeight: 700
+                  }}
+                >
+                  <Building2 size={14} color="#818cf8" />
+                  <span>Head Office: Mumbai, Delhi, Chennai, Hyderabad</span>
+                </div>
               </div>
             </div>
 
             {/* Copyright & Info */}
             <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', textAlign: 'right', lineHeight: 1.6 }}>
               <div>© 2026 MWS EAGLE Mobile Spare-Parts Marketplace. All rights reserved.</div>
-              <div>Manufactured at Kathmandu, Nepal · Branch Offices: Mumbai, Delhi, Chennai</div>
+              <div>Manufacture from Kathmandu, Nepal · Head Office: Mumbai, Delhi, Chennai, Hyderabad</div>
             </div>
           </div>
         </footer>

@@ -2012,7 +2012,7 @@ export const ShopModals = () => {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '0.72rem', color: '#d97706', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Manufactured At
+                      Manufacture From
                     </div>
                     <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a' }}>
                       Kathmandu, Nepal
@@ -2020,7 +2020,7 @@ export const ShopModals = () => {
                   </div>
                 </div>
 
-                {/* 2. SEPARATE LOCATION: Branch Office at Mumbai, Delhi, Chennai */}
+                {/* 2. SEPARATE LOCATION: Head Office: Mumbai, Delhi, Chennai, Hyderabad */}
                 <div
                   style={{
                     display: 'flex',
@@ -2047,10 +2047,10 @@ export const ShopModals = () => {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '0.72rem', color: '#4f46e5', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Branch Offices
+                      Head Office
                     </div>
                     <div style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a' }}>
-                      Mumbai • Delhi • Chennai
+                      Mumbai • Delhi • Chennai • Hyderabad
                     </div>
                   </div>
                 </div>

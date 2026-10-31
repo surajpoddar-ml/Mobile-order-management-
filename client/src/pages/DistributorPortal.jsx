@@ -391,6 +391,68 @@ export const DistributorPortal = () => {
               My Reward
             </span>
           </button>
+
+          {/* Card 4: Live Chat */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('messages')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '3px',
+              padding: '7px 4px',
+              borderRadius: '11px',
+              background: activeTab === 'messages' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#ffffff',
+              color: activeTab === 'messages' ? '#ffffff' : '#1e293b',
+              border: activeTab === 'messages' ? '1px solid #0284c7' : '1px solid rgba(2, 132, 199, 0.18)',
+              boxShadow: activeTab === 'messages' ? '0 3px 10px rgba(2, 132, 199, 0.25)' : '0 1px 4px rgba(0, 0, 0, 0.04)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              textAlign: 'center',
+              minHeight: '50px',
+              position: 'relative'
+            }}
+          >
+            <div style={{
+              width: '20px',
+              height: '20px',
+              borderRadius: '6px',
+              background: activeTab === 'messages' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(2, 132, 199, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: activeTab === 'messages' ? '#ffffff' : '#0284c7',
+              position: 'relative'
+            }}>
+              <MessageSquare size={15} style={{ transform: 'scale(0.8)' }} />
+              {chatUnreadCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  right: '-6px',
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  fontSize: '0.52rem',
+                  fontWeight: 800,
+                  padding: '1px 3.5px',
+                  borderRadius: '10px',
+                  lineHeight: 1
+                }}>
+                  {chatUnreadCount}
+                </span>
+              )}
+            </div>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: activeTab === 'messages' ? 800 : 700,
+              lineHeight: 1.15,
+              whiteSpace: 'nowrap'
+            }}>
+              Live Chat
+            </span>
+          </button>
         </div>
       </section>
 
@@ -798,6 +860,114 @@ export const DistributorPortal = () => {
                 })}
               </div>
             )}
+          </section>
+
+          {/* Support & Locations: Live Chat, Manufacture & Head Office */}
+          <section style={{ maxWidth: '1240px', margin: '20px auto 30px auto', padding: '0 12px' }}>
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              padding: '18px 20px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '11px',
+                    background: 'rgba(2, 132, 199, 0.12)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#0284c7',
+                    flexShrink: 0
+                  }}>
+                    <MessageSquare size={22} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0f172a' }}>
+                      Distributor Desk & Wholesale Support
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
+                      Direct bulk orders, custom quotes, invoice assistance, and real-time support.
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('messages');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 20px',
+                    borderRadius: '24px',
+                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontWeight: 800,
+                    fontSize: '0.86rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 3px 10px rgba(2, 132, 199, 0.3)',
+                    transition: 'all 0.18s ease'
+                  }}
+                >
+                  <MessageSquare size={16} />
+                  <span>Start Live Chat</span>
+                </button>
+              </div>
+
+              {/* Separately in below: Manufacture and Head Office */}
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: '10px',
+                paddingTop: '12px',
+                borderTop: '1px solid #f1f5f9'
+              }}>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '7px',
+                  padding: '7px 14px',
+                  borderRadius: '20px',
+                  backgroundColor: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  color: '#92400e',
+                  fontSize: '0.82rem',
+                  fontWeight: 700
+                }}>
+                  <MapPin size={15} color="#d97706" />
+                  <span>Manufacture from: <strong>Kathmandu, Nepal</strong></span>
+                </div>
+
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '7px',
+                  padding: '7px 14px',
+                  borderRadius: '20px',
+                  backgroundColor: '#eef2ff',
+                  border: '1px solid #c7d2fe',
+                  color: '#3730a3',
+                  fontSize: '0.82rem',
+                  fontWeight: 700
+                }}>
+                  <Building2 size={15} color="#4f46e5" />
+                  <span>Head Office: <strong>Mumbai, Delhi, Chennai, Hyderabad</strong></span>
+                </div>
+              </div>
+            </div>
           </section>
         </>
       )}
