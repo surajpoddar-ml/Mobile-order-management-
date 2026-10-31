@@ -26,6 +26,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { RewardsSection } from '../components/rewards/RewardsSection';
+import { LiveChatWindow } from '../components/chat/LiveChatWindow';
+import { MessageSquare } from 'lucide-react';
 
 export const DistributorPortal = () => {
   const { user } = useAuth();
@@ -39,7 +41,19 @@ export const DistributorPortal = () => {
     openProductDetails
   } = useCart();
 
-  const [activeTab, setActiveTab] = useState('catalog'); // 'catalog' | 'orders'
+  const [activeTab, setActiveTab] = useState('catalog');
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+
+  useEffect(() => {
+    api.chat.getUnreadCount()
+      .then(res => {
+        if (res.success && typeof res.unreadCount === 'number') {
+          setChatUnreadCount(res.unreadCount);
+        }
+      })
+      .catch(() => {});
+  }, [activeTab]);
+ // 'catalog' | 'orders'
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [myOrders, setMyOrders] = useState([]);
@@ -225,7 +239,7 @@ export const DistributorPortal = () => {
       }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(4, 1fr)',
           gap: '8px'
         }}>
           {/* Card 1: Product Catalog */}
@@ -1017,6 +1031,71 @@ export const DistributorPortal = () => {
         <section style={{ maxWidth: '1240px', margin: '30px auto 80px', padding: '0 20px' }}>
           <RewardsSection userType="Distributor" />
         </section>
+      )}
+{/* ====== 6. LIVE MESSAGING / LIVE CHAT VIEW ====== */}
+      {activeTab === 'messages' && (
+        <section style={{ maxWidth: '860px', margin: '20px auto 80px', padding: '0 16px' }}>
+          <LiveChatWindow
+            recipientName="MWS Eagle Distributor Desk"
+            recipientRole="Admin"
+            recipientSubtitle="Direct Distributor Support & Wholesale Inquiries"
+            currentUser={user}
+            height="calc(100vh - 240px)"
+          />
+        </section>
+      )}
+
+      {/* Floating Chat Trigger Button */}
+      {activeTab !== 'messages' && (
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('messages');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 90,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '11px 18px',
+            borderRadius: '30px',
+            background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+            color: '#ffffff',
+            border: 'none',
+            fontWeight: 800,
+            fontSize: '0.88rem',
+            cursor: 'pointer',
+            boxShadow: '0 4px 18px rgba(2, 132, 199, 0.45)',
+            transition: 'transform 0.18s ease'
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+        >
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <MessageSquare size={18} />
+            {chatUnreadCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-7px',
+                right: '-9px',
+                background: '#ef4444',
+                color: '#ffffff',
+                fontSize: '0.62rem',
+                fontWeight: 900,
+                padding: '1px 5px',
+                borderRadius: '10px',
+                border: '1.5px solid #ffffff'
+              }}>
+                {chatUnreadCount}
+              </span>
+            )}
+          </div>
+          <span>Live Chat</span>
+        </button>
       )}
     </div>
   );

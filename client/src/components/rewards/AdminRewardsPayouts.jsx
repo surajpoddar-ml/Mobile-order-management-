@@ -202,8 +202,8 @@ export const AdminRewardsPayouts = () => {
     }
   };
 
-  // Calculate total NPR value redeemed
-  const totalValueRedeemedNpr = redemptions.reduce((acc, r) => acc + (Number(r.cashAmount) || 0), 0);
+  // Calculate total ₹ value redeemed
+  const totalValueRedeemedInr = redemptions.reduce((acc, r) => acc + (Number(r.cashAmount) || 0), 0);
   const totalPointsRedeemedSum = redemptions.reduce((acc, r) => acc + (Number(r.points) || 0), 0);
 
   return (
@@ -279,7 +279,7 @@ export const AdminRewardsPayouts = () => {
           </div>
         </div>
 
-        {/* Total Redeemed Value in NPR */}
+        {/* Total Redeemed Value in ₹ */}
         <div
           style={{
             background: '#ffffff',
@@ -293,10 +293,10 @@ export const AdminRewardsPayouts = () => {
             Total Redeemed Value
           </div>
           <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#d97706', lineHeight: 1.1 }}>
-            NPR {totalValueRedeemedNpr.toLocaleString()}
+            ₹ {totalValueRedeemedInr.toLocaleString()}
           </div>
           <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
-            Exact conversion: 1 Pt = NPR 1
+            Exact conversion: 1 Pt = ₹ 1
           </div>
         </div>
       </div>
@@ -498,7 +498,7 @@ export const AdminRewardsPayouts = () => {
                       <th style={{ padding: '12px 16px' }}>User Details</th>
                       <th style={{ padding: '12px 16px' }}>Purchased Product</th>
                       <th style={{ padding: '12px 16px' }}>Points Deducted</th>
-                      <th style={{ padding: '12px 16px' }}>NPR Equivalent</th>
+                      <th style={{ padding: '12px 16px' }}>₹ Equivalent</th>
                       <th style={{ padding: '12px 16px' }}>Status</th>
                       <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
                     </tr>
@@ -584,13 +584,13 @@ export const AdminRewardsPayouts = () => {
                             </div>
                           </td>
 
-                          {/* NPR Equivalent */}
+                          {/* ₹ Equivalent */}
                           <td style={{ padding: '14px 16px' }}>
                             <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#059669' }}>
-                              NPR {Number(item.cashAmount).toLocaleString()}
+                              ₹ {Number(item.cashAmount).toLocaleString()}
                             </div>
                             <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                              1 pt = NPR 1
+                              1 pt = ₹ 1
                             </div>
                           </td>
 
@@ -777,7 +777,7 @@ export const AdminRewardsPayouts = () => {
                             {Number(u.pointsBalance || 0).toLocaleString()} <span style={{ fontSize: '0.75rem' }}>pts</span>
                           </div>
                           <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                            NPR {Number(u.pointsBalance || 0).toLocaleString()} value
+                            ₹ {Number(u.pointsBalance || 0).toLocaleString()} value
                           </div>
                         </td>
                         <td style={{ padding: '14px 16px', fontWeight: 700, color: '#334155' }}>
@@ -805,7 +805,7 @@ export const AdminRewardsPayouts = () => {
               Reward Point Conversion Rate
             </div>
             <div style={{ fontSize: '0.84rem', color: '#64748b', marginBottom: '24px' }}>
-              The reward system allows customers and distributors to earn points via QR codes and redeem those points exclusively for catalog products at a fixed rate of 1 Point = NPR 1.
+              The reward system allows customers and distributors to earn points via QR codes and redeem those points exclusively for catalog products at a fixed rate of 1 Point = ₹ 1.
             </div>
 
             {settingsMsg.text && (
@@ -827,7 +827,7 @@ export const AdminRewardsPayouts = () => {
             <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  Points-to-NPR Rate (1 Point = NPR X)
+                  Points-to-₹ Rate (1 Point = ₹ X)
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <input
@@ -847,7 +847,7 @@ export const AdminRewardsPayouts = () => {
                     }}
                   />
                   <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>
-                    Standard Conversion: 1 Point = NPR 1.00
+                    Standard Conversion: 1 Point = ₹ 1.00
                   </span>
                 </div>
               </div>

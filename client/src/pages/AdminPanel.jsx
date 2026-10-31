@@ -13,6 +13,8 @@ import { AdminCreateOffers } from '../components/rewards/AdminCreateOffers';
 import { AdminRewardsPayouts } from '../components/rewards/AdminRewardsPayouts';
 import { AdminStickers } from '../components/AdminStickers';
 import { AdminProductWarranty } from '../components/warranty/AdminProductWarranty';
+import { AdminChatManagement } from '../components/chat/AdminChatManagement';
+import { MessageSquare } from 'lucide-react';
 
 export const AdminPanel = () => {
   const { user, navigate, logout } = useAuth();
@@ -26,6 +28,19 @@ export const AdminPanel = () => {
   // Core navigation & view state
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'orders' | 'pending' | 'distributors' | 'customers' | 'all' | 'products' | 'advertisements' | 'stickers'
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  // Live Chat unread count state
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+
+  useEffect(() => {
+    api.chat.getUnreadCount()
+      .then(res => {
+        if (res.success && typeof res.unreadCount === 'number') {
+          setChatUnreadCount(res.unreadCount);
+        }
+      })
+      .catch(() => {});
+  }, [activeTab]);
+
   const [actionMsg, setActionMsg] = useState('');
 
   // Sync activeTab with URL query parameter e.g. /admin?tab=products
@@ -34,7 +49,7 @@ export const AdminPanel = () => {
       try {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get('tab');
-        if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'warranties', 'advertisements', 'categories', 'create-offers', 'rewards-payouts', 'stickers'].includes(tab)) {
+        if (tab && ['overview', 'orders', 'pending', 'distributors', 'customers', 'all', 'products', 'warranties', 'advertisements', 'categories', 'create-offers', 'rewards-payouts', 'stickers', 'messages'].includes(tab)) {
           setActiveTab(tab);
         }
       } catch (e) {}
@@ -1089,6 +1104,7 @@ export const AdminPanel = () => {
   const navMenuItems = [
     { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard, badge: null, color: 'var(--primary)' },
     { id: 'orders', label: 'Orders', icon: ShoppingCart, badge: orders?.length ?? 0, color: '#2563eb' },
+    { id: 'messages', label: 'Live Messages', icon: MessageSquare, badge: chatUnreadCount > 0 ? chatUnreadCount : null, color: '#0284c7' },
     { id: 'create-offers', label: 'Create Offers', icon: QrCode, badge: null, color: '#f59e0b' },
     { id: 'rewards-payouts', label: 'Reward Redemptions', icon: Gift, badge: null, color: '#10b981' },
     { id: 'pending', label: 'Pending Approvals', icon: Clock, badge: metrics?.distributors?.pending ?? 0, color: 'var(--status-pending)' },
@@ -1860,7 +1876,7 @@ export const AdminPanel = () => {
                           {/* Payment & Proof Details */}
                           <td style={{ padding: '12px 14px', verticalAlign: 'top', minWidth: '180px' }}>
                             <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>
-                              NPR {Number(ord.totalAmount).toLocaleString()}
+                              ₹ {Number(ord.totalAmount).toLocaleString()}
                             </div>
 
                             {ord.paymentMethod === 'Reward Points' ? (
@@ -2806,6 +2822,12 @@ export const AdminPanel = () => {
         {/* ======================================================== */}
         {activeTab === 'warranties' && (
           <AdminProductWarranty />
+        )}
+{/* ======================================================== */}
+        {/* ============ VIEW: LIVE MESSAGES MANAGEMENT =========== */}
+        {/* ======================================================== */}
+        {activeTab === 'messages' && (
+          <AdminChatManagement currentUser={user} />
         )}
 
         {/* ======================================================== */}

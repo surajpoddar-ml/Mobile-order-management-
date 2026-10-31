@@ -57,7 +57,7 @@ export const RedemptionModal = ({
     return Number(p.customerPrice || p.originalPrice || p.distributorPrice || 0);
   };
 
-  // 1 Reward Point = NPR 1
+  // 1 Reward Point = ₹ 1
   const unitPrice = selectedProduct ? getProductPrice(selectedProduct) : 0;
   const totalRequiredPoints = Math.round(unitPrice * quantity);
   const hasEnoughPoints = currentPoints >= totalRequiredPoints && totalRequiredPoints > 0;
@@ -129,7 +129,7 @@ export const RedemptionModal = ({
     }
     if (!hasEnoughPoints) {
       return setErrorMsg(
-        `Insufficient points. You need ${totalRequiredPoints} points (NPR ${totalRequiredPoints}), but only have ${currentPoints} points.`
+        `Insufficient points. You need ${totalRequiredPoints} points (₹ ${totalRequiredPoints}), but only have ${currentPoints} points.`
       );
     }
     setErrorMsg('');
@@ -154,7 +154,7 @@ export const RedemptionModal = ({
 
     if (!hasEnoughPoints) {
       return setErrorMsg(
-        `Insufficient points. You need ${totalRequiredPoints} points (NPR ${totalRequiredPoints}), but only have ${currentPoints} points.`
+        `Insufficient points. You need ${totalRequiredPoints} points (₹ ${totalRequiredPoints}), but only have ${currentPoints} points.`
       );
     }
 
@@ -257,7 +257,7 @@ export const RedemptionModal = ({
                 Buy Products with Points
               </div>
               <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                Redeem your earned reward points for catalog products • 1 Point = NPR 1
+                Redeem your earned reward points for catalog products • 1 Point = ₹ 1
               </div>
             </div>
           </div>
@@ -279,7 +279,7 @@ export const RedemptionModal = ({
               className="reward-points-pill"
             >
               <Sparkles size={14} color="#f59e0b" />
-              <span>{currentPoints.toLocaleString()} pts (NPR {currentPoints.toLocaleString()})</span>
+              <span>{currentPoints.toLocaleString()} pts (₹ {currentPoints.toLocaleString()})</span>
             </div>
 
             <button
@@ -326,13 +326,13 @@ export const RedemptionModal = ({
               {currentPoints.toLocaleString()} Points
             </span>
             <span style={{ color: '#cbd5e1' }}>
-              (= <strong>NPR {currentPoints.toLocaleString()}</strong>)
+              (= <strong>₹ {currentPoints.toLocaleString()}</strong>)
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontSize: '0.78rem', fontWeight: 700 }}>
             <CheckCircle2 size={14} />
-            <span>Rate: 1 Point = NPR 1</span>
+            <span>Rate: 1 Point = ₹ 1</span>
           </div>
         </div>
 
@@ -519,7 +519,7 @@ export const RedemptionModal = ({
                               {price} <span style={{ fontSize: '0.74rem', fontWeight: 700 }}>pts</span>
                             </div>
                             <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                              NPR {price.toLocaleString()}
+                              ₹ {price.toLocaleString()}
                             </div>
                           </div>
 
@@ -590,7 +590,7 @@ export const RedemptionModal = ({
                           {selectedProduct.name}
                         </div>
                         <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                          Unit Price: NPR {unitPrice.toLocaleString()} ({unitPrice} pts)
+                          Unit Price: ₹ {unitPrice.toLocaleString()} ({unitPrice} pts)
                         </div>
                       </div>
                     </div>
@@ -649,7 +649,7 @@ export const RedemptionModal = ({
                         {totalRequiredPoints.toLocaleString()} <span style={{ fontSize: '0.8rem' }}>pts</span>
                       </div>
                       <div style={{ fontSize: '0.74rem', color: '#475569' }}>
-                        (NPR {totalRequiredPoints.toLocaleString()})
+                        (₹ {totalRequiredPoints.toLocaleString()})
                       </div>
                     </div>
                   </div>
@@ -760,7 +760,7 @@ export const RedemptionModal = ({
                       {quantity}x {selectedProduct.name}
                     </div>
                     <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                      Payment: {totalRequiredPoints} Reward Points (NPR {totalRequiredPoints.toLocaleString()})
+                      Payment: {totalRequiredPoints} Reward Points (₹ {totalRequiredPoints.toLocaleString()})
                     </div>
                   </div>
                 </div>
@@ -1037,7 +1037,7 @@ export const RedemptionModal = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Equivalent Value:</span>
                   <span style={{ fontWeight: 800, color: '#059669' }}>
-                    NPR {Number(successOrder.totalNpr).toLocaleString()}
+                    ₹ {Number(successOrder.totalNpr).toLocaleString()}
                   </span>
                 </div>
 

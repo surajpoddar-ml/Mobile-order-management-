@@ -585,6 +585,53 @@ export const api = {
 
     getMyWarranties: () =>
       request('/my/warranties', { method: 'GET' })
+  },
+// Live Messaging / Live Chat Endpoints
+  chat: {
+    getMyConversation: () =>
+      request('/chat/my-conversation', { method: 'GET' }),
+
+    getMessages: (conversationId, { limit = 50, beforeId = null } = {}) => {
+      const params = new URLSearchParams();
+      if (limit) params.append('limit', limit);
+      if (beforeId) params.append('beforeId', beforeId);
+      return request(`/chat/conversations/${conversationId}/messages?${params.toString()}`, { method: 'GET' });
+    },
+
+    sendMessage: ({ conversationId, messageText }) =>
+      request('/chat/messages', {
+        method: 'POST',
+        body: JSON.stringify({ conversationId, messageText })
+      }),
+
+    uploadImage: ({ conversationId, file, caption = '' }) => {
+      const formData = new FormData();
+      formData.append('conversationId', conversationId);
+      formData.append('image', file);
+      if (caption) formData.append('caption', caption);
+      return request('/chat/messages/upload', {
+        method: 'POST',
+        body: formData
+      });
+    },
+
+    markAsRead: (conversationId) =>
+      request(`/chat/conversations/${conversationId}/read`, { method: 'PATCH' }),
+
+    deleteMessage: (messageId) =>
+      request(`/chat/messages/${messageId}`, { method: 'DELETE' }),
+
+    getAdminConversations: ({ userType = 'All', search = '', page = 1, limit = 50 } = {}) => {
+      const params = new URLSearchParams();
+      if (userType && userType !== 'All') params.append('userType', userType);
+      if (search) params.append('search', search);
+      params.append('page', page);
+      params.append('limit', limit);
+      return request(`/chat/admin/conversations?${params.toString()}`, { method: 'GET' });
+    },
+
+    getUnreadCount: () =>
+      request('/chat/unread-count', { method: 'GET' })
   }
 };
 

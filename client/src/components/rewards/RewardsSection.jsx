@@ -221,7 +221,7 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
               }}
             >
               <Sparkles size={14} color="#f59e0b" />
-              <span>Conversion Rate: <strong>1 Point = NPR 1</strong></span>
+              <span>Conversion Rate: <strong>1 Point = ₹ 1</strong></span>
             </div>
           </div>
 
@@ -262,10 +262,10 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
               }}
             >
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '4px' }}>
-                Equivalent Value in NPR
+                Equivalent Value in ₹
               </div>
               <div style={{ fontSize: 'clamp(1.8rem, 4vw, 2.4rem)', fontWeight: 900, color: '#10b981', lineHeight: 1.1 }}>
-                NPR {summary.pointsBalance.toLocaleString()}
+                ₹ {summary.pointsBalance.toLocaleString()}
               </div>
             </div>
 
@@ -567,7 +567,7 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
                   No Product Redemptions Yet
                 </div>
                 <div style={{ fontSize: '0.82rem', maxWidth: '360px', margin: '0 auto 18px', color: '#94a3b8' }}>
-                  Redeem your earned points to purchase mobile accessories directly from the catalog (1 Point = NPR 1).
+                  Redeem your earned points to purchase mobile accessories directly from the catalog (1 Point = ₹ 1).
                 </div>
                 <button
                   type="button"
@@ -601,7 +601,7 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
                       <th style={{ padding: '12px 14px' }}>Date</th>
                       <th style={{ padding: '12px 14px' }}>Purchased Product</th>
                       <th style={{ padding: '12px 14px' }}>Points Redeemed</th>
-                      <th style={{ padding: '12px 14px' }}>NPR Value</th>
+                      <th style={{ padding: '12px 14px' }}>₹ Value</th>
                       <th style={{ padding: '12px 14px' }}>Status</th>
                     </tr>
                   </thead>
@@ -643,7 +643,7 @@ export const RewardsSection = ({ userType = 'Customer' }) => {
                             -{red.points} pts
                           </td>
                           <td style={{ padding: '14px', fontWeight: 900, color: '#059669', fontSize: '0.95rem' }}>
-                            NPR {Number(red.cashAmount).toLocaleString()}
+                            ₹ {Number(red.cashAmount).toLocaleString()}
                           </td>
                           <td style={{ padding: '14px' }}>
                             <span

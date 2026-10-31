@@ -2043,9 +2043,9 @@ export const ShopModals = () => {
                   <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#15803d' }}>Open WhatsApp →</span>
                 </a>
 
-                {/* Location: Khagaria, Bihar */}
+                {/* Location: Manufacture from Kathmandu Nepal, Branch Office Delhi, Mumbai */}
                 <a
-                  href="https://maps.google.com/?q=Khagaria,+Bihar"
+                  href="https://maps.google.com/?q=Kathmandu,+Nepal"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -2082,8 +2082,8 @@ export const ShopModals = () => {
                     <MapPin size={20} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Hub & Distribution Center</div>
-                    <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0f172a' }}>Khagaria, Bihar</div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Locations & Offices</div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>Manufacture from Kathmandu Nepal, Branch Office Delhi, Mumbai</div>
                   </div>
                   <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#d97706' }}>Open Map →</span>
                 </a>

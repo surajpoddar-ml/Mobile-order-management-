@@ -207,9 +207,9 @@ function AppContent() {
                 <span>WhatsApp: +91 95076 77590</span>
               </a>
 
-              {/* Location: Khagaria, Bihar */}
+              {/* Location: Manufacture from Kathmandu Nepal, Branch Office Delhi, Mumbai */}
               <a
-                href="https://maps.google.com/?q=Khagaria,+Bihar"
+                href="https://maps.google.com/?q=Kathmandu,+Nepal"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -236,14 +236,14 @@ function AppContent() {
                 }}
               >
                 <MapPin size={15} color="#fbbf24" />
-                <span>Khagaria, Bihar</span>
+                <span>Manufacture from Kathmandu Nepal, Branch Office Delhi, Mumbai</span>
               </a>
             </div>
 
             {/* Copyright & Info */}
             <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', textAlign: 'right', lineHeight: 1.6 }}>
               <div>© 2026 MWS EAGLE Mobile Spare-Parts Marketplace. All rights reserved.</div>
-              <div>Secure authentication · Role-based access control · Khagaria, Bihar Hub</div>
+              <div>Secure authentication · Role-based access control · Manufacture from Kathmandu Nepal, Branch Office Delhi, Mumbai</div>
             </div>
           </div>
         </footer>

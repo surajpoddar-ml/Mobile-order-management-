@@ -14,6 +14,8 @@ import rewardRoutes from './routes/rewardRoutes.js';
 import stickerRoutes from './routes/stickerRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import customerWarrantyRouter, { adminWarrantyRouter } from './routes/warrantyRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
+import { initSocketIO } from './services/socketService.js';
 import { seedDatabase } from './database/seed.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -50,6 +52,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rewards', rewardRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/chat', chatRoutes);
 app.use('/api/admin/warranties', adminWarrantyRouter);
 app.use('/api/warranties', customerWarrantyRouter);
 app.use('/api/my/warranties', (req, res, next) => {
@@ -101,7 +104,11 @@ const server = app.listen(listenPort, () => {
   console.log(` Listening on: ${listenPort}`);
   console.log(` Health check: /api/health`);
   console.log(` Media uploads: /uploads`);
+  console.log(` Live Messaging: Socket.IO initialized`);
   console.log(`===============================================`);
+
+  // Initialize real-time Socket.IO
+  initSocketIO(server);
 
   // Initialize and seed database in background without crashing the web service
   seedDatabase()

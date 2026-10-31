@@ -584,6 +584,59 @@ export const initDb = async () => {
     await queryRun('ALTER TABLE product_warranties ADD COLUMN qr_expiry_date VARCHAR(100) DEFAULT NULL');
   } catch (e) {}
 
+  // Chat Conversations Table (Customer/Distributor to Admin)
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS chat_conversations (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      conversation_token VARCHAR(191) UNIQUE NOT NULL,
+      user_id INT NOT NULL,
+      user_type VARCHAR(50) NOT NULL,
+      user_name VARCHAR(255) NOT NULL,
+      user_identifier VARCHAR(100) NOT NULL,
+      user_email VARCHAR(191) DEFAULT NULL,
+      user_phone VARCHAR(50) DEFAULT NULL,
+      status VARCHAR(50) DEFAULT 'open',
+      last_message_text TEXT DEFAULT NULL,
+      last_message_at VARCHAR(100) DEFAULT NULL,
+      last_sender_role VARCHAR(50) DEFAULT NULL,
+      unread_admin_count INT DEFAULT 0,
+      unread_user_count INT DEFAULT 0,
+      created_at VARCHAR(100) NOT NULL,
+      updated_at VARCHAR(100) NOT NULL,
+      INDEX idx_cc_user (user_id),
+      INDEX idx_cc_type (user_type),
+      INDEX idx_cc_last (last_message_at),
+      INDEX idx_cc_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  // Chat Messages Table
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      conversation_id INT NOT NULL,
+      sender_id INT NOT NULL,
+      sender_name VARCHAR(255) NOT NULL,
+      sender_role VARCHAR(50) NOT NULL,
+      message_type VARCHAR(50) DEFAULT 'text',
+      message_text TEXT DEFAULT NULL,
+      media_url TEXT DEFAULT NULL,
+      media_type VARCHAR(100) DEFAULT NULL,
+      file_name VARCHAR(255) DEFAULT NULL,
+      file_size INT DEFAULT NULL,
+      is_read INT DEFAULT 0,
+      read_at VARCHAR(100) DEFAULT NULL,
+      deleted_at VARCHAR(100) DEFAULT NULL,
+      deleted_by_id INT DEFAULT NULL,
+      created_at VARCHAR(100) NOT NULL,
+      updated_at VARCHAR(100) NOT NULL,
+      INDEX idx_cm_conv (conversation_id),
+      INDEX idx_cm_sender (sender_id),
+      INDEX idx_cm_read (is_read),
+      INDEX idx_cm_created (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
   console.log('MySQL database tables verified and ready.');
 };
 
