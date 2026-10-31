@@ -1280,6 +1280,13 @@ body {
   }
 }
 
+.product-card-btn .btn-text-full {
+  display: inline;
+}
+.product-card-btn .btn-text-short {
+  display: none;
+}
+
 /* Mobile optimizations for partner card, tabs, chips, and grid */
 @media (max-width: 768px) {
   .portal-header-section {
@@ -1333,159 +1340,253 @@ body {
     font-size: 0.78rem !important;
   }
 
+  /* 3 Products per Row Grid */
   .products-responsive-grid {
+    display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 6px !important;
+    gap: 5px !important;
     width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .product-card-container {
     border-radius: 8px !important;
     min-width: 0 !important;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    background: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
   }
 
+  /* Compact 1:1 Aspect Ratio Image */
   .product-card-img-wrapper {
-    height: clamp(75px, 25vw, 100px) !important;
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    height: auto !important;
+    max-height: 112px !important;
+    background: #f8fafc !important;
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    padding: 2px !important;
+    box-sizing: border-box !important;
   }
 
+  .product-card-img-wrapper img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+  }
+
+  /* Compact Badges */
   .product-card-badge {
-    top: 4px !important;
-    left: 4px !important;
-    font-size: 0.50rem !important;
-    padding: 1.5px 4px !important;
-    border-radius: 4px !important;
-    line-height: 1.1 !important;
-    max-width: 85% !important;
+    position: absolute !important;
+    top: 3px !important;
+    left: 3px !important;
+    font-size: 0.44rem !important;
+    font-weight: 700 !important;
+    padding: 1px 4px !important;
+    border-radius: 3px !important;
+    line-height: 1 !important;
+    max-width: 75% !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+    z-index: 2 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
   }
 
   .product-card-stock-pill {
-    top: 4px !important;
-    right: 4px !important;
-    font-size: 0.48rem !important;
-    padding: 1.5px 4px !important;
-    border-radius: 4px !important;
-    line-height: 1.1 !important;
-    letter-spacing: 0.02em !important;
+    position: absolute !important;
+    top: 3px !important;
+    right: 3px !important;
+    font-size: 0.42rem !important;
+    font-weight: 800 !important;
+    padding: 1px 3px !important;
+    border-radius: 3px !important;
+    line-height: 1 !important;
+    letter-spacing: 0.01em !important;
+    z-index: 2 !important;
   }
 
+  /* Compact Card Body */
   .product-card-body {
-    padding: 6px 4px 6px 4px !important;
+    padding: 4px 4px 5px 4px !important;
     display: flex !important;
     flex-direction: column !important;
     flex: 1 1 auto !important;
+    justify-content: space-between !important;
     min-width: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .product-card-category {
-    font-size: 0.52rem !important;
-    margin-bottom: 2px !important;
-    line-height: 1.1 !important;
-    letter-spacing: 0.03em !important;
+    font-size: 0.48rem !important;
+    margin-bottom: 1px !important;
+    line-height: 1 !important;
+    letter-spacing: 0.02em !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+    color: #9ca3af !important;
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
+    height: 1em !important;
   }
 
+  /* Max 2 Lines Title with Fixed Height for Perfect Visual Alignment */
   .product-card-title {
-    font-size: 0.70rem !important;
-    line-height: 1.22 !important;
-    min-height: 2.45em !important;
-    margin-bottom: 3px !important;
+    font-size: clamp(0.64rem, 2.2vw, 0.70rem) !important;
+    font-weight: 700 !important;
+    color: #1f2937 !important;
+    line-height: 1.2 !important;
+    height: 2.4em !important;
+    min-height: 2.4em !important;
+    max-height: 2.4em !important;
+    margin-bottom: 2px !important;
     display: -webkit-box !important;
     -webkit-line-clamp: 2 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
+    text-overflow: ellipsis !important;
     word-break: break-word !important;
   }
 
+  /* Compact Rating */
   .product-card-rating {
     display: flex !important;
     align-items: center !important;
     gap: 1px !important;
-    margin-bottom: 3px !important;
+    margin-bottom: 2px !important;
+    height: 10px !important;
+    line-height: 1 !important;
   }
 
   .product-card-rating svg {
     width: 8px !important;
     height: 8px !important;
+    flex-shrink: 0 !important;
   }
 
   .product-card-rating span {
-    font-size: 0.55rem !important;
+    font-size: 0.52rem !important;
     margin-left: 2px !important;
+    color: #9ca3af !important;
+    font-weight: 600 !important;
   }
 
+  /* Prominent but Compact Pricing */
   .product-card-pricing-row {
     display: flex !important;
     flex-wrap: wrap !important;
     align-items: baseline !important;
     gap: 1px 3px !important;
-    margin-bottom: 5px !important;
+    margin-bottom: 4px !important;
     margin-top: auto !important;
+    line-height: 1.1 !important;
   }
 
   .product-card-price {
-    font-size: clamp(0.74rem, 2.7vw, 0.86rem) !important;
+    font-size: clamp(0.76rem, 2.7vw, 0.86rem) !important;
     font-weight: 800 !important;
-    line-height: 1.1 !important;
+    line-height: 1 !important;
   }
 
   .product-card-original-price {
-    font-size: 0.56rem !important;
-    line-height: 1.1 !important;
+    font-size: 0.54rem !important;
+    color: #9ca3af !important;
+    text-decoration: line-through !important;
+    line-height: 1 !important;
   }
 
   .product-card-discount-tag {
-    font-size: 0.50rem !important;
+    font-size: 0.46rem !important;
     padding: 0.5px 3px !important;
     border-radius: 2px !important;
-    font-weight: 700 !important;
-    line-height: 1.1 !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
   }
 
+  /* Action Buttons: Zero Overflow & Comfortable Touch Targets */
   .product-card-actions-row {
     display: flex !important;
     align-items: center !important;
     gap: 3px !important;
     width: 100% !important;
+    margin-top: auto !important;
   }
 
   .product-card-btn {
-    padding: 4px 2px !important;
-    font-size: 0.60rem !important;
+    flex: 1 !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 4px !important;
     border-radius: 5px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     gap: 2px !important;
     min-width: 0 !important;
+    border: none !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
   }
 
   .product-card-btn svg {
-    width: 10px !important;
-    height: 10px !important;
+    width: 11px !important;
+    height: 11px !important;
     flex-shrink: 0 !important;
   }
 
-  .product-card-btn span {
-    font-size: 0.58rem !important;
+  .product-card-btn .btn-text-full {
+    display: none !important;
+  }
+
+  .product-card-btn .btn-text-short {
+    display: inline !important;
+    font-size: 0.60rem !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    white-space: nowrap !important;
   }
 
   .product-card-heart-btn {
-    width: 22px !important;
-    height: 22px !important;
-    min-width: 22px !important;
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
     border-radius: 5px !important;
     padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid #e5e7eb !important;
+    background: #ffffff !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .product-card-heart-btn svg {
-    width: 11px !important;
-    height: 11px !important;
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .portal-products-section,
+  #best-selling-products-section {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    padding-bottom: calc(75px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .portal-orders-section {
@@ -1501,33 +1602,40 @@ body {
 
 @media (max-width: 360px) {
   .products-responsive-grid {
-    gap: 4px !important;
+    gap: 3px !important;
   }
 
   .product-card-body {
-    padding: 4px 2px 5px 2px !important;
+    padding: 3px 2px 4px 2px !important;
   }
 
   .product-card-title {
-    font-size: 0.64rem !important;
+    font-size: 0.62rem !important;
   }
 
   .product-card-price {
-    font-size: 0.70rem !important;
+    font-size: 0.72rem !important;
   }
 
   .product-card-btn {
-    padding: 3px 1px !important;
+    height: 26px !important;
+    min-height: 26px !important;
+    padding: 0 2px !important;
   }
 
-  .product-card-btn span {
-    font-size: 0.52rem !important;
+  .product-card-btn .btn-text-short {
+    font-size: 0.54rem !important;
   }
 
   .product-card-heart-btn {
-    width: 20px !important;
-    height: 20px !important;
-    min-width: 20px !important;
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+  }
+
+  .product-card-heart-btn svg {
+    width: 11px !important;
+    height: 11px !important;
   }
 }
 
@@ -1758,6 +1866,6 @@ body {
 
   body,
   main {
-    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(75px + env(safe-area-inset-bottom, 0px));
   }
 }

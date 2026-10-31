@@ -749,7 +749,8 @@ export const DistributorPortal = () => {
                             }}
                           >
                             <ShoppingCart size={14} style={{ flexShrink: 0 }} />
-                            <span>{isItemInStock ? 'Order Lot' : 'Out of Stock'}</span>
+                            <span className="btn-text-full">{isItemInStock ? 'Order Lot' : 'Out of Stock'}</span>
+                            <span className="btn-text-short">{isItemInStock ? 'Order' : 'Out'}</span>
                           </button>
 
                           <button

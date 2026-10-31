@@ -787,7 +787,8 @@ export const CustomerPortal = () => {
                             }}
                           >
                             <ShoppingCart size={14} style={{ flexShrink: 0 }} />
-                            <span>{isItemInStock ? 'Add to Cart' : 'Out of Stock'}</span>
+                            <span className="btn-text-full">{isItemInStock ? 'Add to Cart' : 'Out of Stock'}</span>
+                            <span className="btn-text-short">{isItemInStock ? 'Add' : 'Out'}</span>
                           </button>
 
                           <button

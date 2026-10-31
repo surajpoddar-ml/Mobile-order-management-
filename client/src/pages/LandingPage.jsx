@@ -227,6 +227,7 @@ export const LandingPage = () => {
     return (
       <div
         key={p.id}
+        className="product-card-container"
         onClick={() => openProductDetails(p)}
         style={{
           background: '#ffffff',
@@ -265,7 +266,9 @@ export const LandingPage = () => {
         >
           {/* Badge (Bestseller, New!) */}
           {badgeLabel && (
-            <span style={{
+            <span
+              className="product-card-badge"
+              style={{
               position: 'absolute',
               top: '8px',
               left: '8px',
@@ -284,7 +287,9 @@ export const LandingPage = () => {
 
           {/* Stock Status Pill */}
           {!isItemInStock && (
-            <span style={{
+            <span
+              className="product-card-stock-pill"
+              style={{
               position: 'absolute',
               top: '12px',
               right: '12px',
@@ -324,9 +329,9 @@ export const LandingPage = () => {
         </div>
 
         {/* Card Content Area */}
-        <div style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+        <div className="product-card-body" style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', flex: 1 }}>
           {/* Category uppercase label */}
-          <div style={{
+          <div className="product-card-category" style={{
             fontSize: '0.68rem',
             fontWeight: 700,
             color: '#9ca3af',
@@ -338,7 +343,7 @@ export const LandingPage = () => {
           </div>
 
           {/* Product Title */}
-          <h3 style={{
+          <h3 className="product-card-title" style={{
             fontSize: '0.92rem',
             fontWeight: 700,
             color: '#1f2937',
@@ -354,7 +359,7 @@ export const LandingPage = () => {
           </h3>
 
           {/* Star Rating & Reviews */}
-          <div style={{
+          <div className="product-card-rating" style={{
             display: 'flex',
             alignItems: 'center',
             gap: '4px',
@@ -377,7 +382,7 @@ export const LandingPage = () => {
           </div>
 
           {/* Pricing Row */}
-          <div style={{
+          <div className="product-card-pricing-row" style={{
             display: 'flex',
             alignItems: 'baseline',
             flexWrap: 'wrap',
@@ -385,7 +390,7 @@ export const LandingPage = () => {
             marginBottom: '14px',
             marginTop: 'auto'
           }}>
-            <span style={{
+            <span className="product-card-price" style={{
               fontSize: 'clamp(1.05rem, 3.5vw, 1.22rem)',
               fontWeight: 800,
               color: '#111827'
@@ -394,7 +399,7 @@ export const LandingPage = () => {
             </span>
 
             {p.originalPrice && p.originalPrice > p.price && (
-              <span style={{
+              <span className="product-card-original-price" style={{
                 fontSize: '0.80rem',
                 color: '#9ca3af',
                 textDecoration: 'line-through'
@@ -404,7 +409,7 @@ export const LandingPage = () => {
             )}
 
             {discountStr && (
-              <span style={{
+              <span className="product-card-discount-tag" style={{
                 fontSize: '0.74rem',
                 fontWeight: 800,
                 color: '#ef4444',
@@ -419,13 +424,14 @@ export const LandingPage = () => {
           </div>
 
           {/* Buttons Row: Add to Cart + Heart Button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div className="product-card-actions-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 addToCart(p);
               }}
               disabled={!isItemInStock}
+              className="product-card-btn"
               style={{
                 flex: 1,
                 display: 'inline-flex',
@@ -452,7 +458,8 @@ export const LandingPage = () => {
               }}
             >
               <ShoppingCart size={15} style={{ flexShrink: 0 }} />
-              <span>{isItemInStock ? 'Add to Cart' : 'Out of Stock'}</span>
+              <span className="btn-text-full">{isItemInStock ? 'Add to Cart' : 'Out of Stock'}</span>
+              <span className="btn-text-short">{isItemInStock ? 'Add' : 'Out'}</span>
             </button>
 
             <button
@@ -460,6 +467,7 @@ export const LandingPage = () => {
                 e.stopPropagation();
                 toggleWishlist(p);
               }}
+              className="product-card-heart-btn"
               style={{
                 width: '36px',
                 height: '36px',
