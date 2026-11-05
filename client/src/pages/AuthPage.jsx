@@ -175,14 +175,14 @@ export const AuthPage = ({ prefillData }) => {
     setLoading(true);
     try {
       await registerDistributor({
-        fullName: distForm.fullName,
+        fullName: distForm.fullName || distForm.businessName,
         email: distForm.email,
         phoneNumber: distForm.phoneNumber,
         password: distForm.password,
         businessName: distForm.businessName,
         businessAddress: distForm.businessAddress,
-        panVatNumber: distForm.panVatNumber,
-        contactPerson: distForm.contactPerson || distForm.fullName,
+        panVatNumber: distForm.panVatNumber || '',
+        contactPerson: distForm.contactPerson || '',
         businessPhone: distForm.businessPhone || distForm.phoneNumber,
         businessEmail: distForm.businessEmail || distForm.email
       });
@@ -190,7 +190,7 @@ export const AuthPage = ({ prefillData }) => {
       setStatusAlert({
         type: 'pending',
         title: 'Application Submitted Successfully!',
-        message: 'Your distributor account request has been received with status "Pending". The administrator will review your business license and PAN/VAT details. You will be able to log in once approved.'
+        message: 'Your distributor account request has been received with status "Pending". The administrator will review your application. You will be able to log in once approved.'
       });
       setAuthMode('login');
       setLoginRole('Distributor');
@@ -869,41 +869,6 @@ export const AuthPage = ({ prefillData }) => {
                   />
                 </div>
 
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                  gap: '14px',
-                  marginBottom: '14px'
-                }}>
-                  <div>
-                    <label style={labelStyle}>
-                      PAN / VAT Number <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. VAT-984210492"
-                      value={distForm.panVatNumber}
-                      onChange={e => setDistForm({ ...distForm, panVatNumber: e.target.value })}
-                      style={inputStyle}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={labelStyle}>
-                      Contact Person Name <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Robert Miller (Director)"
-                      value={distForm.contactPerson}
-                      onChange={e => setDistForm({ ...distForm, contactPerson: e.target.value })}
-                      style={inputStyle}
-                    />
-                  </div>
-                </div>
-
                 <div style={{ marginBottom: '18px' }}>
                   <label style={labelStyle}>
                     Full Business / Warehouse Address <span style={{ color: '#dc2626' }}>*</span>
@@ -934,20 +899,6 @@ export const AuthPage = ({ prefillData }) => {
                 }}>
                   <User size={16} />
                   2. Login Account Credentials
-                </div>
-
-                <div style={{ marginBottom: '14px' }}>
-                  <label style={labelStyle}>
-                    Account Holder Full Name <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Your personal full name"
-                    value={distForm.fullName}
-                    onChange={e => setDistForm({ ...distForm, fullName: e.target.value })}
-                    style={inputStyle}
-                  />
                 </div>
 
                 <div style={{

@@ -124,17 +124,17 @@ router.post('/register/distributor', async (req, res) => {
     } = req.body;
 
     // Validate required personal & business fields
-    if (!fullName || !email || !phoneNumber || !password) {
+    if (!email || !phoneNumber || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Personal details (Name, Email, Phone, Password) are required.'
+        message: 'Personal credentials (Email, Phone, Password) are required.'
       });
     }
 
-    if (!businessName || !businessAddress || !panVatNumber) {
+    if (!businessName || !businessAddress) {
       return res.status(400).json({
         success: false,
-        message: 'Business details (Business Name, Business Address, PAN/VAT Number) are required.'
+        message: 'Business details (Business Name, Business Address) are required.'
       });
     }
 
@@ -181,6 +181,20 @@ router.post('/register/distributor', async (req, res) => {
     const now = new Date().toISOString();
     const userId = `DIST-${Date.now().toString().slice(-6)}`;
 
+    const effectiveFullName = (fullName && typeof fullName === 'string' && fullName.trim())
+      ? fullName.trim()
+      : (businessName && typeof businessName === 'string' && businessName.trim())
+        ? businessName.trim()
+        : 'Wholesale Distributor';
+
+    const effectivePanVat = (panVatNumber && typeof panVatNumber === 'string' && panVatNumber.trim())
+      ? panVatNumber.trim().toUpperCase()
+      : null;
+
+    const effectiveContactPerson = (contactPerson && typeof contactPerson === 'string' && contactPerson.trim())
+      ? contactPerson.trim()
+      : null;
+
     // Status is strictly 'Pending'
     await queryRun(
       `INSERT INTO users (
@@ -190,7 +204,7 @@ router.post('/register/distributor', async (req, res) => {
       ) VALUES (?, ?, ?, ?, ?, 'Distributor', 'Pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
-        fullName.trim(),
+        effectiveFullName,
         email.trim().toLowerCase(),
         phoneNumber.trim(),
         passwordHash,
@@ -199,19 +213,20 @@ router.post('/register/distributor', async (req, res) => {
         now,
         businessName.trim(),
         businessAddress.trim(),
-        panVatNumber.trim().toUpperCase(),
-        (contactPerson || fullName).trim(),
+        effectivePanVat,
+        effectiveContactPerson,
         (businessPhone || phoneNumber).trim(),
         (businessEmail || email).trim().toLowerCase()
       ]
     );
 
     // 1. Notify Admin of new distributor registration pending review
+    const displayPan = effectivePanVat ? ` (PAN/VAT: ${effectivePanVat})` : '';
     await createNotification({
       recipientId: 'ADMIN',
       recipientRole: 'Admin',
       title: `🏢 New Distributor Application`,
-      message: `${businessName.trim()} (${fullName.trim()}) submitted a wholesale distributor application (PAN/VAT: ${panVatNumber.trim().toUpperCase()}).`,
+      message: `${businessName.trim()} submitted a wholesale distributor application${displayPan}.`,
       type: 'distributor_pending',
       entityId: userId,
       linkUrl: '/admin?tab=pending',
