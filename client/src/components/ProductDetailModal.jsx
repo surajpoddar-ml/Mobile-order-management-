@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
-import { getMediaUrl } from '../services/api';
+import { getMediaUrl, getProductFallbackImage } from '../services/api';
 import {
   X,
   ShoppingCart,
@@ -77,7 +77,9 @@ export const ProductDetailModal = () => {
       imageList = [p.imageUrl];
     }
   }
-  // If no images provided, imageList remains empty and renders clean Package placeholder
+  if (!imageList.length) {
+    imageList = [getProductFallbackImage(p.category)];
+  }
 
   // Parse specifications / features / colors / models if available in p.specifications
   let parsedSpecs = [];
@@ -289,33 +291,23 @@ export const ProductDetailModal = () => {
                 <Heart size={18} fill={wish ? '#ef4444' : 'none'} color={wish ? '#ef4444' : 'currentColor'} />
               </button>
 
-              {activeImage ? (
-                <img
-                  src={getMediaUrl(activeImage)}
-                  alt={p.name || 'MWS Eagle Product'}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                    padding: '12px',
-                    filter: !isItemInStock ? 'grayscale(40%)' : 'none'
-                  }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+              <img
+                src={getMediaUrl(activeImage)}
+                alt={p.name || 'MWS Eagle Product'}
+                style={{
                   width: '100%',
-                  height: '240px',
-                  color: '#94a3b8'
-                }}>
-                  <Package size={64} strokeWidth={1.2} />
-                </div>
-              )}
+                  height: '100%',
+                  objectFit: 'contain',
+                  padding: '12px',
+                  filter: !isItemInStock ? 'grayscale(40%)' : 'none'
+                }}
+                onError={(e) => {
+                  const fallback = getProductFallbackImage(p.category);
+                  if (e.target.src !== fallback && !e.target.src.endsWith(fallback)) {
+                    e.target.src = fallback;
+                  }
+                }}
+              />
             </div>
 
             {/* Thumbnail Row if Multiple Images */}

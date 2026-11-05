@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api, { getMediaUrl } from '../services/api';
+import api, { getMediaUrl, getProductFallbackImage } from '../services/api';
 import AdvertisementBoard from '../components/AdvertisementBoard';
 import PromotionalSticker from '../components/PromotionalSticker';
 import {
@@ -308,27 +308,24 @@ export const LandingPage = () => {
           )}
 
           {/* Product Image */}
-          {p.imageUrl ? (
-            <img
-              src={getMediaUrl(p.imageUrl)}
-              alt={p.name ? `${p.name} - MWS Eagle` : 'MWS Eagle'}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                transition: 'transform 0.3s',
-                filter: !isItemInStock ? 'grayscale(45%)' : 'none',
-                opacity: !isItemInStock ? 0.75 : 1
-              }}
-              onError={(e) => {
-                e.target.style.display = 'none';
-              }}
-            />
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '140px', color: '#94a3b8' }}>
-              <Package size={36} strokeWidth={1.5} />
-            </div>
-          )}
+          <img
+            src={getMediaUrl(p.imageUrl) || getProductFallbackImage(p.category)}
+            alt={p.name ? `${p.name} - MWS Eagle` : 'MWS Eagle'}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transition: 'transform 0.3s',
+              filter: !isItemInStock ? 'grayscale(45%)' : 'none',
+              opacity: !isItemInStock ? 0.75 : 1
+            }}
+            onError={(e) => {
+              const fallback = getProductFallbackImage(p.category);
+              if (e.target.src !== fallback && !e.target.src.endsWith(fallback)) {
+                e.target.src = fallback;
+              }
+            }}
+          />
         </div>
 
         {/* Card Content Area */}

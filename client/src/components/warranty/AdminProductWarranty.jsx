@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import QRCode from 'qrcode';
-import api, { getMediaUrl } from '../../services/api';
+import api, { getMediaUrl, getProductFallbackImage } from '../../services/api';
 import {
   downloadSingleWarrantyCard,
   downloadSingleWarrantyQrOnly,

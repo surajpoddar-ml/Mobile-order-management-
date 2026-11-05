@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api, { getMediaUrl } from '../services/api';
+import api, { getMediaUrl, getProductFallbackImage } from '../services/api';
 import {
   ShieldCheck, Users, User, Building2, Clock, CheckCircle, XCircle,
   Search, Eye, Trash2, Check, X, PauseCircle, PlayCircle, RefreshCw, Layers,
@@ -2342,16 +2342,17 @@ export const AdminPanel = () => {
                                 justifyContent: 'center',
                                 border: '1px solid #e2e8f0'
                               }}>
-                                {p.imageUrl ? (
-                                  <img
-                                    src={getMediaUrl(p.imageUrl)}
-                                    alt={p.name}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                    onError={e => { e.target.style.display = 'none'; }}
-                                  />
-                                ) : (
-                                  <Package size={20} color="#94a3b8" />
-                                )}
+                                <img
+                                  src={getMediaUrl(p.imageUrl) || getProductFallbackImage(p.category)}
+                                  alt={p.name}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={e => {
+                                    const fallback = getProductFallbackImage(p.category);
+                                    if (e.target.src !== fallback && !e.target.src.endsWith(fallback)) {
+                                      e.target.src = fallback;
+                                    }
+                                  }}
+                                />
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.88rem', lineHeight: 1.3 }}>
@@ -3604,7 +3605,10 @@ export const AdminPanel = () => {
                           alt="Product"
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           onError={(e) => {
-                            e.target.style.display = 'none';
+                            const fallback = getProductFallbackImage(productForm.category);
+                            if (e.target.src !== fallback && !e.target.src.endsWith(fallback)) {
+                              e.target.src = fallback;
+                            }
                           }}
                         />
                       </div>
