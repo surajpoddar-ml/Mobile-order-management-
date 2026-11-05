@@ -51,18 +51,20 @@ export const getMediaUrl = (url) => {
  */
 export const getProductFallbackImage = (category) => {
   if (!category) return '/cat_charger.jpg';
-  const c = String(category).toLowerCase();
-  if (c.includes('cable')) return '/cat_data_cable.jpg';
-  if (c.includes('dc')) return '/cat_dc_charger.jpg';
+  const c = String(category).toLowerCase().replace(/[\s_-]+/g, '');
+  if (c.includes('neckband') || c.includes('neck')) return '/cat_neckband.jpg';
+  if (c.includes('cable') || c.includes('wire')) return '/cat_data_cable.jpg';
+  if (c.includes('earbud') || c.includes('tws') || c.includes('airbud') || c.includes('bud')) return '/cat_earbud.jpg';
+  if (c.includes('earphone') || c.includes('headphone') || c.includes('audio')) return '/cat_earphone.jpg';
+  if (c.includes('dccharger') || c.includes('carcharger') || c.includes('dc')) return '/cat_dc_charger.jpg';
   if (c.includes('charger')) return '/cat_charger.jpg';
-  if (c.includes('earphone')) return '/cat_earphone.jpg';
-  if (c.includes('earbud') || c.includes('ear bud')) return '/cat_earbud.jpg';
-  if (c.includes('neckband') || c.includes('neck band')) return '/cat_neckband.jpg';
-  if (c.includes('power bank')) return '/cat_power_bank.jpg';
-  if (c.includes('speaker')) return '/cat_bt_speaker.jpg';
+  if (c.includes('powerbank') || c.includes('battery') || c.includes('power')) return '/cat_power_bank.jpg';
+  if (c.includes('speaker') || c.includes('bt')) return '/cat_bt_speaker.jpg';
   if (c.includes('otg')) return '/cat_otg.jpg';
   return '/cat_charger.jpg';
 };
+
+export const getCategoryFallbackImage = getProductFallbackImage;
 
 /**
  * Universal Fetch wrapper with JWT injection & error handling

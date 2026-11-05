@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api, { getMediaUrl, getProductFallbackImage } from '../services/api';
+import api, { getMediaUrl, getProductFallbackImage, getCategoryFallbackImage } from '../services/api';
 import AdvertisementBoard from '../components/AdvertisementBoard';
 import PromotionalSticker from '../components/PromotionalSticker';
 import {
@@ -87,14 +87,11 @@ export const LandingPage = () => {
   ];
 
   const categoriesList = dbCategories.length > 0
-    ? dbCategories.map(cat => {
-      const found = standardCategories.find(s => s.name.toLowerCase() === cat.name.toLowerCase());
-      return {
-        id: cat.name,
-        name: cat.name,
-        image: cat.imageUrl ? getCategoryImageUrl(cat.imageUrl) : (found ? found.image : '/cat_earphone.jpg')
-      };
-    })
+    ? dbCategories.map(cat => ({
+      id: cat.name,
+      name: cat.name,
+      image: cat.imageUrl ? getCategoryImageUrl(cat.imageUrl) : getCategoryFallbackImage(cat.name)
+    }))
     : standardCategories;
 
   // Fetch all products from catalog (applicable to existing accounts, new accounts & visitors)
@@ -588,10 +585,13 @@ export const LandingPage = () => {
               >
                 <div className="cat-card-img-container">
                   <img
-                    src={cat.image}
+                    src={cat.image || getCategoryFallbackImage(cat.name)}
                     alt={cat.name}
                     onError={(e) => {
-                      e.target.src = '/mws_eagle_logo.jpg';
+                      const fallback = getCategoryFallbackImage(cat.name);
+                      if (e.target.src !== fallback && !e.target.src.endsWith(fallback)) {
+                        e.target.src = fallback;
+                      }
                     }}
                   />
                 </div>
