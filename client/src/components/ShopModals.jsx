@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import api, { getMediaUrl, getProductFallbackImage } from '../services/api';
+import api, { getMediaUrl } from '../services/api';
 import {
   X,
   ShoppingCart,
@@ -462,24 +462,35 @@ export const ShopModals = () => {
                             background: '#ffffff'
                           }}
                         >
-                          <img
-                            src={getMediaUrl(item.product.imageUrl) || getProductFallbackImage(item.product.category)}
-                            alt={item.product.name}
-                            style={{
+                          {item.product.imageUrl ? (
+                            <img
+                              src={getMediaUrl(item.product.imageUrl)}
+                              alt={item.product.name}
+                              style={{
+                                width: '68px',
+                                height: '68px',
+                                objectFit: 'cover',
+                                borderRadius: '8px',
+                                background: '#f8fafc',
+                                flexShrink: 0
+                              }}
+                              onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <div style={{
                               width: '68px',
                               height: '68px',
-                              objectFit: 'cover',
                               borderRadius: '8px',
-                              background: '#f8fafc',
+                              background: '#f1f5f9',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#94a3b8',
                               flexShrink: 0
-                            }}
-                            onError={(e) => {
-                              const fallback = getProductFallbackImage(item.product.category);
-                              if (e.target.src !== fallback && !e.target.src.endsWith(fallback)) {
-                                e.target.src = fallback;
-                              }
-                            }}
-                          />
+                            }}>
+                              <Package size={24} />
+                            </div>
+                          )}
                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                             <div>
                               <div style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }}>
@@ -1572,17 +1583,18 @@ export const ShopModals = () => {
                         background: '#ffffff'
                       }}
                     >
-                      <img
-                        src={getMediaUrl(item.imageUrl) || getProductFallbackImage(item.category)}
-                        alt={item.name}
-                        style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px' }}
-                        onError={(e) => {
-                          const fallback = getProductFallbackImage(item.category);
-                          if (e.target.src !== fallback && !e.target.src.endsWith(fallback)) {
-                            e.target.src = fallback;
-                          }
-                        }}
-                      />
+                      {item.imageUrl ? (
+                        <img
+                          src={getMediaUrl(item.imageUrl)}
+                          alt={item.name}
+                          style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px' }}
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div style={{ width: '64px', height: '64px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                          <Package size={24} />
+                        </div>
+                      )}
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }}>
                           {item.category}

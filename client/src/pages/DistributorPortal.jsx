@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import AdvertisementBoard from '../components/AdvertisementBoard';
 import PromotionalSticker from '../components/PromotionalSticker';
-import api, { getMediaUrl, getProductFallbackImage } from '../services/api';
+import api, { getMediaUrl } from '../services/api';
 import {
   Building2,
   ShieldCheck,
@@ -687,23 +687,26 @@ export const DistributorPortal = () => {
                           </span>
                         )}
 
-                        <img
-                          src={getMediaUrl(p.imageUrl) || getProductFallbackImage(p.category)}
-                          alt={p.name}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            filter: !isItemInStock ? 'grayscale(45%)' : 'none',
-                            opacity: !isItemInStock ? 0.75 : 1
-                          }}
-                          onError={(e) => {
-                            const fallback = getProductFallbackImage(p.category);
-                            if (e.target.src !== fallback && !e.target.src.endsWith(fallback)) {
-                              e.target.src = fallback;
-                            }
-                          }}
-                        />
+                        {p.imageUrl ? (
+                          <img
+                            src={getMediaUrl(p.imageUrl)}
+                            alt={p.name}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              filter: !isItemInStock ? 'grayscale(45%)' : 'none',
+                              opacity: !isItemInStock ? 0.75 : 1
+                            }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', minHeight: '140px', color: '#94a3b8' }}>
+                            <Package size={36} strokeWidth={1.5} />
+                          </div>
+                        )}
                       </div>
 
                       {/* Content Area */}
