@@ -1,7 +1,7 @@
 import express from 'express';
 import { queryGet, queryAll, queryRun } from '../database/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
-import { createNotification } from './notificationRoutes.js';
+import { createNotification } from '../services/notificationService.js';
 
 const router = express.Router();
 
