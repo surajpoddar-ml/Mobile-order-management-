@@ -92,7 +92,7 @@ export const ShopModals = () => {
     city: '',
     state: '',
     postalCode: '',
-    paymentMethod: user?.userType === 'Distributor' ? 'Wholesale Invoice (Net 30)' : 'Cash on Delivery',
+    paymentMethod: user?.userType === 'Distributor' ? 'Purchase with Available Credit' : 'Cash on Delivery',
     transactionId: '',
     paymentScreenshot: null,
     notes: ''
@@ -130,6 +130,31 @@ export const ShopModals = () => {
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState(null);
   const [copiedUpi, setCopiedUpi] = useState(false);
+
+  // Distributor Available Credit State
+  const [distributorCredit, setDistributorCredit] = useState(null);
+  const [creditLoading, setCreditLoading] = useState(false);
+
+  // Fetch distributor available credit balance whenever cart or user is active
+  useEffect(() => {
+    let isMounted = true;
+    if (user?.userType === 'Distributor') {
+      setCreditLoading(true);
+      api.credits.getMyCredit()
+        .then(res => {
+          if (isMounted && res.success && res.credit) {
+            setDistributorCredit(res.credit);
+          }
+        })
+        .catch(err => {
+          console.warn('Could not load distributor credit balance:', err);
+        })
+        .finally(() => {
+          if (isMounted) setCreditLoading(false);
+        });
+    }
+    return () => { isMounted = false; };
+  }, [user, isCartOpen, checkoutStep]);
 
   // Generate / Regenerate Dynamic UPI QR Code whenever cart or payment method changes
   useEffect(() => {
@@ -195,7 +220,7 @@ export const ShopModals = () => {
         customerEmail: user.email || prev.customerEmail,
         customerPhone: user.phoneNumber || prev.customerPhone,
         shippingAddress: user.businessAddress || prev.shippingAddress,
-        paymentMethod: user.userType === 'Distributor' ? 'Wholesale Invoice (Net 30)' : 'Cash on Delivery'
+        paymentMethod: user.userType === 'Distributor' ? 'Purchase with Available Credit' : 'Cash on Delivery'
       }));
     }
   }, [user]);
@@ -316,6 +341,15 @@ export const ShopModals = () => {
     if (!formData.customerName || !formData.customerEmail || !formData.customerPhone || !formData.shippingAddress || !formData.district) {
       alert('Please fill in your full name, email, phone number, delivery address, and district.');
       return;
+    }
+
+    if (formData.paymentMethod === 'Purchase with Available Credit') {
+      const orderAmount = Number(dynamicPayment?.amount || cartTotal);
+      const available = Number(distributorCredit?.availableCredit || 0);
+      if (available < orderAmount) {
+        alert("Insufficient credit limit. Please contact the admin/owner or support to increase your credit limit.");
+        return;
+      }
     }
 
     if (formData.paymentMethod === 'UPI / QR Payment' || formData.paymentMethod.includes('QR')) {
@@ -1032,33 +1066,84 @@ export const ShopModals = () => {
                         {[
                           { id: 'Cash on Delivery', label: 'Cash on Delivery (COD)', desc: 'Pay when products arrive' },
                           { id: 'UPI / QR Payment', label: 'UPI / QR Code', desc: 'Instant Google Pay / PhonePe / Paytm' },
-                          ...(user?.userType === 'Distributor' ? [{ id: 'Wholesale Invoice (Net 30)', label: 'Wholesale Invoice (Net 30 Credit)', desc: 'B2B commercial invoice' }] : [])
-                        ].map((m) => (
-                          <label
-                            key={m.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '10px',
-                              padding: '10px 14px',
-                              borderRadius: '8px',
-                              border: `1.5px solid ${formData.paymentMethod === m.id ? '#2563eb' : '#e5e7eb'}`,
-                              background: formData.paymentMethod === m.id ? 'rgba(37, 99, 235, 0.05)' : '#ffffff',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <input
-                              type="radio"
-                              name="paymentMethod"
-                              checked={formData.paymentMethod === m.id}
-                              onChange={() => setFormData({ ...formData, paymentMethod: m.id })}
-                            />
-                            <div>
-                              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#1f2937' }}>{m.label}</div>
-                              <div style={{ fontSize: '0.74rem', color: '#6b7280' }}>{m.desc}</div>
-                            </div>
-                          </label>
-                        ))}
+                          ...(user?.userType === 'Distributor' ? [{
+                            id: 'Purchase with Available Credit',
+                            label: 'Purchase with Available Credit',
+                            desc: `Available Credit: ₹${(distributorCredit?.availableCredit ?? 0).toLocaleString('en-IN')}`,
+                            isCredit: true
+                          }] : [])
+                        ].map((m) => {
+                          const orderAmt = dynamicPayment?.amount || cartTotal;
+                          const availableCreditNum = Number(distributorCredit?.availableCredit || 0);
+                          const isInsufficient = m.isCredit && availableCreditNum < orderAmt;
+
+                          return (
+                            <label
+                              key={m.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '10px',
+                                padding: '12px 14px',
+                                borderRadius: '10px',
+                                border: `1.5px solid ${
+                                  formData.paymentMethod === m.id
+                                    ? (isInsufficient ? '#ef4444' : '#2563eb')
+                                    : (m.isCredit && isInsufficient ? '#fca5a5' : '#e5e7eb')
+                                }`,
+                                background: formData.paymentMethod === m.id
+                                  ? (isInsufficient ? 'rgba(239, 68, 68, 0.05)' : 'rgba(37, 99, 235, 0.05)')
+                                  : (m.isCredit ? 'rgba(2, 132, 199, 0.02)' : '#ffffff'),
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                              }}
+                            >
+                              <input
+                                type="radio"
+                                name="paymentMethod"
+                                checked={formData.paymentMethod === m.id}
+                                onChange={() => setFormData({ ...formData, paymentMethod: m.id })}
+                                style={{ marginTop: '3px' }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1f2937' }}>{m.label}</div>
+                                  {m.isCredit && (
+                                    <span style={{
+                                      fontSize: '0.74rem',
+                                      fontWeight: 800,
+                                      padding: '2px 8px',
+                                      borderRadius: '12px',
+                                      background: isInsufficient ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                                      color: isInsufficient ? '#dc2626' : '#059669',
+                                      border: isInsufficient ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)'
+                                    }}>
+                                      Available: ₹{availableCreditNum.toLocaleString('en-IN')}
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: isInsufficient ? '#dc2626' : '#64748b', marginTop: '2px' }}>
+                                  {m.desc}
+                                </div>
+                                {m.isCredit && isInsufficient && (
+                                  <div style={{
+                                    marginTop: '6px',
+                                    padding: '6px 10px',
+                                    borderRadius: '6px',
+                                    background: 'rgba(239, 68, 68, 0.08)',
+                                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                                    color: '#b91c1c',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 600,
+                                    lineHeight: 1.3
+                                  }}>
+                                    ⚠️ Insufficient credit limit. Please contact the admin/owner or support to increase your credit limit.
+                                  </div>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
                       </div>
 
                       {/* Online Payment Proof Section (QR Code, Transaction ID, Screenshot Proof) */}

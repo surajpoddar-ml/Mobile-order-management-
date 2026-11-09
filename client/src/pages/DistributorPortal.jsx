@@ -23,7 +23,9 @@ import {
   MapPin,
   Gift,
   QrCode,
-  ChevronRight
+  ChevronRight,
+  CreditCard,
+  RefreshCw
 } from 'lucide-react';
 import { RewardsSection } from '../components/rewards/RewardsSection';
 import { LiveChatWindow } from '../components/chat/LiveChatWindow';
@@ -58,6 +60,39 @@ export const DistributorPortal = () => {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [myOrders, setMyOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+
+  // Distributor Available Credit State
+  const [distributorCredit, setDistributorCredit] = useState(null);
+  const [creditTransactions, setCreditTransactions] = useState([]);
+  const [loadingCredit, setLoadingCredit] = useState(false);
+
+  const fetchDistributorCredit = () => {
+    setLoadingCredit(true);
+    api.credits.getMyCredit()
+      .then(res => {
+        if (res.success && res.credit) {
+          setDistributorCredit(res.credit);
+          setCreditTransactions(res.transactions || []);
+        }
+      })
+      .catch(err => {
+        console.warn('Failed to load credit details:', err);
+      })
+      .finally(() => setLoadingCredit(false));
+  };
+
+  useEffect(() => {
+    fetchDistributorCredit();
+    const handleCreditRefresh = () => fetchDistributorCredit();
+    window.addEventListener('mws_notifications_refresh', handleCreditRefresh);
+    return () => window.removeEventListener('mws_notifications_refresh', handleCreditRefresh);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'credit') {
+      fetchDistributorCredit();
+    }
+  }, [activeTab]);
 
   const [dbCategories, setDbCategories] = useState([]);
 
@@ -228,15 +263,87 @@ export const DistributorPortal = () => {
       {/* ====== 1. AD DISPLAY TV VIEWER (CONTROLLABLE BY ADMIN) ====== */}
       <AdvertisementBoard />
 
-      {/* ====== 2. THREE EVENLY SPACED NAVIGATION CARDS: PRODUCT CATALOG, MY ORDERS, MY REWARD ====== */}
+      {/* ====== 2. DISTRIBUTOR IDENTITY & AVAILABLE CREDIT QUICK STATUS BAR ====== */}
+      <section style={{
+        maxWidth: '1240px',
+        margin: '10px auto 4px auto',
+        padding: '0 12px'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+          padding: '10px 16px',
+          background: '#ffffff',
+          borderRadius: '12px',
+          border: '1px solid rgba(2, 132, 199, 0.22)',
+          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{
+              padding: '3px 9px',
+              borderRadius: '6px',
+              background: '#0284c7',
+              color: '#ffffff',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              fontFamily: 'monospace',
+              letterSpacing: '0.5px'
+            }}>
+              ID: {user?.userId || 'DISTRIBUTOR'}
+            </span>
+            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a' }}>
+              {user?.businessName || user?.fullName}
+            </span>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              padding: '2px 8px',
+              borderRadius: '10px',
+              background: 'rgba(2, 132, 199, 0.1)',
+              color: '#0284c7'
+            }}>
+              Verified Wholesale Account
+            </span>
+          </div>
+
+          <div
+            onClick={() => setActiveTab('credit')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.12) 100%)',
+              border: '1.5px solid rgba(16, 185, 129, 0.35)',
+              padding: '5px 14px',
+              borderRadius: '24px',
+              transition: 'all 0.2s ease'
+            }}
+            title="Click to view full credit ledger"
+          >
+            <CreditCard size={16} color="#059669" />
+            <span style={{ fontSize: '0.78rem', color: '#065f46', fontWeight: 700 }}>
+              Available Credit:
+            </span>
+            <span style={{ fontSize: '0.98rem', fontWeight: 900, color: '#059669' }}>
+              ₹{(distributorCredit?.availableCredit ?? 0).toLocaleString('en-IN')}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ====== 3. FIVE EVENLY SPACED NAVIGATION CARDS: PRODUCT CATALOG, MY ORDERS, CREDIT BALANCE, MY REWARD, LIVE CHAT ====== */}
       <section className="portal-header-section" style={{
         maxWidth: '1240px',
-        margin: '8px auto 0 auto',
+        margin: '6px auto 0 auto',
         padding: '0 12px'
       }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(5, 1fr)',
           gap: '8px'
         }}>
           {/* Card 1: Product Catalog */}
@@ -345,7 +452,51 @@ export const DistributorPortal = () => {
             </span>
           </button>
 
-          {/* Card 3: My Reward */}
+          {/* Card 3: Available Credit */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('credit')}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '3px',
+              padding: '7px 4px',
+              borderRadius: '11px',
+              background: activeTab === 'credit' ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : '#ffffff',
+              color: activeTab === 'credit' ? '#ffffff' : '#1e293b',
+              border: activeTab === 'credit' ? '1px solid #059669' : '1px solid rgba(16, 185, 129, 0.22)',
+              boxShadow: activeTab === 'credit' ? '0 3px 10px rgba(16, 185, 129, 0.25)' : '0 1px 4px rgba(0, 0, 0, 0.04)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              textAlign: 'center',
+              minHeight: '50px'
+            }}
+          >
+            <div style={{
+              width: '20px',
+              height: '20px',
+              borderRadius: '6px',
+              background: activeTab === 'credit' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(16, 185, 129, 0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: activeTab === 'credit' ? '#ffffff' : '#059669'
+            }}>
+              <CreditCard size={15} style={{ transform: 'scale(0.6)' }} />
+            </div>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: activeTab === 'credit' ? 800 : 700,
+              lineHeight: 1.15,
+              whiteSpace: 'nowrap'
+            }}>
+              Credit Balance
+            </span>
+          </button>
+
+          {/* Card 4: My Reward */}
           <button
             type="button"
             onClick={() => setActiveTab('rewards')}
@@ -389,7 +540,7 @@ export const DistributorPortal = () => {
             </span>
           </button>
 
-          {/* Card 4: Live Chat */}
+          {/* Card 5: Live Chat */}
           <button
             type="button"
             onClick={() => setActiveTab('messages')}
@@ -1193,6 +1344,212 @@ export const DistributorPortal = () => {
               ))}
             </div>
           )}
+        </section>
+      )}
+
+      {/* ====== 5. CREDIT BALANCE & TRANSACTION LEDGER VIEW ====== */}
+      {activeTab === 'credit' && (
+        <section style={{ maxWidth: '1000px', margin: '30px auto 80px', padding: '0 20px' }}>
+          {/* Header */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+            marginBottom: '20px'
+          }}>
+            <div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+                Distributor Credit Balance
+              </h2>
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.84rem', color: '#64748b' }}>
+                Your admin-approved wholesale credit line, available balance, and complete purchase audit history.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={fetchDistributorCredit}
+              className="btn"
+              style={{
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                padding: '8px 14px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                color: '#334155',
+                cursor: 'pointer'
+              }}
+            >
+              <RefreshCw size={14} className={loadingCredit ? 'spin' : ''} />
+              Refresh
+            </button>
+          </div>
+
+          {/* 3 Metric Cards */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '16px',
+            marginBottom: '24px'
+          }}>
+            <div className="glass-panel" style={{ padding: '20px', borderRadius: '16px', background: '#ffffff', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Total Credit Assigned
+              </div>
+              <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#0284c7', marginTop: '6px' }}>
+                ₹{Number(distributorCredit?.totalCredit || 0).toLocaleString('en-IN')}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+                Authorized credit limit by administration
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '20px', borderRadius: '16px', background: '#ffffff', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Total Credit Used
+              </div>
+              <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#ea580c', marginTop: '6px' }}>
+                ₹{Number(distributorCredit?.usedCredit || 0).toLocaleString('en-IN')}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+                Utilized across placed orders
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{
+              padding: '20px',
+              borderRadius: '16px',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.12) 100%)',
+              border: '1.5px solid rgba(16, 185, 129, 0.3)'
+            }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Remaining Available Credit
+              </div>
+              <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#059669', marginTop: '6px' }}>
+                ₹{Number(distributorCredit?.availableCredit || 0).toLocaleString('en-IN')}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#065f46', marginTop: '4px' }}>
+                Usable for instant checkout orders
+              </div>
+            </div>
+          </div>
+
+          {/* Usage Notice */}
+          <div style={{
+            padding: '14px 18px',
+            borderRadius: '12px',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <CreditCard size={22} color="#0284c7" style={{ flexShrink: 0 }} />
+            <div style={{ fontSize: '0.82rem', color: '#475569', lineHeight: 1.4 }}>
+              <b>How it works:</b> Choose <b>"Purchase with Available Credit"</b> during checkout. Your order total will be deducted directly from your available balance. Orders exceeding your available limit will be blocked. Contact support or admin to request a limit increase.
+            </div>
+          </div>
+
+          {/* Transaction Ledger Table */}
+          <div className="glass-panel" style={{
+            padding: '20px',
+            borderRadius: '16px',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0'
+          }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: '0 0 14px 0', color: '#0f172a' }}>
+              Credit & Purchase Transaction History
+            </h3>
+
+            {loadingCredit ? (
+              <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
+                Loading transaction records...
+              </div>
+            ) : creditTransactions.length === 0 ? (
+              <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
+                No credit transactions or purchases recorded yet.
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: 700 }}>
+                      <th style={{ padding: '10px 12px' }}>Date & Time</th>
+                      <th style={{ padding: '10px 12px' }}>Activity</th>
+                      <th style={{ padding: '10px 12px' }}>Amount</th>
+                      <th style={{ padding: '10px 12px' }}>Previous Balance</th>
+                      <th style={{ padding: '10px 12px' }}>New Balance</th>
+                      <th style={{ padding: '10px 12px' }}>Reference / Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {creditTransactions.map((tx) => {
+                      const isDeduction = tx.transaction_type === 'PURCHASE_DEDUCTION';
+                      const isRefund = tx.transaction_type === 'REFUND';
+
+                      let dateStr = tx.created_at;
+                      try {
+                        dateStr = new Date(tx.created_at).toLocaleString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        });
+                      } catch (e) {}
+
+                      return (
+                        <tr key={tx.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '12px', color: '#334155', whiteSpace: 'nowrap' }}>
+                            {dateStr}
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            <span style={{
+                              padding: '3px 8px',
+                              borderRadius: '10px',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              background: isDeduction ? 'rgba(239, 68, 68, 0.1)' : (isRefund ? 'rgba(16, 185, 129, 0.1)' : 'rgba(2, 132, 199, 0.1)'),
+                              color: isDeduction ? '#dc2626' : (isRefund ? '#059669' : '#0284c7')
+                            }}>
+                              {isDeduction ? 'PURCHASE DEDUCTION' : (isRefund ? 'ORDER REFUND' : tx.transaction_type)}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px', fontWeight: 800, color: isDeduction ? '#dc2626' : '#059669' }}>
+                            {isDeduction ? '-' : '+'}₹{Number(tx.amount || 0).toLocaleString('en-IN')}
+                          </td>
+                          <td style={{ padding: '12px', color: '#64748b' }}>
+                            ₹{Number(tx.previous_credit || 0).toLocaleString('en-IN')}
+                          </td>
+                          <td style={{ padding: '12px', fontWeight: 700, color: '#0f172a' }}>
+                            ₹{Number(tx.new_credit || 0).toLocaleString('en-IN')}
+                          </td>
+                          <td style={{ padding: '12px', color: '#334155' }}>
+                            {tx.reference_order_number && (
+                              <span style={{ fontWeight: 700, color: '#0284c7', marginRight: '6px' }}>
+                                {tx.reference_order_number}
+                              </span>
+                            )}
+                            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                              {tx.description || '-'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </section>
       )}
 

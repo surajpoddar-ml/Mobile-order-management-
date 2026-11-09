@@ -634,6 +634,42 @@ export const api = {
 
     getUnreadCount: () =>
       request('/chat/unread-count', { method: 'GET' })
+  },
+
+  // Persistent Images Storage Endpoints
+  images: {
+    upload: (formData) =>
+      request('/images', {
+        method: 'POST',
+        body: formData
+      }),
+
+    getAll: () =>
+      request('/images', { method: 'GET' }),
+
+    getById: (id) =>
+      request(`/images/${id}`, { method: 'GET' }),
+
+    delete: (id) =>
+      request(`/images/${id}`, { method: 'DELETE' })
+  },
+
+  // Distributor Credit Payment System Endpoints
+  credits: {
+    getMyCredit: () =>
+      request('/credits/my-credit', { method: 'GET' }),
+
+    getDistributorsCredit: (query = '') =>
+      request(`/credits/admin/distributors${query ? `?query=${encodeURIComponent(query)}` : ''}`, { method: 'GET' }),
+
+    getDistributorLedger: (distributorId) =>
+      request(`/credits/admin/ledger/${encodeURIComponent(distributorId)}`, { method: 'GET' }),
+
+    adjustCredit: (data) =>
+      request('/credits/admin/adjust', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      })
   }
 };
 

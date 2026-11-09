@@ -124,7 +124,33 @@ router.post('/', verifyToken, async (req, res) => {
 
     const isOnlinePayment = paymentMethod.includes('Online') || paymentMethod.includes('QR') || paymentMethod.includes('UPI');
     let paymentStatus = isOnlinePayment ? 'Pending Verification' : 'Pending (Cash on Delivery)';
-    if (paymentMethod.includes('Wholesale Invoice')) {
+    if (paymentMethod === 'Purchase with Available Credit') {
+      if (userType !== 'Distributor') {
+        return res.status(403).json({
+          success: false,
+          message: 'Purchase with Available Credit is exclusively available for wholesale distributors.'
+        });
+      }
+
+      // Check available credit balance
+      const creditRecord = await queryGet(
+        'SELECT * FROM distributor_credits WHERE distributor_id = ? OR user_id = ?',
+        [userId, req.user.id]
+      );
+
+      const availableCredit = creditRecord
+        ? Math.max(0, Number(creditRecord.total_credit || 0) - Number(creditRecord.used_credit || 0))
+        : 0;
+
+      if (availableCredit < authoritativeTotal) {
+        return res.status(400).json({
+          success: false,
+          message: 'Insufficient credit limit. Please contact the admin/owner or support to increase your credit limit.'
+        });
+      }
+
+      paymentStatus = 'Paid via Credit';
+    } else if (paymentMethod.includes('Wholesale Invoice')) {
       paymentStatus = 'Invoice Net 30';
     }
 
@@ -171,6 +197,45 @@ router.post('/', verifyToken, async (req, res) => {
           [orderNumber, transactionId ? transactionId.trim() : null, paymentScreenshot || null, now, paymentReference.trim()]
         );
       } catch (err) {}
+    }
+
+    // Automatically deduct distributor credit if paid via Available Credit
+    if (paymentMethod === 'Purchase with Available Credit') {
+      try {
+        await queryRun(
+          `UPDATE distributor_credits
+           SET used_credit = used_credit + ?,
+               available_credit = GREATEST(0, total_credit - (used_credit + ?)),
+               updated_at = CURRENT_TIMESTAMP
+           WHERE distributor_id = ? OR user_id = ?`,
+          [authoritativeTotal, authoritativeTotal, userId, req.user.id]
+        );
+
+        const updatedCredit = await queryGet(
+          'SELECT * FROM distributor_credits WHERE distributor_id = ? OR user_id = ?',
+          [userId, req.user.id]
+        );
+
+        const newAvail = updatedCredit ? Math.max(0, Number(updatedCredit.total_credit || 0) - Number(updatedCredit.used_credit || 0)) : 0;
+        const prevAvail = newAvail + authoritativeTotal;
+
+        await queryRun(
+          `INSERT INTO distributor_credit_transactions
+           (distributor_id, user_id, transaction_type, amount, previous_credit, new_credit, reference_order_number, description)
+           VALUES (?, ?, 'PURCHASE_DEDUCTION', ?, ?, ?, ?, ?)`,
+          [
+            userId,
+            req.user.id,
+            authoritativeTotal,
+            prevAvail,
+            newAvail,
+            orderNumber,
+            `Order ${orderNumber} - Purchase with Available Credit`
+          ]
+        );
+      } catch (creditErr) {
+        console.error('Error recording credit deduction:', creditErr);
+      }
     }
 
     const createdOrder = await queryGet('SELECT * FROM orders WHERE id = ?', [result.lastID]);
@@ -400,6 +465,65 @@ router.put('/admin/:id/status', verifyToken, requireAdmin, async (req, res) => {
             dedupKey: `refund_points_${existing.orderNumber}_${Date.now()}`
           });
         } catch (e) {}
+      }
+    }
+
+    // If order was paid via Available Credit and is being Cancelled, restore credit balance
+    if (newStatus === 'Cancelled' && existing.orderStatus !== 'Cancelled' && existing.paymentMethod === 'Purchase with Available Credit') {
+      try {
+        const refundAmount = Number(existing.totalAmount || 0);
+        await queryRun(
+          `UPDATE distributor_credits
+           SET used_credit = GREATEST(0, used_credit - ?),
+               available_credit = GREATEST(0, total_credit - GREATEST(0, used_credit - ?)),
+               updated_at = CURRENT_TIMESTAMP
+           WHERE distributor_id = ? OR user_id = ?`,
+          [refundAmount, refundAmount, existing.userId, existing.userId]
+        );
+
+        const refCredit = await queryGet(
+          'SELECT * FROM distributor_credits WHERE distributor_id = ? OR user_id = ?',
+          [existing.userId, existing.userId]
+        );
+        const refAvail = refCredit ? Math.max(0, Number(refCredit.total_credit || 0) - Number(refCredit.used_credit || 0)) : 0;
+        const refPrev = Math.max(0, refAvail - refundAmount);
+
+        // Fetch user numeric ID
+        const distUser = await queryGet(
+          'SELECT id, userId FROM users WHERE userId = ? OR id = ? LIMIT 1',
+          [existing.userId, existing.userId]
+        );
+
+        await queryRun(
+          `INSERT INTO distributor_credit_transactions
+           (distributor_id, user_id, transaction_type, amount, previous_credit, new_credit, reference_order_number, description)
+           VALUES (?, ?, 'REFUND', ?, ?, ?, ?, ?)`,
+          [
+            existing.userId,
+            distUser?.id || 0,
+            refundAmount,
+            refPrev,
+            refAvail,
+            existing.orderNumber,
+            `Refund: Order ${existing.orderNumber} Cancelled (+₹${refundAmount.toLocaleString('en-IN')})`
+          ]
+        );
+
+        // Notify distributor of credit refund
+        try {
+          await createNotification({
+            recipientId: String(existing.userId),
+            recipientRole: existing.userType,
+            title: `🔄 Credit Refund: ₹${refundAmount.toLocaleString('en-IN')}`,
+            message: `Your cancelled order ${existing.orderNumber} has been refunded. ₹${refundAmount.toLocaleString('en-IN')} has been restored to your available credit.`,
+            type: 'credit_update',
+            entityId: existing.orderNumber,
+            linkUrl: '/portal/distributor?tab=credit',
+            dedupKey: `credit_refund_${existing.orderNumber}_${Date.now()}`
+          });
+        } catch (e) {}
+      } catch (err) {
+        console.error('Error refunding credit for cancelled order:', err);
       }
     }
 

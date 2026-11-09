@@ -15,6 +15,8 @@ import stickerRoutes from './routes/stickerRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import customerWarrantyRouter, { adminWarrantyRouter } from './routes/warrantyRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
+import imageRoutes, { serveImageHandler } from './routes/imageRoutes.js';
+import creditRoutes from './routes/creditRoutes.js';
 import { initSocketIO } from './services/socketService.js';
 import { seedDatabase } from './database/seed.js';
 
@@ -53,6 +55,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/rewards', rewardRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/credits', creditRoutes);
+app.get('/images/:filename', serveImageHandler);
+app.use('/api/images', imageRoutes);
 app.use('/api/admin/warranties', adminWarrantyRouter);
 app.use('/api/warranties', customerWarrantyRouter);
 app.use('/api/my/warranties', (req, res, next) => {

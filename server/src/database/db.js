@@ -637,6 +637,61 @@ export const initDb = async () => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
+  // Persistent Images Table
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS images (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      original_name VARCHAR(255) NOT NULL,
+      stored_name VARCHAR(255) NOT NULL UNIQUE,
+      mime_type VARCHAR(100) NOT NULL,
+      file_size INT NOT NULL,
+      file_path VARCHAR(500) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_img_stored (stored_name),
+      INDEX idx_img_created (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  // Distributor Credit Balances Table
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS distributor_credits (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      distributor_id VARCHAR(100) NOT NULL UNIQUE,
+      total_credit DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      used_credit DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      available_credit DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_dc_dist (distributor_id),
+      INDEX idx_dc_user (user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  // Distributor Credit Transactions & Audit Ledger Table
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS distributor_credit_transactions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      distributor_id VARCHAR(100) NOT NULL,
+      user_id INT NOT NULL,
+      transaction_type VARCHAR(50) NOT NULL,
+      amount DECIMAL(12,2) NOT NULL,
+      previous_credit DECIMAL(12,2) NOT NULL,
+      new_credit DECIMAL(12,2) NOT NULL,
+      reference_order_number VARCHAR(100) DEFAULT NULL,
+      description VARCHAR(255) DEFAULT NULL,
+      admin_id INT DEFAULT NULL,
+      admin_name VARCHAR(255) DEFAULT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_dct_dist (distributor_id),
+      INDEX idx_dct_user (user_id),
+      INDEX idx_dct_order (reference_order_number),
+      INDEX idx_dct_created (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
   console.log('MySQL database tables verified and ready.');
 };
 

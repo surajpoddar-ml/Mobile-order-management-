@@ -7,13 +7,15 @@ import {
   Film, Image as ImageIcon, Upload, Plus, ExternalLink, Sparkles,
   LayoutDashboard, Package, Menu, Edit, ArrowLeft, AlertCircle,
   ShoppingCart, Truck, FileText, QrCode, Calculator, Percent, Tag, EyeOff, Info, ArrowRightLeft, ToggleLeft, ToggleRight,
-  FolderTree, Battery, BatteryCharging, Cable, Headphones, Shield, Smartphone, Cpu, Zap, Wallet, Gift
+  FolderTree, Battery, BatteryCharging, Cable, Headphones, Shield, Smartphone, Cpu, Zap, Wallet, Gift, CreditCard
 } from 'lucide-react';
 import { AdminCreateOffers } from '../components/rewards/AdminCreateOffers';
 import { AdminRewardsPayouts } from '../components/rewards/AdminRewardsPayouts';
 import { AdminStickers } from '../components/AdminStickers';
 import { AdminProductWarranty } from '../components/warranty/AdminProductWarranty';
 import { AdminChatManagement } from '../components/chat/AdminChatManagement';
+import AdminMediaGallery from '../components/media/AdminMediaGallery';
+import AdminDistributorCredit from '../components/credit/AdminDistributorCredit';
 import { MessageSquare } from 'lucide-react';
 
 export const AdminPanel = () => {
@@ -1109,11 +1111,13 @@ export const AdminPanel = () => {
     { id: 'rewards-payouts', label: 'Reward Redemptions', icon: Gift, badge: null, color: '#10b981' },
     { id: 'pending', label: 'Pending Approvals', icon: Clock, badge: metrics?.distributors?.pending ?? 0, color: 'var(--status-pending)' },
     { id: 'distributors', label: 'Distributors', icon: Building2, badge: metrics?.distributors?.approved ?? 0, color: 'var(--distributor-accent)' },
+    { id: 'distributor-credit', label: 'Distributor Credit System', icon: CreditCard, badge: null, color: '#0284c7' },
     { id: 'customers', label: 'Customers', icon: Users, badge: metrics?.customers?.active ?? 0, color: 'var(--customer-accent)' },
     { id: 'products', label: 'Product Management', icon: Package, badge: allProducts?.length ?? 0, color: '#0d9488' },
     { id: 'warranties', label: 'Product Warranty', icon: ShieldCheck, badge: null, color: '#0284c7' },
     { id: 'categories', label: 'Categories', icon: FolderTree, badge: categories?.length ?? 0, color: '#8b5cf6' },
     { id: 'advertisements', label: 'Ad Board & Media', icon: Film, badge: advertisements?.length ?? 0, color: '#ea580c' },
+    { id: 'persistent-media', label: 'Persistent Media Storage', icon: ImageIcon, badge: null, color: '#0284c7' },
     { id: 'stickers', label: 'Promotional Stickers', icon: Sparkles, badge: null, color: '#ec4899' },
     { id: 'all', label: 'All User Accounts', icon: Search, badge: users?.length ?? 0, color: '#6366f1' },
   ];
@@ -2833,6 +2837,20 @@ export const AdminPanel = () => {
         {/* ======================================================== */}
         {/* =========== VIEW 3: AD BOARD & MEDIA MANAGEMENT ======== */}
         {/* ======================================================== */}
+        {/* ======================================================== */}
+        {/* ============ VIEW: PERSISTENT MEDIA STORAGE ============ */}
+        {/* ======================================================== */}
+        {activeTab === 'persistent-media' && (
+          <AdminMediaGallery />
+        )}
+
+        {/* ======================================================== */}
+        {/* ============ VIEW: DISTRIBUTOR CREDIT SYSTEM ============ */}
+        {/* ======================================================== */}
+        {activeTab === 'distributor-credit' && (
+          <AdminDistributorCredit />
+        )}
+
         {activeTab === 'advertisements' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             <div className="glass-panel" style={{
@@ -3134,9 +3152,14 @@ export const AdminPanel = () => {
                         />
                       ) : (
                         <img
-                          src={getMediaUrl(ad.mediaUrl)}
+                          src={getMediaUrl(ad.mediaUrl) || '/mws_main_banner.jpg'}
                           alt={ad.title}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => {
+                            if (e.currentTarget.src !== '/mws_main_banner.jpg' && !e.currentTarget.src.endsWith('/mws_main_banner.jpg')) {
+                              e.currentTarget.src = '/mws_main_banner.jpg';
+                            }
+                          }}
                         />
                       )}
 
