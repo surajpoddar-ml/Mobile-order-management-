@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export const AuthPage = ({ prefillData }) => {
-  const { login, registerCustomer, registerDistributor, navigate } = useAuth();
+  const { login, loginWithGoogle, switchAccount, registerCustomer, registerDistributor, navigate } = useAuth();
 
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
   const [loginRole, setLoginRole] = useState('Customer'); // 'Customer' | 'Distributor'
@@ -30,6 +30,121 @@ export const AuthPage = ({ prefillData }) => {
   const [loginPassword, setLoginPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+
+  // Remembered Account from previous persistent session
+  const [rememberedAccount, setRememberedAccount] = useState(() => {
+    try {
+      const raw = localStorage.getItem('mws_remembered_account');
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  // Automatically prefill recognized account on initial mount
+  useEffect(() => {
+    if (rememberedAccount && !loginEmail) {
+      if (rememberedAccount.email) setLoginEmail(rememberedAccount.email);
+      if (rememberedAccount.userType && (rememberedAccount.userType === 'Customer' || rememberedAccount.userType === 'Distributor' || rememberedAccount.userType === 'Admin')) {
+        setLoginRole(rememberedAccount.userType);
+      }
+    }
+  }, [rememberedAccount]);
+
+  // Google OAuth Credential Handler
+  const handleGoogleCredentialResponse = async (response) => {
+    if (!response?.credential) return;
+    setLoading(true);
+    setErrorMsg(null);
+    setStatusAlert(null);
+    try {
+      await loginWithGoogle({
+        credential: response.credential,
+        requestedRole: loginRole,
+        rememberMe
+      });
+    } catch (err) {
+      const data = err.data || {};
+      if (data.accountStatus === 'Pending') {
+        setStatusAlert({
+          type: 'pending',
+          title: 'Distributor Awaiting Admin Approval',
+          message: 'Your Google-linked distributor account is awaiting administrator review.'
+        });
+      } else if (data.accountStatus === 'Suspended') {
+        setStatusAlert({
+          type: 'suspended',
+          title: 'Account Suspended',
+          message: 'Your account has been suspended by the administrator.'
+        });
+      } else {
+        setErrorMsg(err.message || 'Google sign-in failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initialize Google Identity Services (GSI) & Google One-Tap
+  useEffect(() => {
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1029384756-mwseagle.apps.googleusercontent.com';
+    let isMounted = true;
+
+    const setupGoogleAuth = () => {
+      if (window.google?.accounts?.id) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: handleGoogleCredentialResponse,
+            auto_select: true, // Automatic recognition if Google session is active on browser
+            cancel_on_tap_outside: false
+          });
+
+          const btnContainer = document.getElementById('google-signin-btn-container');
+          if (btnContainer && isMounted) {
+            btnContainer.innerHTML = '';
+            window.google.accounts.id.renderButton(btnContainer, {
+              theme: 'outline',
+              size: 'large',
+              type: 'standard',
+              text: 'continue_with',
+              shape: 'rectangular',
+              width: 280,
+              logo_alignment: 'left'
+            });
+          }
+
+          // Trigger Google One-Tap account prompt if supported
+          window.google.accounts.id.prompt((notification) => {
+            if (notification.isNotDisplayed()) {
+              // Gracefully handle browser restrictions or third-party cookie blocking
+            }
+          });
+        } catch (e) {
+          console.warn('Google GSI initialization:', e.message);
+        }
+      }
+    };
+
+    if (window.google?.accounts?.id) {
+      setupGoogleAuth();
+    } else {
+      const existingScript = document.getElementById('google-gsi-client');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.id = 'google-gsi-client';
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          if (isMounted) setupGoogleAuth();
+        };
+        document.body.appendChild(script);
+      }
+    }
+
+    return () => { isMounted = false; };
+  }, [authMode, loginRole]);
 
   // Customer Form
   const [custForm, setCustForm] = useState({
@@ -100,7 +215,7 @@ export const AuthPage = ({ prefillData }) => {
     setLoading(true);
 
     try {
-      await login(loginEmail, loginPassword, loginRole);
+      await login(loginEmail, loginPassword, loginRole, rememberMe);
     } catch (err) {
       const data = err.data || {};
       const status = data.accountStatus;
@@ -423,7 +538,78 @@ export const AuthPage = ({ prefillData }) => {
         {/* =============== LOGIN FORM (SIGN IN) ================== */}
         {/* ======================================================== */}
         {authMode === 'login' && (
-          <form onSubmit={handleLoginSubmit}>
+          <div>
+            {/* Automatic Account Recognition / Remembered Account Card */}
+            {rememberedAccount && (
+              <div style={{
+                marginBottom: '20px',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.06) 0%, rgba(3, 105, 161, 0.1) 100%)',
+                border: '1.5px solid rgba(2, 132, 199, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    background: '#0284c7',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '1rem'
+                  }}>
+                    {rememberedAccount.fullName ? rememberedAccount.fullName[0].toUpperCase() : 'U'}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                      {rememberedAccount.fullName || 'Welcome Back'}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                      {rememberedAccount.email} • <span style={{ color: '#0284c7', fontWeight: 700 }}>{rememberedAccount.userType}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginEmail(rememberedAccount.email);
+                      if (rememberedAccount.userType) setLoginRole(rememberedAccount.userType);
+                    }}
+                    className="btn btn-sky"
+                    style={{ padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px' }}
+                  >
+                    Continue as {rememberedAccount.fullName?.split(' ')[0] || 'User'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={switchAccount}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#64748b',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: '6px 8px'
+                    }}
+                  >
+                    Switch Account
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleLoginSubmit}>
             {/* Role Tabs for Login */}
             <div style={{ marginBottom: '20px' }}>
               <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
@@ -605,6 +791,27 @@ export const AuthPage = ({ prefillData }) => {
               {loading ? 'Authenticating...' : loginRole === 'Admin' ? 'Sign In to Admin Panel' : `Sign In as ${loginRole}`}
             </button>
 
+            {/* Google OAuth & Automatic Google Account Recognition */}
+            <div style={{ marginTop: '18px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                margin: '16px 0',
+                color: '#94a3b8',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                letterSpacing: '0.04em'
+              }}>
+                <span style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                <span>OR SIGN IN WITH GOOGLE</span>
+                <span style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+              </div>
+
+              {/* Official Google GSI Render Target */}
+              <div id="google-signin-btn-container" style={{ display: 'flex', justifyContent: 'center', minHeight: '44px', width: '100%' }}></div>
+            </div>
+
             {/* Switch to Register footer */}
             <div style={{
               textAlign: 'center',
@@ -635,6 +842,7 @@ export const AuthPage = ({ prefillData }) => {
               </button>
             </div>
           </form>
+        </div>
         )}
 
         {/* ======================================================== */}

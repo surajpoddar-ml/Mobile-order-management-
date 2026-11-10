@@ -13,15 +13,26 @@ const JWT_SECRET = process.env.JWT_SECRET || 'mws_eagle_mobile_parts_super_secre
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const uploadDir = path.resolve(__dirname, '../../uploads/products');
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Supports external persistent upload directory (e.g. Hostinger IMAGE_UPLOAD_DIR) or local fallback
+const resolveProductUploadDir = () => {
+  if (process.env.IMAGE_UPLOAD_DIR) {
+    const customDir = path.resolve(process.env.IMAGE_UPLOAD_DIR, 'products');
+    if (!fs.existsSync(customDir)) {
+      try { fs.mkdirSync(customDir, { recursive: true }); } catch (e) {}
+    }
+    return customDir;
+  }
+  const defaultDir = path.resolve(__dirname, '../../uploads/products');
+  if (!fs.existsSync(defaultDir)) {
+    try { fs.mkdirSync(defaultDir, { recursive: true }); } catch (e) {}
+  }
+  return defaultDir;
+};
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir);
+    cb(null, resolveProductUploadDir());
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();

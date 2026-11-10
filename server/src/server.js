@@ -30,16 +30,40 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// Native Cookie Parser Middleware for HTTP-only Refresh Tokens
+app.use((req, res, next) => {
+  const cookieHeader = req.headers.cookie;
+  req.cookies = {};
+  if (cookieHeader) {
+    cookieHeader.split(';').forEach(cookie => {
+      const parts = cookie.split('=');
+      const name = parts[0]?.trim();
+      const value = parts.slice(1).join('=').trim();
+      if (name) req.cookies[name] = decodeURIComponent(value);
+    });
+  }
+  next();
+});
+
 // Middleware
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => callback(null, true),
+  credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve uploaded media files statically
+// Serve uploaded media files statically (supports external persistent storage e.g. on Hostinger)
+if (process.env.IMAGE_UPLOAD_DIR) {
+  try {
+    const persistentDir = path.resolve(process.env.IMAGE_UPLOAD_DIR);
+    if (fs.existsSync(persistentDir)) {
+      app.use('/uploads', express.static(persistentDir));
+    }
+  } catch (e) {}
+}
 const uploadsPath = path.resolve(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsPath));
 

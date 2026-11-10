@@ -31,47 +31,106 @@ export const AuthProvider = ({ children }) => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Validate session on startup
+  // Validate and restore session on startup
   useEffect(() => {
+    let isMounted = true;
     const verifySession = async () => {
       const storedToken = localStorage.getItem('mobile_parts_token');
-      if (!storedToken) {
-        setLoading(false);
-        return;
+      const storedRefreshToken = localStorage.getItem('mws_refresh_token');
+
+      // 1. If an access token exists, verify via /me
+      if (storedToken) {
+        try {
+          const response = await api.auth.getMe();
+          if (isMounted && response.success && response.user) {
+            setUser(response.user);
+            setToken(storedToken);
+
+            // Update remembered account info
+            localStorage.setItem('mws_remembered_account', JSON.stringify({
+              email: response.user.email,
+              fullName: response.user.fullName,
+              userType: response.user.userType,
+              avatarUrl: response.user.avatarUrl || null
+            }));
+
+            // Only redirect if specifically on the /login page
+            const currentPath = window.location.pathname;
+            if (currentPath === '/login') {
+              if (response.user.userType === 'Customer') navigate('/portal/customer');
+              else if (response.user.userType === 'Distributor') navigate('/portal/distributor');
+              else if (response.user.userType === 'Admin') navigate('/admin');
+            }
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.warn('Access token expired, attempting persistent session refresh...');
+        }
       }
 
+      // 2. If access token was missing or expired, attempt seamless refresh via refresh token / HTTP-only cookie
       try {
-        const response = await api.auth.getMe();
-        if (response.success && response.user) {
-          setUser(response.user);
-          // Only redirect if specifically on the /login page
+        const refreshRes = await api.auth.refreshSession(storedRefreshToken);
+        if (isMounted && refreshRes.success && refreshRes.token && refreshRes.user) {
+          localStorage.setItem('mobile_parts_token', refreshRes.token);
+          if (refreshRes.refreshToken) {
+            localStorage.setItem('mws_refresh_token', refreshRes.refreshToken);
+          }
+          setToken(refreshRes.token);
+          setUser(refreshRes.user);
+
+          localStorage.setItem('mws_remembered_account', JSON.stringify({
+            email: refreshRes.user.email,
+            fullName: refreshRes.user.fullName,
+            userType: refreshRes.user.userType,
+            avatarUrl: refreshRes.user.avatarUrl || null
+          }));
+
           const currentPath = window.location.pathname;
           if (currentPath === '/login') {
-            if (response.user.userType === 'Customer') navigate('/portal/customer');
-            else if (response.user.userType === 'Distributor') navigate('/portal/distributor');
-            else if (response.user.userType === 'Admin') navigate('/admin');
+            if (refreshRes.user.userType === 'Customer') navigate('/portal/customer');
+            else if (refreshRes.user.userType === 'Distributor') navigate('/portal/distributor');
+            else if (refreshRes.user.userType === 'Admin') navigate('/admin');
           }
+        } else {
+          localStorage.removeItem('mobile_parts_token');
+          setToken(null);
+          setUser(null);
         }
-      } catch (err) {
-        console.warn('Session verification failed:', err.message);
+      } catch (refreshErr) {
+        // No active session or refresh token expired
         localStorage.removeItem('mobile_parts_token');
+        localStorage.removeItem('mws_refresh_token');
         setToken(null);
         setUser(null);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     verifySession();
+    return () => { isMounted = false; };
   }, []);
 
-  // Login handler
-  const login = async (email, password, requestedPortal) => {
-    const res = await api.auth.login({ email, password, requestedPortal });
+  // Login handler with persistent session option
+  const login = async (email, password, requestedPortal, rememberMe = true) => {
+    const res = await api.auth.login({ email, password, requestedPortal, rememberMe });
     if (res.success && res.token) {
       localStorage.setItem('mobile_parts_token', res.token);
+      if (res.refreshToken) {
+        localStorage.setItem('mws_refresh_token', res.refreshToken);
+      }
       setToken(res.token);
       setUser(res.user);
+
+      // Save remembered account snapshot
+      localStorage.setItem('mws_remembered_account', JSON.stringify({
+        email: res.user.email,
+        fullName: res.user.fullName,
+        userType: res.user.userType,
+        avatarUrl: res.user.avatarUrl || null
+      }));
 
       // Check if returnUrl is provided (e.g. from /verify-warranty/:token)
       const urlParams = new URLSearchParams(window.location.search);
@@ -82,6 +141,42 @@ export const AuthProvider = ({ children }) => {
       }
 
       // Portal Redirection Rule (Section 6)
+      if (res.user.userType === 'Customer') {
+        navigate('/portal/customer');
+      } else if (res.user.userType === 'Distributor') {
+        navigate('/portal/distributor');
+      } else if (res.user.userType === 'Admin') {
+        navigate('/admin');
+      }
+    }
+    return res;
+  };
+
+  // Google Login / One-Tap authentication handler
+  const loginWithGoogle = async ({ credential, profile, requestedRole = 'Customer', rememberMe = true }) => {
+    const res = await api.auth.loginWithGoogle({ credential, profile, requestedRole, rememberMe });
+    if (res.success && res.token && res.user) {
+      localStorage.setItem('mobile_parts_token', res.token);
+      if (res.refreshToken) {
+        localStorage.setItem('mws_refresh_token', res.refreshToken);
+      }
+      setToken(res.token);
+      setUser(res.user);
+
+      localStorage.setItem('mws_remembered_account', JSON.stringify({
+        email: res.user.email,
+        fullName: res.user.fullName,
+        userType: res.user.userType,
+        avatarUrl: res.user.avatarUrl || null
+      }));
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const returnUrl = urlParams.get('returnUrl');
+      if (returnUrl && returnUrl.startsWith('/')) {
+        navigate(returnUrl);
+        return res;
+      }
+
       if (res.user.userType === 'Customer') {
         navigate('/portal/customer');
       } else if (res.user.userType === 'Distributor') {
@@ -119,9 +214,30 @@ export const AuthProvider = ({ children }) => {
     return res;
   };
 
-  // Logout handler
-  const logout = () => {
+  // Logout handler - cleans up local storage, notifies backend, and clears cookies
+  const logout = async () => {
+    const currentRefreshToken = localStorage.getItem('mws_refresh_token');
+    try {
+      await api.auth.logout(currentRefreshToken);
+    } catch (e) {
+      console.warn('Logout API notification failed:', e.message);
+    }
     localStorage.removeItem('mobile_parts_token');
+    localStorage.removeItem('mws_refresh_token');
+    setToken(null);
+    setUser(null);
+    navigate('/login');
+  };
+
+  // Switch Account handler - clears session and remembered account prompt
+  const switchAccount = async () => {
+    const currentRefreshToken = localStorage.getItem('mws_refresh_token');
+    try {
+      await api.auth.logout(currentRefreshToken);
+    } catch (e) {}
+    localStorage.removeItem('mobile_parts_token');
+    localStorage.removeItem('mws_refresh_token');
+    localStorage.removeItem('mws_remembered_account');
     setToken(null);
     setUser(null);
     navigate('/login');
@@ -151,9 +267,11 @@ export const AuthProvider = ({ children }) => {
         currentRoute,
         navigate,
         login,
+        loginWithGoogle,
         registerCustomer,
         registerDistributor,
         logout,
+        switchAccount,
         refreshUser
       }}
     >

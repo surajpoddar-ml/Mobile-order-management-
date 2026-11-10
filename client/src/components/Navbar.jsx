@@ -5,6 +5,7 @@ import api from '../services/api';
 import {
   Search,
   User,
+  UserCheck,
   Heart,
   ShoppingCart,
   Menu,
@@ -34,7 +35,7 @@ import {
 import { NotificationBell } from './NotificationBell';
 
 export const Navbar = () => {
-  const { user, logout, navigate, currentRoute } = useAuth();
+  const { user, logout, switchAccount, navigate, currentRoute } = useAuth();
   const {
     cartCount,
     wishlistCount,
@@ -499,6 +500,31 @@ export const Navbar = () => {
                     </button>
 
                     <div style={{ borderTop: '1px solid #f1f5f9', margin: '4px 0' }} />
+
+                    <button
+                      onClick={() => {
+                        setUserDropdownOpen(false);
+                        switchAccount();
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '9px 16px',
+                        background: 'none',
+                        border: 'none',
+                        textAlign: 'left',
+                        fontSize: '0.86rem',
+                        color: '#475569',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >
+                      <UserCheck size={15} />
+                      Switch Account
+                    </button>
 
                     <button
                       onClick={() => {

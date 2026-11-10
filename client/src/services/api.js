@@ -71,17 +71,20 @@ export const getCategoryFallbackImage = getProductFallbackImage;
  */
 const request = async (endpoint, options = {}) => {
   const token = localStorage.getItem('mobile_parts_token');
+  const refreshToken = localStorage.getItem('mws_refresh_token');
   const isFormData = options.body instanceof FormData;
 
   const headers = {
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(refreshToken ? { 'x-refresh-token': refreshToken } : {}),
     ...options.headers
   };
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
+      credentials: 'include',
       headers
     });
 
@@ -107,6 +110,24 @@ export const api = {
       request('/auth/login', {
         method: 'POST',
         body: JSON.stringify(credentials)
+      }),
+
+    loginWithGoogle: (payload) =>
+      request('/auth/google', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+
+    refreshSession: (refreshToken) =>
+      request('/auth/refresh', {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken })
+      }),
+
+    logout: (refreshToken) =>
+      request('/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken })
       }),
 
     registerCustomer: (payload) =>

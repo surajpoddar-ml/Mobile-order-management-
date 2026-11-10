@@ -121,6 +121,25 @@ export const initDb = async () => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
+  // Ensure users table has googleId and avatarUrl columns
+  try { await queryRun('ALTER TABLE users ADD COLUMN googleId VARCHAR(255) DEFAULT NULL'); } catch (e) {}
+  try { await queryRun('ALTER TABLE users ADD COLUMN avatarUrl TEXT DEFAULT NULL'); } catch (e) {}
+
+  // User persistent sessions table (HTTP-only refresh tokens & Remember Me)
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      refresh_token VARCHAR(500) NOT NULL UNIQUE,
+      device_info VARCHAR(255) DEFAULT NULL,
+      ip_address VARCHAR(100) DEFAULT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_us_user (user_id),
+      INDEX idx_us_token (refresh_token)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
   // Products table
   await queryRun(`
     CREATE TABLE IF NOT EXISTS products (
