@@ -1394,7 +1394,7 @@ export const DistributorPortal = () => {
           {/* 3 Metric Cards */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '16px',
             marginBottom: '24px'
           }}>
@@ -1419,6 +1419,18 @@ export const DistributorPortal = () => {
               </div>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
                 Utilized across placed orders
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '20px', borderRadius: '16px', background: '#ffffff', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Outstanding Debt
+              </div>
+              <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#dc2626', marginTop: '6px' }}>
+                ₹{Number(distributorCredit?.outstandingBalance || 0).toLocaleString('en-IN')}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+                Current pending receivables to settle
               </div>
             </div>
 
@@ -1517,10 +1529,28 @@ export const DistributorPortal = () => {
                               borderRadius: '10px',
                               fontSize: '0.72rem',
                               fontWeight: 800,
-                              background: isDeduction ? 'rgba(239, 68, 68, 0.1)' : (isRefund ? 'rgba(16, 185, 129, 0.1)' : 'rgba(2, 132, 199, 0.1)'),
-                              color: isDeduction ? '#dc2626' : (isRefund ? '#059669' : '#0284c7')
+                              background: isDeduction
+                                ? 'rgba(239, 68, 68, 0.1)'
+                                : (isRefund
+                                    ? 'rgba(147, 51, 234, 0.1)'
+                                    : (tx.transaction_type === 'PAYMENT_SETTLEMENT'
+                                        ? 'rgba(16, 185, 129, 0.1)'
+                                        : 'rgba(2, 132, 199, 0.1)')),
+                              color: isDeduction
+                                ? '#dc2626'
+                                : (isRefund
+                                    ? '#7c3aed'
+                                    : (tx.transaction_type === 'PAYMENT_SETTLEMENT'
+                                        ? '#059669'
+                                        : '#0284c7'))
                             }}>
-                              {isDeduction ? 'PURCHASE DEDUCTION' : (isRefund ? 'ORDER REFUND' : tx.transaction_type)}
+                              {isDeduction
+                                ? 'PURCHASE DEDUCTION'
+                                : (isRefund
+                                    ? 'ORDER REFUND'
+                                    : (tx.transaction_type === 'PAYMENT_SETTLEMENT'
+                                        ? 'PAYMENT RECEIVED'
+                                        : tx.transaction_type))}
                             </span>
                           </td>
                           <td style={{ padding: '12px', fontWeight: 800, color: isDeduction ? '#dc2626' : '#059669' }}>

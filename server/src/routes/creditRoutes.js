@@ -6,6 +6,15 @@ import { createNotification } from '../services/notificationService.js';
 const router = express.Router();
 
 /**
+ * Generate a unique readable transaction reference
+ */
+export const generateTxnNumber = () => {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const randomPart = Math.floor(1000 + Math.random() * 9000);
+  return `TXN-CR-${timestamp}-${randomPart}`;
+};
+
+/**
  * Helper: Ensure distributor credit record exists in distributor_credits table
  */
 export const ensureDistributorCreditRecord = async (distributorUser) => {
@@ -18,8 +27,8 @@ export const ensureDistributorCreditRecord = async (distributorUser) => {
 
   if (!record) {
     await queryRun(
-      `INSERT INTO distributor_credits (user_id, distributor_id, total_credit, used_credit, available_credit)
-       VALUES (?, ?, 0.00, 0.00, 0.00)
+      `INSERT INTO distributor_credits (user_id, distributor_id, total_credit, used_credit, total_paid, outstanding_balance, available_credit)
+       VALUES (?, ?, 0.00, 0.00, 0.00, 0.00, 0.00)
        ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP`,
       [distributorUser.id, distributorUser.userId]
     );
@@ -49,24 +58,29 @@ router.get('/my-credit', verifyToken, async (req, res) => {
 
     // Fetch transactions ledger for this distributor
     const transactions = await queryAll(
-      `SELECT id, distributor_id, transaction_type, amount, previous_credit, new_credit,
-              reference_order_number, description, admin_name, created_at
+      `SELECT id, txn_number, distributor_id, transaction_type, amount, credit_added, credit_removed,
+              payment_amount, previous_credit, new_credit, outstanding_before, outstanding_after,
+              payment_method, reference_id, reference_order_number, description, admin_name, created_at
        FROM distributor_credit_transactions
        WHERE distributor_id = ? OR user_id = ?
-       ORDER BY created_at DESC
+       ORDER BY created_at DESC, id DESC
        LIMIT 100`,
       [req.user.userId, req.user.id]
     );
 
     const totalCredit = Number(creditRecord?.total_credit || 0);
     const usedCredit = Number(creditRecord?.used_credit || 0);
-    const availableCredit = Math.max(0, totalCredit - usedCredit);
+    const totalPaid = Number(creditRecord?.total_paid || 0);
+    const outstandingBalance = Number(creditRecord?.outstanding_balance || Math.max(0, usedCredit - totalPaid));
+    const availableCredit = Math.max(0, totalCredit - outstandingBalance);
 
     return res.status(200).json({
       success: true,
       credit: {
         totalCredit,
         usedCredit,
+        totalPaid,
+        outstandingBalance,
         availableCredit,
         distributorId: req.user.userId,
         businessName: req.user.businessName || req.user.fullName
@@ -100,7 +114,9 @@ router.get('/admin/distributors', verifyToken, requireAdmin, async (req, res) =>
         u.accountStatus,
         COALESCE(dc.total_credit, 0.00) AS totalCredit,
         COALESCE(dc.used_credit, 0.00) AS usedCredit,
-        GREATEST(0.00, COALESCE(dc.total_credit, 0.00) - COALESCE(dc.used_credit, 0.00)) AS availableCredit,
+        COALESCE(dc.total_paid, 0.00) AS totalPaid,
+        COALESCE(dc.outstanding_balance, 0.00) AS outstandingBalance,
+        COALESCE(dc.available_credit, 0.00) AS availableCredit,
         dc.updated_at AS lastUpdated
       FROM users u
       LEFT JOIN distributor_credits dc ON (dc.distributor_id = u.userId OR dc.user_id = u.id)
@@ -121,15 +137,21 @@ router.get('/admin/distributors', verifyToken, requireAdmin, async (req, res) =>
     // Calculate overall aggregates
     let totalAssigned = 0;
     let totalUsed = 0;
+    let totalPaid = 0;
+    let totalOutstanding = 0;
     let totalAvailable = 0;
 
     distributors.forEach(d => {
       d.totalCredit = Number(d.totalCredit || 0);
       d.usedCredit = Number(d.usedCredit || 0);
-      d.availableCredit = Math.max(0, d.totalCredit - d.usedCredit);
+      d.totalPaid = Number(d.totalPaid || 0);
+      d.outstandingBalance = Number(d.outstandingBalance || Math.max(0, d.usedCredit - d.totalPaid));
+      d.availableCredit = Math.max(0, d.totalCredit - d.outstandingBalance);
 
       totalAssigned += d.totalCredit;
       totalUsed += d.usedCredit;
+      totalPaid += d.totalPaid;
+      totalOutstanding += d.outstandingBalance;
       totalAvailable += d.availableCredit;
     });
 
@@ -139,6 +161,8 @@ router.get('/admin/distributors', verifyToken, requireAdmin, async (req, res) =>
         totalDistributors: distributors.length,
         totalAssigned,
         totalUsed,
+        totalPaid,
+        totalOutstanding,
         totalAvailable
       },
       distributors
@@ -153,11 +177,20 @@ router.get('/admin/distributors', verifyToken, requireAdmin, async (req, res) =>
 });
 
 // =========================================================================
-// 3. ADMIN: GET DETAILED TRANSACTION LEDGER FOR A SPECIFIC DISTRIBUTOR
+// 3. ADMIN: GET DETAILED DISTRIBUTOR TRANSACTION LEDGER & ACCOUNTING OVERVIEW
 // =========================================================================
 router.get('/admin/ledger/:distributorId', verifyToken, requireAdmin, async (req, res) => {
   try {
     const { distributorId } = req.params;
+    const {
+      search = '',
+      type = 'ALL',
+      startDate = '',
+      endDate = '',
+      sort = 'newest',
+      page = 1,
+      limit = 25
+    } = req.query;
 
     const distributorUser = await queryGet(
       "SELECT id, userId, fullName, businessName, email, phoneNumber, accountStatus FROM users WHERE (userId = ? OR id = ?) AND userType = 'Distributor'",
@@ -173,18 +206,120 @@ router.get('/admin/ledger/:distributorId', verifyToken, requireAdmin, async (req
 
     const creditRecord = await ensureDistributorCreditRecord(distributorUser);
 
-    const transactions = await queryAll(
-      `SELECT id, distributor_id, transaction_type, amount, previous_credit, new_credit,
-              reference_order_number, description, admin_id, admin_name, created_at
+    // Build query with filters
+    let sql = `
+      SELECT id, txn_number, distributor_id, user_id, transaction_type, amount,
+             credit_added, credit_removed, payment_amount,
+             previous_credit, new_credit, outstanding_before, outstanding_after,
+             payment_method, reference_id, reference_order_number, description,
+             admin_id, admin_name, created_at
+      FROM distributor_credit_transactions
+      WHERE (distributor_id = ? OR user_id = ?)
+    `;
+    const params = [distributorUser.userId, distributorUser.id];
+
+    // Search filter
+    if (search && search.trim()) {
+      const q = `%${search.trim()}%`;
+      sql += ` AND (txn_number LIKE ? OR reference_id LIKE ? OR reference_order_number LIKE ? OR description LIKE ? OR admin_name LIKE ?)`;
+      params.push(q, q, q, q, q);
+    }
+
+    // Type filter
+    if (type && type !== 'ALL') {
+      if (type === 'CREDIT_ADDED') {
+        sql += ` AND (transaction_type IN ('CREDIT_ADDED', 'ALLOCATION', 'INCREASE') OR credit_added > 0)`;
+      } else if (type === 'CREDIT_REMOVED') {
+        sql += ` AND (transaction_type IN ('CREDIT_REMOVED', 'DECREASE') OR (credit_removed > 0 AND transaction_type != 'PURCHASE_DEDUCTION'))`;
+      } else if (type === 'PAYMENT_SETTLEMENT') {
+        sql += ` AND (transaction_type = 'PAYMENT_SETTLEMENT' OR payment_amount > 0)`;
+      } else if (type === 'PURCHASE_DEDUCTION') {
+        sql += ` AND transaction_type = 'PURCHASE_DEDUCTION'`;
+      } else if (type === 'REFUND') {
+        sql += ` AND transaction_type = 'REFUND'`;
+      } else if (type === 'ADJUSTMENT') {
+        sql += ` AND transaction_type = 'ADJUSTMENT'`;
+      } else {
+        sql += ` AND transaction_type = ?`;
+        params.push(type);
+      }
+    }
+
+    // Date range filter
+    if (startDate && startDate.trim()) {
+      sql += ` AND created_at >= ?`;
+      params.push(`${startDate.trim()} 00:00:00`);
+    }
+    if (endDate && endDate.trim()) {
+      sql += ` AND created_at <= ?`;
+      params.push(`${endDate.trim()} 23:59:59`);
+    }
+
+    // Sorting
+    const sortOrder = sort === 'oldest' ? 'ASC' : 'DESC';
+    sql += ` ORDER BY created_at ${sortOrder}, id ${sortOrder}`;
+
+    // Fetch all matching records to compute totals & pagination
+    const allMatching = await queryAll(sql, params);
+    const totalTransactionsCount = allMatching.length;
+
+    // Apply pagination if limit is numeric
+    let paginatedTransactions = allMatching;
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = limit === 'all' ? allMatching.length : (parseInt(limit, 10) || 25);
+    if (limit !== 'all') {
+      const offset = (pageNum - 1) * limitNum;
+      paginatedTransactions = allMatching.slice(offset, offset + limitNum);
+    }
+
+    // Financial aggregates across entire historical ledger for this distributor
+    const allHistory = await queryAll(
+      `SELECT transaction_type, amount, credit_added, credit_removed, payment_amount, created_at
        FROM distributor_credit_transactions
        WHERE distributor_id = ? OR user_id = ?
-       ORDER BY created_at DESC`,
+       ORDER BY created_at DESC, id DESC`,
       [distributorUser.userId, distributorUser.id]
     );
 
+    let totalAmountAdded = 0;
+    let totalAmountDeducted = 0;
+    let totalOrderDeducted = 0;
+    let totalAmountPaid = 0;
+    let lastTransactionDate = null;
+
+    allHistory.forEach(tx => {
+      const added = Number(tx.credit_added || 0);
+      const removed = Number(tx.credit_removed || 0);
+      const payment = Number(tx.payment_amount || 0);
+      const amt = Number(tx.amount || 0);
+
+      if (tx.transaction_type === 'ALLOCATION' || tx.transaction_type === 'CREDIT_ADDED') {
+        totalAmountAdded += (added > 0 ? added : amt);
+      } else if (tx.transaction_type === 'PURCHASE_DEDUCTION') {
+        totalOrderDeducted += amt;
+      } else if (tx.transaction_type === 'PAYMENT_SETTLEMENT') {
+        totalAmountPaid += (payment > 0 ? payment : amt);
+      } else if (tx.transaction_type === 'CREDIT_REMOVED' || tx.transaction_type === 'DECREASE') {
+        totalAmountDeducted += (removed > 0 ? removed : amt);
+      } else if (tx.transaction_type === 'REFUND') {
+        // Refund restores credit
+        totalAmountAdded += amt;
+      } else {
+        if (added > 0) totalAmountAdded += added;
+        if (removed > 0) totalAmountDeducted += removed;
+        if (payment > 0) totalAmountPaid += payment;
+      }
+
+      if (!lastTransactionDate && tx.created_at) {
+        lastTransactionDate = tx.created_at;
+      }
+    });
+
     const totalCredit = Number(creditRecord?.total_credit || 0);
     const usedCredit = Number(creditRecord?.used_credit || 0);
-    const availableCredit = Math.max(0, totalCredit - usedCredit);
+    const recordedTotalPaid = Number(creditRecord?.total_paid || totalAmountPaid);
+    const currentOutstanding = Number(creditRecord?.outstanding_balance || Math.max(0, usedCredit - recordedTotalPaid));
+    const currentAvailable = Math.max(0, totalCredit - currentOutstanding);
 
     return res.status(200).json({
       success: true,
@@ -195,12 +330,26 @@ router.get('/admin/ledger/:distributorId', verifyToken, requireAdmin, async (req
         businessName: distributorUser.businessName,
         email: distributorUser.email,
         phoneNumber: distributorUser.phoneNumber,
-        accountStatus: distributorUser.accountStatus,
-        totalCredit,
-        usedCredit,
-        availableCredit
+        accountStatus: distributorUser.accountStatus
       },
-      transactions: transactions || []
+      summary: {
+        totalCreditAssigned: totalCredit,
+        totalAmountAdded,
+        totalAmountDeducted,
+        totalOrderDeducted,
+        totalAmountPaid: recordedTotalPaid,
+        currentOutstanding,
+        currentAvailable,
+        totalTransactions: totalTransactionsCount,
+        lastTransactionDate
+      },
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalTransactionsCount / limitNum) || 1,
+        totalItems: totalTransactionsCount,
+        limit: limitNum
+      },
+      transactions: paginatedTransactions
     });
   } catch (error) {
     console.error('Error fetching distributor ledger:', error);
@@ -212,7 +361,7 @@ router.get('/admin/ledger/:distributorId', verifyToken, requireAdmin, async (req
 });
 
 // =========================================================================
-// 4. ADMIN: MANUALLY ASSIGN, INCREASE, OR ADJUST CREDIT LIMIT
+// 4. ADMIN: MANUALLY ASSIGN, INCREASE, OR REDUCE CREDIT LIMIT
 // =========================================================================
 router.post('/admin/adjust', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -241,20 +390,32 @@ router.post('/admin/adjust', verifyToken, requireAdmin, async (req, res) => {
     const creditRecord = await ensureDistributorCreditRecord(distributorUser);
     const currentTotal = Number(creditRecord.total_credit || 0);
     const currentUsed = Number(creditRecord.used_credit || 0);
-    const currentAvailable = Math.max(0, currentTotal - currentUsed);
+    const currentPaid = Number(creditRecord.total_paid || 0);
+    const currentOutstanding = Number(creditRecord.outstanding_balance || Math.max(0, currentUsed - currentPaid));
+    const currentAvailable = Math.max(0, currentTotal - currentOutstanding);
 
     let newTotal = currentTotal;
     let transactionType = 'ALLOCATION';
+    let creditAdded = 0;
+    let creditRemoved = 0;
 
     if (mode === 'SET') {
       newTotal = parsedAmount;
-      transactionType = 'ALLOCATION';
-    } else if (mode === 'INCREASE') {
+      if (newTotal >= currentTotal) {
+        transactionType = 'ALLOCATION';
+        creditAdded = newTotal - currentTotal;
+      } else {
+        transactionType = 'CREDIT_REMOVED';
+        creditRemoved = currentTotal - newTotal;
+      }
+    } else if (mode === 'INCREASE' || mode === 'ADD') {
       newTotal = currentTotal + parsedAmount;
-      transactionType = 'ADJUSTMENT';
-    } else if (mode === 'DECREASE') {
+      transactionType = 'ALLOCATION';
+      creditAdded = parsedAmount;
+    } else if (mode === 'DECREASE' || mode === 'REMOVE') {
       newTotal = Math.max(0, currentTotal - parsedAmount);
-      transactionType = 'ADJUSTMENT';
+      transactionType = 'CREDIT_REMOVED';
+      creditRemoved = Math.min(currentTotal, parsedAmount);
     } else {
       return res.status(400).json({
         success: false,
@@ -262,37 +423,45 @@ router.post('/admin/adjust', verifyToken, requireAdmin, async (req, res) => {
       });
     }
 
-    const newAvailable = Math.max(0, newTotal - currentUsed);
+    const newAvailable = Math.max(0, newTotal - currentOutstanding);
+    const txnNumber = generateTxnNumber();
+    const adminName = req.user.fullName || req.user.email || 'Admin';
 
     // Update distributor_credits table
     await queryRun(
       `UPDATE distributor_credits
-       SET total_credit = ?, available_credit = ?, updated_at = CURRENT_TIMESTAMP
+       SET total_credit = ?, available_credit = ?, outstanding_balance = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [newTotal, newAvailable, creditRecord.id]
+      [newTotal, newAvailable, currentOutstanding, creditRecord.id]
     );
 
-    const adminName = req.user.fullName || req.user.email || 'Admin';
     const auditDesc = description && description.trim()
       ? description.trim()
       : (mode === 'SET'
           ? `Admin set credit limit to ₹${newTotal.toLocaleString('en-IN')}`
-          : (mode === 'INCREASE'
+          : (mode === 'INCREASE' || mode === 'ADD'
               ? `Admin increased credit limit by ₹${parsedAmount.toLocaleString('en-IN')}`
               : `Admin decreased credit limit by ₹${parsedAmount.toLocaleString('en-IN')}`));
 
     // Insert historical audit ledger transaction
     await queryRun(
       `INSERT INTO distributor_credit_transactions
-       (distributor_id, user_id, transaction_type, amount, previous_credit, new_credit, description, admin_id, admin_name)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (txn_number, distributor_id, user_id, transaction_type, amount, credit_added, credit_removed,
+        payment_amount, previous_credit, new_credit, outstanding_before, outstanding_after,
+        description, admin_id, admin_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0.00, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        txnNumber,
         distributorUser.userId,
         distributorUser.id,
         transactionType,
         parsedAmount,
+        creditAdded,
+        creditRemoved,
         currentAvailable,
         newAvailable,
+        currentOutstanding,
+        currentOutstanding,
         auditDesc,
         req.user.id,
         adminName
@@ -317,13 +486,16 @@ router.post('/admin/adjust', verifyToken, requireAdmin, async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `Credit successfully ${mode === 'SET' ? 'assigned' : (mode === 'INCREASE' ? 'increased' : 'adjusted')}. Available Balance: ₹${newAvailable.toLocaleString('en-IN')}`,
+      message: `Credit successfully ${mode === 'SET' ? 'assigned' : (mode === 'INCREASE' || mode === 'ADD' ? 'increased' : 'adjusted')}. Available Balance: ₹${newAvailable.toLocaleString('en-IN')}`,
       credit: {
         totalCredit: newTotal,
         usedCredit: currentUsed,
+        totalPaid: currentPaid,
+        outstandingBalance: currentOutstanding,
         availableCredit: newAvailable,
         distributorId: distributorUser.userId
-      }
+      },
+      txnNumber
     });
   } catch (error) {
     console.error('Error adjusting distributor credit:', error);
@@ -334,5 +506,128 @@ router.post('/admin/adjust', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-export default router;
+// =========================================================================
+// 5. ADMIN: RECORD DISTRIBUTOR PAYMENT / SETTLEMENT
+// =========================================================================
+router.post('/admin/settle-payment', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const {
+      distributorId,
+      amount,
+      paymentMethod = 'Bank Transfer',
+      referenceId = '',
+      description = ''
+    } = req.body;
 
+    const parsedAmount = Number(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment amount must be greater than zero.'
+      });
+    }
+
+    const distributorUser = await queryGet(
+      "SELECT id, userId, fullName, businessName, email, phoneNumber FROM users WHERE (userId = ? OR id = ?) AND userType = 'Distributor'",
+      [distributorId, distributorId]
+    );
+
+    if (!distributorUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Distributor not found.'
+      });
+    }
+
+    const creditRecord = await ensureDistributorCreditRecord(distributorUser);
+    const currentTotal = Number(creditRecord.total_credit || 0);
+    const currentUsed = Number(creditRecord.used_credit || 0);
+    const currentPaid = Number(creditRecord.total_paid || 0);
+    const outstandingBefore = Number(creditRecord.outstanding_balance || Math.max(0, currentUsed - currentPaid));
+    const availableBefore = Math.max(0, currentTotal - outstandingBefore);
+
+    // Update financial balance
+    const newPaid = currentPaid + parsedAmount;
+    const outstandingAfter = Math.max(0, outstandingBefore - parsedAmount);
+    // Also adjust used_credit downward to match remaining debt
+    const newUsed = Math.max(0, currentUsed - parsedAmount);
+    const availableAfter = Math.max(0, currentTotal - outstandingAfter);
+
+    const txnNumber = generateTxnNumber();
+    const adminName = req.user.fullName || req.user.email || 'Admin';
+
+    // Update distributor_credits
+    await queryRun(
+      `UPDATE distributor_credits
+       SET total_paid = ?, used_credit = ?, outstanding_balance = ?, available_credit = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [newPaid, newUsed, outstandingAfter, availableAfter, creditRecord.id]
+    );
+
+    const note = description && description.trim()
+      ? description.trim()
+      : `Payment received via ${paymentMethod}${referenceId ? ` (Ref: ${referenceId})` : ''} - ₹${parsedAmount.toLocaleString('en-IN')}`;
+
+    // Record in ledger
+    await queryRun(
+      `INSERT INTO distributor_credit_transactions
+       (txn_number, distributor_id, user_id, transaction_type, amount, credit_added, credit_removed,
+        payment_amount, previous_credit, new_credit, outstanding_before, outstanding_after,
+        payment_method, reference_id, description, admin_id, admin_name)
+       VALUES (?, ?, ?, 'PAYMENT_SETTLEMENT', ?, 0.00, 0.00, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        txnNumber,
+        distributorUser.userId,
+        distributorUser.id,
+        parsedAmount,
+        parsedAmount,
+        availableBefore,
+        availableAfter,
+        outstandingBefore,
+        outstandingAfter,
+        paymentMethod,
+        referenceId.trim() || null,
+        note,
+        req.user.id,
+        adminName
+      ]
+    );
+
+    // Notify distributor
+    try {
+      await createNotification({
+        recipientId: distributorUser.userId,
+        recipientRole: 'Distributor',
+        title: `✅ Payment Received: ₹${parsedAmount.toLocaleString('en-IN')}`,
+        message: `Your payment of ₹${parsedAmount.toLocaleString('en-IN')} has been acknowledged and credited to your account. Available Credit restored: ₹${availableAfter.toLocaleString('en-IN')}. Outstanding: ₹${outstandingAfter.toLocaleString('en-IN')}.`,
+        type: 'credit_update',
+        entityId: txnNumber,
+        linkUrl: '/portal/distributor?tab=credit',
+        dedupKey: `credit_pay_${txnNumber}`
+      });
+    } catch (e) {
+      console.warn('Could not dispatch payment notification:', e.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Payment of ₹${parsedAmount.toLocaleString('en-IN')} recorded successfully. Outstanding balance updated to ₹${outstandingAfter.toLocaleString('en-IN')}.`,
+      txnNumber,
+      credit: {
+        totalCredit: currentTotal,
+        usedCredit: newUsed,
+        totalPaid: newPaid,
+        outstandingBalance: outstandingAfter,
+        availableCredit: availableAfter
+      }
+    });
+  } catch (error) {
+    console.error('Error recording distributor payment:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to record distributor payment.'
+    });
+  }
+});
+
+export default router;

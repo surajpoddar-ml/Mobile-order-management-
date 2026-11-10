@@ -202,33 +202,49 @@ router.post('/', verifyToken, async (req, res) => {
     // Automatically deduct distributor credit if paid via Available Credit
     if (paymentMethod === 'Purchase with Available Credit') {
       try {
-        await queryRun(
-          `UPDATE distributor_credits
-           SET used_credit = used_credit + ?,
-               available_credit = GREATEST(0, total_credit - (used_credit + ?)),
-               updated_at = CURRENT_TIMESTAMP
-           WHERE distributor_id = ? OR user_id = ?`,
-          [authoritativeTotal, authoritativeTotal, userId, req.user.id]
-        );
-
-        const updatedCredit = await queryGet(
+        const prevCreditRecord = await queryGet(
           'SELECT * FROM distributor_credits WHERE distributor_id = ? OR user_id = ?',
           [userId, req.user.id]
         );
+        const prevUsed = Number(prevCreditRecord?.used_credit || 0);
+        const prevTotal = Number(prevCreditRecord?.total_credit || 0);
+        const prevPaid = Number(prevCreditRecord?.total_paid || 0);
+        const prevOutstanding = Number(prevCreditRecord?.outstanding_balance || Math.max(0, prevUsed - prevPaid));
+        const prevAvail = Math.max(0, prevTotal - prevOutstanding);
 
-        const newAvail = updatedCredit ? Math.max(0, Number(updatedCredit.total_credit || 0) - Number(updatedCredit.used_credit || 0)) : 0;
-        const prevAvail = newAvail + authoritativeTotal;
+        const newUsed = prevUsed + authoritativeTotal;
+        const newOutstanding = Math.max(0, newUsed - prevPaid);
+        const newAvail = Math.max(0, prevTotal - newOutstanding);
+
+        await queryRun(
+          `UPDATE distributor_credits
+           SET used_credit = ?,
+               outstanding_balance = ?,
+               available_credit = ?,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE distributor_id = ? OR user_id = ?`,
+          [newUsed, newOutstanding, newAvail, userId, req.user.id]
+        );
+
+        const txnNumber = 'TXN-CR-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000);
 
         await queryRun(
           `INSERT INTO distributor_credit_transactions
-           (distributor_id, user_id, transaction_type, amount, previous_credit, new_credit, reference_order_number, description)
-           VALUES (?, ?, 'PURCHASE_DEDUCTION', ?, ?, ?, ?, ?)`,
+           (txn_number, distributor_id, user_id, transaction_type, amount, credit_added, credit_removed,
+            payment_amount, previous_credit, new_credit, outstanding_before, outstanding_after,
+            reference_id, reference_order_number, description)
+           VALUES (?, ?, ?, 'PURCHASE_DEDUCTION', ?, 0.00, ?, 0.00, ?, ?, ?, ?, ?, ?, ?)`,
           [
+            txnNumber,
             userId,
             req.user.id,
             authoritativeTotal,
+            authoritativeTotal,
             prevAvail,
             newAvail,
+            prevOutstanding,
+            newOutstanding,
+            orderNumber,
             orderNumber,
             `Order ${orderNumber} - Purchase with Available Credit`
           ]
@@ -472,21 +488,29 @@ router.put('/admin/:id/status', verifyToken, requireAdmin, async (req, res) => {
     if (newStatus === 'Cancelled' && existing.orderStatus !== 'Cancelled' && existing.paymentMethod === 'Purchase with Available Credit') {
       try {
         const refundAmount = Number(existing.totalAmount || 0);
-        await queryRun(
-          `UPDATE distributor_credits
-           SET used_credit = GREATEST(0, used_credit - ?),
-               available_credit = GREATEST(0, total_credit - GREATEST(0, used_credit - ?)),
-               updated_at = CURRENT_TIMESTAMP
-           WHERE distributor_id = ? OR user_id = ?`,
-          [refundAmount, refundAmount, existing.userId, existing.userId]
-        );
-
-        const refCredit = await queryGet(
+        const refCreditBefore = await queryGet(
           'SELECT * FROM distributor_credits WHERE distributor_id = ? OR user_id = ?',
           [existing.userId, existing.userId]
         );
-        const refAvail = refCredit ? Math.max(0, Number(refCredit.total_credit || 0) - Number(refCredit.used_credit || 0)) : 0;
-        const refPrev = Math.max(0, refAvail - refundAmount);
+        const refTotal = Number(refCreditBefore?.total_credit || 0);
+        const refUsedBefore = Number(refCreditBefore?.used_credit || 0);
+        const refPaid = Number(refCreditBefore?.total_paid || 0);
+        const refOutstandingBefore = Number(refCreditBefore?.outstanding_balance || Math.max(0, refUsedBefore - refPaid));
+        const refAvailBefore = Math.max(0, refTotal - refOutstandingBefore);
+
+        const refUsedAfter = Math.max(0, refUsedBefore - refundAmount);
+        const refOutstandingAfter = Math.max(0, refUsedAfter - refPaid);
+        const refAvailAfter = Math.max(0, refTotal - refOutstandingAfter);
+
+        await queryRun(
+          `UPDATE distributor_credits
+           SET used_credit = ?,
+               outstanding_balance = ?,
+               available_credit = ?,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE distributor_id = ? OR user_id = ?`,
+          [refUsedAfter, refOutstandingAfter, refAvailAfter, existing.userId, existing.userId]
+        );
 
         // Fetch user numeric ID
         const distUser = await queryGet(
@@ -494,16 +518,25 @@ router.put('/admin/:id/status', verifyToken, requireAdmin, async (req, res) => {
           [existing.userId, existing.userId]
         );
 
+        const refundTxnNumber = 'TXN-CR-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000);
+
         await queryRun(
           `INSERT INTO distributor_credit_transactions
-           (distributor_id, user_id, transaction_type, amount, previous_credit, new_credit, reference_order_number, description)
-           VALUES (?, ?, 'REFUND', ?, ?, ?, ?, ?)`,
+           (txn_number, distributor_id, user_id, transaction_type, amount, credit_added, credit_removed,
+            payment_amount, previous_credit, new_credit, outstanding_before, outstanding_after,
+            reference_id, reference_order_number, description)
+           VALUES (?, ?, ?, 'REFUND', ?, ?, 0.00, 0.00, ?, ?, ?, ?, ?, ?, ?)`,
           [
+            refundTxnNumber,
             existing.userId,
             distUser?.id || 0,
             refundAmount,
-            refPrev,
-            refAvail,
+            refundAmount,
+            refAvailBefore,
+            refAvailAfter,
+            refOutstandingBefore,
+            refOutstandingAfter,
+            existing.orderNumber,
             existing.orderNumber,
             `Refund: Order ${existing.orderNumber} Cancelled (+₹${refundAmount.toLocaleString('en-IN')})`
           ]

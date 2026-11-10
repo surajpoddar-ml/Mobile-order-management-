@@ -683,11 +683,27 @@ export const api = {
     getDistributorsCredit: (query = '') =>
       request(`/credits/admin/distributors${query ? `?query=${encodeURIComponent(query)}` : ''}`, { method: 'GET' }),
 
-    getDistributorLedger: (distributorId) =>
-      request(`/credits/admin/ledger/${encodeURIComponent(distributorId)}`, { method: 'GET' }),
+    getDistributorLedger: (distributorId, params = {}) => {
+      const qs = new URLSearchParams();
+      if (params.search) qs.append('search', params.search);
+      if (params.type && params.type !== 'ALL') qs.append('type', params.type);
+      if (params.startDate) qs.append('startDate', params.startDate);
+      if (params.endDate) qs.append('endDate', params.endDate);
+      if (params.sort) qs.append('sort', params.sort);
+      if (params.page) qs.append('page', params.page);
+      if (params.limit) qs.append('limit', params.limit);
+      const queryString = qs.toString();
+      return request(`/credits/admin/ledger/${encodeURIComponent(distributorId)}${queryString ? `?${queryString}` : ''}`, { method: 'GET' });
+    },
 
     adjustCredit: (data) =>
       request('/credits/admin/adjust', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+
+    settlePayment: (data) =>
+      request('/credits/admin/settle-payment', {
         method: 'POST',
         body: JSON.stringify(data)
       })

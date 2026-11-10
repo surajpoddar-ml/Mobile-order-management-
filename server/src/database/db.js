@@ -681,6 +681,8 @@ export const initDb = async () => {
       distributor_id VARCHAR(100) NOT NULL UNIQUE,
       total_credit DECIMAL(12,2) NOT NULL DEFAULT 0.00,
       used_credit DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      total_paid DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      outstanding_balance DECIMAL(12,2) NOT NULL DEFAULT 0.00,
       available_credit DECIMAL(12,2) NOT NULL DEFAULT 0.00,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -693,12 +695,20 @@ export const initDb = async () => {
   await queryRun(`
     CREATE TABLE IF NOT EXISTS distributor_credit_transactions (
       id INT AUTO_INCREMENT PRIMARY KEY,
+      txn_number VARCHAR(100) DEFAULT NULL,
       distributor_id VARCHAR(100) NOT NULL,
       user_id INT NOT NULL,
       transaction_type VARCHAR(50) NOT NULL,
       amount DECIMAL(12,2) NOT NULL,
+      credit_added DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      credit_removed DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      payment_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
       previous_credit DECIMAL(12,2) NOT NULL,
       new_credit DECIMAL(12,2) NOT NULL,
+      outstanding_before DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      outstanding_after DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      payment_method VARCHAR(50) DEFAULT NULL,
+      reference_id VARCHAR(100) DEFAULT NULL,
       reference_order_number VARCHAR(100) DEFAULT NULL,
       description VARCHAR(255) DEFAULT NULL,
       admin_id INT DEFAULT NULL,
@@ -706,10 +716,39 @@ export const initDb = async () => {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_dct_dist (distributor_id),
       INDEX idx_dct_user (user_id),
+      INDEX idx_dct_txn (txn_number),
       INDEX idx_dct_order (reference_order_number),
       INDEX idx_dct_created (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+
+  // Migrations for existing credit tables
+  const creditMigrations = [
+    'ALTER TABLE distributor_credits ADD COLUMN total_paid DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credits ADD COLUMN outstanding_balance DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN txn_number VARCHAR(100) DEFAULT NULL',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN credit_added DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN credit_removed DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN payment_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN outstanding_before DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN outstanding_after DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN payment_method VARCHAR(50) DEFAULT NULL',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN reference_id VARCHAR(100) DEFAULT NULL',
+    'ALTER TABLE distributor_credit_transactions ADD INDEX idx_dct_txn (txn_number)'
+  ];
+  for (const alterSql of creditMigrations) {
+    try {
+      await queryRun(alterSql);
+    } catch (e) {
+      // Ignore if column/index already exists
+    }
+  }
+
+  try {
+    await queryRun("UPDATE distributor_credit_transactions SET txn_number = CONCAT('TXN-CR-', LPAD(id, 6, '0')) WHERE txn_number IS NULL OR txn_number = ''");
+  } catch (e) {
+    // Ignore
+  }
 
   console.log('MySQL database tables verified and ready.');
 };
