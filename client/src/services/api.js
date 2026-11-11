@@ -18,6 +18,12 @@ const resolveApiOrigin = () => {
   if (envUrl) {
     return envUrl;
   }
+  if (typeof window !== 'undefined' && window.location) {
+    const host = window.location.hostname;
+    if (host.startsWith('192.168.') || host.startsWith('10.')) {
+      return `http://${host}:5001`;
+    }
+  }
   return 'http://localhost:5001';
 };
 
@@ -71,13 +77,11 @@ export const getCategoryFallbackImage = getProductFallbackImage;
  */
 const request = async (endpoint, options = {}) => {
   const token = localStorage.getItem('mobile_parts_token');
-  const refreshToken = localStorage.getItem('mws_refresh_token');
   const isFormData = options.body instanceof FormData;
 
   const headers = {
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(refreshToken ? { 'x-refresh-token': refreshToken } : {}),
     ...options.headers
   };
 

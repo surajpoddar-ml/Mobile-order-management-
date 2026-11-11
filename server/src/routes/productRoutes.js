@@ -9,7 +9,7 @@ import { notifyProductEvent } from '../services/notificationService.js';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'mws_eagle_mobile_parts_super_secret_jwt_key_2026_auth_system';
+const JWT_SECRET = process.env.JWT_SECRET || 'mobile_parts_super_secret_jwt_key_2026_auth_system';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
