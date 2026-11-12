@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
+import { uploadFileToS3 } from '../services/s3Service.js';
 
 const router = express.Router();
 
@@ -93,7 +94,7 @@ router.get('/all', verifyToken, requireAdmin, async (req, res) => {
 /**
  * 3. Admin Endpoint: Upload media file (Image or Video)
  */
-router.post('/upload', verifyToken, requireAdmin, upload.single('mediaFile'), (req, res) => {
+router.post('/upload', verifyToken, requireAdmin, upload.single('mediaFile'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -105,14 +106,30 @@ router.post('/upload', verifyToken, requireAdmin, upload.single('mediaFile'), (r
     const isVideo = req.file.mimetype.startsWith('video/') ||
       /\.(mp4|webm|ogg|mov|mkv)$/i.test(req.file.originalname);
     const mediaType = isVideo ? 'video' : 'image';
-    const relativeUrl = `/uploads/advertisements/${req.file.filename}`;
+    let finalUrl = `/uploads/advertisements/${req.file.filename}`;
+    let s3Result = null;
+
+    try {
+      s3Result = await uploadFileToS3({
+        filePath: req.file.path,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        folder: 'advertisements'
+      });
+      if (s3Result?.url) {
+        finalUrl = s3Result.url;
+      }
+    } catch (s3Err) {
+      console.warn('[AWS S3] Fallback to local storage for advertisement:', s3Err.message);
+    }
 
     return res.status(201).json({
       success: true,
       message: `${mediaType === 'video' ? 'Video' : 'Image'} uploaded successfully!`,
-      url: relativeUrl,
+      url: finalUrl,
       mediaType,
-      fileName: req.file.filename
+      fileName: s3Result?.filename || req.file.filename,
+      storage: s3Result?.url ? 's3' : 'local'
     });
   } catch (error) {
     console.error('File upload error:', error);

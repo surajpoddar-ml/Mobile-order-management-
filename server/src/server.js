@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
@@ -20,6 +21,7 @@ import creditRoutes from './routes/creditRoutes.js';
 import { initSocketIO } from './services/socketService.js';
 import { seedDatabase } from './database/seed.js';
 import { startCreditInterestScheduler } from './services/creditInterestService.js';
+import { streamS3Object, isS3Configured } from './services/s3Service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,6 +69,21 @@ if (process.env.IMAGE_UPLOAD_DIR) {
 }
 const uploadsPath = path.resolve(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsPath));
+
+// AWS S3 direct proxy endpoint (ensures images render reliably even if S3 bucket is private)
+app.get('/api/s3/:folder/:file', (req, res) => {
+  const { folder, file } = req.params;
+  streamS3Object(`${folder}/${file}`, res);
+});
+
+// Fallback for /uploads/:folder/:file if file was saved directly to S3
+app.get('/uploads/:folder/:file', (req, res, next) => {
+  if (isS3Configured()) {
+    const { folder, file } = req.params;
+    return streamS3Object(`${folder}/${file}`, res);
+  }
+  next();
+});
 
 // API Routes
 app.use('/api/auth', authRoutes);

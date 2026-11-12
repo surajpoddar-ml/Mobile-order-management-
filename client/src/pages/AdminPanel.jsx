@@ -611,7 +611,7 @@ export const AdminPanel = () => {
       sku: `PRD-${Date.now().toString().slice(-5)}`,
       description: 'High-speed fast charging adapter with smart IC overload protection.',
       specifications: '• Input: 100-240V AC 50/60Hz\n• Output: 5V/3A, 9V/2.22A, 12V/1.67A (20W Max)\n• Material: Fireproof PC Shell\n• Warranty: 6 Months Official Warranty',
-      imageUrl: 'https://images.unsplash.com/photo-1622445262464-84b1456045b6?auto=format&fit=crop&w=600&q=80',
+      imageUrl: '',
       badge: 'Bestseller',
       inStock: 1,
       productStatus: 'Active',

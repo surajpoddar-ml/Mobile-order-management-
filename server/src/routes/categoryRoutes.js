@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import multer from 'multer';
 import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
+import { uploadFileToS3 } from '../services/s3Service.js';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
@@ -69,17 +70,35 @@ const slugify = (text) => {
  * 1. POST /api/categories/upload
  * Upload Category Image File (Admin Only)
  */
-router.post('/upload', verifyToken, requireAdmin, upload.single('imageFile'), (req, res) => {
+router.post('/upload', verifyToken, requireAdmin, upload.single('imageFile'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No image file uploaded.' });
     }
-    const relativeUrl = `/uploads/categories/${req.file.filename}`;
+
+    let finalUrl = `/uploads/categories/${req.file.filename}`;
+    let s3Result = null;
+
+    try {
+      s3Result = await uploadFileToS3({
+        filePath: req.file.path,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        folder: 'categories'
+      });
+      if (s3Result?.url) {
+        finalUrl = s3Result.url;
+      }
+    } catch (s3Err) {
+      console.warn('[AWS S3] Fallback to local storage for category:', s3Err.message);
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Category image uploaded successfully!',
-      url: relativeUrl,
-      filename: req.file.filename
+      url: finalUrl,
+      filename: s3Result?.filename || req.file.filename,
+      storage: s3Result?.url ? 's3' : 'local'
     });
   } catch (error) {
     console.error('Category image upload error:', error);
