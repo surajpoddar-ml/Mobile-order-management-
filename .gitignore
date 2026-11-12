@@ -32,3 +32,9 @@ Thumbs.db
 .vscode/
 .idea/
 scratch/
+
+# Uploaded User Media (Now hosted 100% on AWS S3)
+server/uploads/
+server/uploads_backup/
+uploads/
+persistent_uploads/
