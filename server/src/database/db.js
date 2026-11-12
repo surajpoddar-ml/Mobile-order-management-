@@ -722,10 +722,18 @@ export const initDb = async () => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
-  // Migrations for existing credit tables
+  // Migrations for existing credit tables & Daily Interest System
   const creditMigrations = [
     'ALTER TABLE distributor_credits ADD COLUMN total_paid DECIMAL(12,2) NOT NULL DEFAULT 0.00',
     'ALTER TABLE distributor_credits ADD COLUMN outstanding_balance DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credits ADD COLUMN interest_enabled TINYINT(1) NOT NULL DEFAULT 1',
+    'ALTER TABLE distributor_credits ADD COLUMN custom_monthly_interest_rate DECIMAL(6,3) DEFAULT NULL',
+    'ALTER TABLE distributor_credits ADD COLUMN interest_start_date VARCHAR(20) DEFAULT NULL',
+    'ALTER TABLE distributor_credits ADD COLUMN accumulated_interest DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credits ADD COLUMN total_interest_charged DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credits ADD COLUMN total_interest_paid DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credits ADD COLUMN last_interest_date VARCHAR(20) DEFAULT NULL',
+    'ALTER TABLE distributor_credits ADD COLUMN last_daily_interest DECIMAL(12,2) NOT NULL DEFAULT 0.00',
     'ALTER TABLE distributor_credit_transactions ADD COLUMN txn_number VARCHAR(100) DEFAULT NULL',
     'ALTER TABLE distributor_credit_transactions ADD COLUMN credit_added DECIMAL(12,2) NOT NULL DEFAULT 0.00',
     'ALTER TABLE distributor_credit_transactions ADD COLUMN credit_removed DECIMAL(12,2) NOT NULL DEFAULT 0.00',
@@ -734,7 +742,15 @@ export const initDb = async () => {
     'ALTER TABLE distributor_credit_transactions ADD COLUMN outstanding_after DECIMAL(12,2) NOT NULL DEFAULT 0.00',
     'ALTER TABLE distributor_credit_transactions ADD COLUMN payment_method VARCHAR(50) DEFAULT NULL',
     'ALTER TABLE distributor_credit_transactions ADD COLUMN reference_id VARCHAR(100) DEFAULT NULL',
-    'ALTER TABLE distributor_credit_transactions ADD INDEX idx_dct_txn (txn_number)'
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN interest_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN interest_rate DECIMAL(6,3) DEFAULT NULL',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN principal_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN interest_before DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN interest_after DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN interest_date VARCHAR(20) DEFAULT NULL',
+    'ALTER TABLE distributor_credit_transactions ADD COLUMN calc_method VARCHAR(50) DEFAULT NULL',
+    'ALTER TABLE distributor_credit_transactions ADD INDEX idx_dct_txn (txn_number)',
+    'ALTER TABLE distributor_credit_transactions ADD INDEX idx_dct_interest_date (interest_date)'
   ];
   for (const alterSql of creditMigrations) {
     try {
@@ -742,6 +758,57 @@ export const initDb = async () => {
     } catch (e) {
       // Ignore if column/index already exists
     }
+  }
+
+  // Dedicated Daily Interest Audit & Deduplication Ledger Table
+  await queryRun(`
+    CREATE TABLE IF NOT EXISTS distributor_credit_interest_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      txn_number VARCHAR(100) NOT NULL,
+      distributor_id VARCHAR(100) NOT NULL,
+      user_id INT NOT NULL,
+      interest_date VARCHAR(20) NOT NULL,
+      principal_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      monthly_rate DECIMAL(6,3) NOT NULL DEFAULT 0.00,
+      days_in_month INT NOT NULL DEFAULT 30,
+      daily_interest DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      interest_before DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      interest_after DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      calc_method VARCHAR(50) NOT NULL DEFAULT 'calendar_days',
+      compounding_enabled TINYINT(1) NOT NULL DEFAULT 0,
+      notes VARCHAR(255) DEFAULT NULL,
+      triggered_by VARCHAR(100) DEFAULT 'SYSTEM_CRON',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uniq_dist_interest_day (distributor_id, interest_date),
+      INDEX idx_dcil_dist (distributor_id),
+      INDEX idx_dcil_date (interest_date)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  // Seed default Distributor Credit Interest Settings if not present
+  try {
+    const nepalToday = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kathmandu',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(new Date());
+    const nowIso = new Date().toISOString();
+    const interestDefaults = [
+      ['credit_interest_enabled', 'false'],
+      ['credit_interest_default_rate', '1.5'],
+      ['credit_interest_start_date', nepalToday],
+      ['credit_interest_calc_mode', 'calendar_days'],
+      ['credit_interest_compounding', 'false']
+    ];
+    for (const [k, v] of interestDefaults) {
+      const existingSetting = await queryGet('SELECT value FROM system_settings WHERE `key` = ?', [k]);
+      if (!existingSetting) {
+        await queryRun('INSERT INTO system_settings (`key`, `value`, updatedDate) VALUES (?, ?, ?)', [k, v, nowIso]);
+      }
+    }
+  } catch (e) {
+    console.warn('[MySQL Init] Interest settings seed notice:', e.message);
   }
 
   try {

@@ -64,6 +64,7 @@ export const DistributorPortal = () => {
   // Distributor Available Credit State
   const [distributorCredit, setDistributorCredit] = useState(null);
   const [creditTransactions, setCreditTransactions] = useState([]);
+  const [creditInterestHistory, setCreditInterestHistory] = useState([]);
   const [loadingCredit, setLoadingCredit] = useState(false);
 
   const fetchDistributorCredit = () => {
@@ -73,6 +74,7 @@ export const DistributorPortal = () => {
         if (res.success && res.credit) {
           setDistributorCredit(res.credit);
           setCreditTransactions(res.transactions || []);
+          setCreditInterestHistory(res.interestHistory || []);
         }
       })
       .catch(err => {
@@ -1469,6 +1471,144 @@ export const DistributorPortal = () => {
             </div>
           </div>
 
+          {/* Dedicated Credit Interest Details Section */}
+          <div className="glass-panel" style={{
+            padding: '22px',
+            borderRadius: '16px',
+            background: 'linear-gradient(135deg, #ffffff 0%, #fdf2f8 100%)',
+            border: '1.5px solid #fbcfe8',
+            marginBottom: '24px'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '10px',
+              marginBottom: '16px'
+            }}>
+              <div>
+                <h3 style={{ fontSize: '1.12rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+                  Credit Interest Details
+                </h3>
+                <p style={{ margin: '3px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Daily interest is calculated automatically on your unpaid principal balance. Payments reduce your principal immediately.
+                </p>
+              </div>
+              <span style={{
+                padding: '4px 10px',
+                borderRadius: '14px',
+                fontSize: '0.74rem',
+                fontWeight: 800,
+                background: distributorCredit?.interestEnabled ? 'rgba(16, 185, 129, 0.14)' : 'rgba(100, 116, 139, 0.14)',
+                color: distributorCredit?.interestEnabled ? '#059669' : '#475569'
+              }}>
+                {distributorCredit?.interestEnabled ? '● Interest Active' : '○ Interest Paused'}
+              </span>
+            </div>
+
+            {/* Interest Metric Cards */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))',
+              gap: '12px',
+              marginBottom: '18px'
+            }}>
+              <div style={{ background: '#ffffff', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Principal Amount</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#dc2626', marginTop: '4px' }}>
+                  ₹{Number(distributorCredit?.principalAmount ?? distributorCredit?.outstandingBalance ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>Outstanding credit balance</div>
+              </div>
+
+              <div style={{ background: '#ffffff', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Monthly Interest Rate</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#4338ca', marginTop: '4px' }}>
+                  {Number(distributorCredit?.monthlyInterestRate || 0).toFixed(2)}% / mo
+                </div>
+                <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
+                  {distributorCredit?.calcMode === 'fixed_30' ? '30-day month basis' : `${distributorCredit?.daysInCurrentMonth || 30}-day calendar basis`}
+                </div>
+              </div>
+
+              <div style={{ background: '#ffffff', padding: '14px', borderRadius: '12px', border: '1px solid #fbcfe8' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#9d174d', textTransform: 'uppercase' }}>Today&apos;s Daily Interest</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#be185d', marginTop: '4px' }}>
+                  ₹{Number(distributorCredit?.dailyInterestAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / day
+                </div>
+                <div style={{ fontSize: '0.7rem', color: '#9d174d', marginTop: '2px' }}>
+                  Est. ₹{Number(distributorCredit?.monthlyEstimatedInterest || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / mo
+                </div>
+              </div>
+
+              <div style={{ background: '#ffffff', padding: '14px', borderRadius: '12px', border: '1px solid #fbcfe8' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#9d174d', textTransform: 'uppercase' }}>Accumulated Interest</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#be185d', marginTop: '4px' }}>
+                  ₹{Number(distributorCredit?.accumulatedInterest || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
+                  Last calc: {distributorCredit?.lastInterestDate || 'Not yet run'}
+                </div>
+              </div>
+
+              <div style={{ background: '#fff7ed', padding: '14px', borderRadius: '12px', border: '1.5px solid #fed7aa' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#9a3412', textTransform: 'uppercase' }}>Total Amount Payable</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#c2410c', marginTop: '4px' }}>
+                  ₹{Number(distributorCredit?.totalPayable ?? distributorCredit?.outstandingBalance ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: '#9a3412', marginTop: '2px' }}>Principal + Accumulated Interest</div>
+              </div>
+            </div>
+
+            {/* Daily Interest Transaction History Sub-table */}
+            <div style={{ background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '14px' }}>
+              <h4 style={{ fontSize: '0.94rem', fontWeight: 800, margin: '0 0 10px 0', color: '#0f172a' }}>
+                Daily Interest Calculation History
+              </h4>
+              {creditInterestHistory.length === 0 ? (
+                <div style={{ padding: '18px', textAlign: 'center', fontSize: '0.82rem', color: '#94a3b8' }}>
+                  No daily interest charges have been recorded yet.
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: 700 }}>
+                        <th style={{ padding: '8px 10px' }}>Date</th>
+                        <th style={{ padding: '8px 10px' }}>Reference</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'right' }}>Principal Used</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'right' }}>Rate (%/mo)</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'right' }}>Daily Interest (+)</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'right' }}>Total Interest After</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {creditInterestHistory.map((log) => (
+                        <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '9px 10px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>{log.interest_date}</td>
+                          <td style={{ padding: '9px 10px', fontFamily: 'monospace', color: '#0284c7', fontWeight: 700 }}>{log.txn_number}</td>
+                          <td style={{ padding: '9px 10px', textAlign: 'right', fontWeight: 700 }}>
+                            ₹{Number(log.principal_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td style={{ padding: '9px 10px', textAlign: 'right', color: '#4338ca', fontWeight: 700 }}>
+                            {Number(log.monthly_rate || 0).toFixed(2)}% ({log.days_in_month}d)
+                          </td>
+                          <td style={{ padding: '9px 10px', textAlign: 'right', color: '#be185d', fontWeight: 800 }}>
+                            +₹{Number(log.daily_interest || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td style={{ padding: '9px 10px', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
+                            ₹{Number(log.interest_after || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Transaction Ledger Table */}
           <div className="glass-panel" style={{
             padding: '20px',
@@ -1505,6 +1645,7 @@ export const DistributorPortal = () => {
                     {creditTransactions.map((tx) => {
                       const isDeduction = tx.transaction_type === 'PURCHASE_DEDUCTION';
                       const isRefund = tx.transaction_type === 'REFUND';
+                      const isDailyInterest = tx.transaction_type === 'DAILY_INTEREST';
 
                       let dateStr = tx.created_at;
                       try {
@@ -1531,30 +1672,36 @@ export const DistributorPortal = () => {
                               fontWeight: 800,
                               background: isDeduction
                                 ? 'rgba(239, 68, 68, 0.1)'
-                                : (isRefund
-                                    ? 'rgba(147, 51, 234, 0.1)'
-                                    : (tx.transaction_type === 'PAYMENT_SETTLEMENT'
-                                        ? 'rgba(16, 185, 129, 0.1)'
-                                        : 'rgba(2, 132, 199, 0.1)')),
+                                : (isDailyInterest
+                                    ? 'rgba(219, 39, 119, 0.12)'
+                                    : (isRefund
+                                        ? 'rgba(147, 51, 234, 0.1)'
+                                        : (tx.transaction_type === 'PAYMENT_SETTLEMENT'
+                                            ? 'rgba(16, 185, 129, 0.1)'
+                                            : 'rgba(2, 132, 199, 0.1)'))),
                               color: isDeduction
                                 ? '#dc2626'
-                                : (isRefund
-                                    ? '#7c3aed'
-                                    : (tx.transaction_type === 'PAYMENT_SETTLEMENT'
-                                        ? '#059669'
-                                        : '#0284c7'))
+                                : (isDailyInterest
+                                    ? '#be185d'
+                                    : (isRefund
+                                        ? '#7c3aed'
+                                        : (tx.transaction_type === 'PAYMENT_SETTLEMENT'
+                                            ? '#059669'
+                                            : '#0284c7')))
                             }}>
                               {isDeduction
                                 ? 'PURCHASE DEDUCTION'
-                                : (isRefund
-                                    ? 'ORDER REFUND'
-                                    : (tx.transaction_type === 'PAYMENT_SETTLEMENT'
-                                        ? 'PAYMENT RECEIVED'
-                                        : tx.transaction_type))}
+                                : (isDailyInterest
+                                    ? 'DAILY INTEREST'
+                                    : (isRefund
+                                        ? 'ORDER REFUND'
+                                        : (tx.transaction_type === 'PAYMENT_SETTLEMENT'
+                                            ? 'PAYMENT RECEIVED'
+                                            : tx.transaction_type)))}
                             </span>
                           </td>
-                          <td style={{ padding: '12px', fontWeight: 800, color: isDeduction ? '#dc2626' : '#059669' }}>
-                            {isDeduction ? '-' : '+'}₹{Number(tx.amount || 0).toLocaleString('en-IN')}
+                          <td style={{ padding: '12px', fontWeight: 800, color: isDeduction ? '#dc2626' : (isDailyInterest ? '#be185d' : '#059669') }}>
+                            {isDeduction ? '-' : '+'}₹{Number(tx.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td style={{ padding: '12px', color: '#64748b' }}>
                             ₹{Number(tx.previous_credit || 0).toLocaleString('en-IN')}
@@ -1563,9 +1710,9 @@ export const DistributorPortal = () => {
                             ₹{Number(tx.new_credit || 0).toLocaleString('en-IN')}
                           </td>
                           <td style={{ padding: '12px', color: '#334155' }}>
-                            {tx.reference_order_number && (
+                            {(tx.reference_order_number || tx.reference_id) && (
                               <span style={{ fontWeight: 700, color: '#0284c7', marginRight: '6px' }}>
-                                {tx.reference_order_number}
+                                {tx.reference_order_number || tx.reference_id}
                               </span>
                             )}
                             <span style={{ fontSize: '0.78rem', color: '#64748b' }}>

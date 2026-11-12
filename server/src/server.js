@@ -19,6 +19,7 @@ import imageRoutes, { serveImageHandler } from './routes/imageRoutes.js';
 import creditRoutes from './routes/creditRoutes.js';
 import { initSocketIO } from './services/socketService.js';
 import { seedDatabase } from './database/seed.js';
+import { startCreditInterestScheduler } from './services/creditInterestService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -144,6 +145,7 @@ const server = app.listen(listenPort, () => {
     .then(() => {
       dbConnected = true;
       console.log('[DATABASE] MySQL tables initialized and seeded successfully.');
+      startCreditInterestScheduler();
     })
     .catch((err) => {
       dbError = err.message;

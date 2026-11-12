@@ -710,7 +710,31 @@ export const api = {
       request('/credits/admin/settle-payment', {
         method: 'POST',
         body: JSON.stringify(data)
-      })
+      }),
+
+    getInterestSettings: () =>
+      request('/credits/admin/interest-settings', { method: 'GET' }),
+
+    updateInterestSettings: (data) =>
+      request('/credits/admin/interest-settings', {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }),
+
+    updateDistributorInterest: (distributorId, data) =>
+      request(`/credits/admin/distributor-interest/${encodeURIComponent(distributorId)}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }),
+
+    runDailyInterest: (data = {}) =>
+      request('/credits/admin/calculate-interest', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+
+    getDistributorInterestHistory: (distributorId) =>
+      request(`/credits/admin/interest-history/${encodeURIComponent(distributorId)}`, { method: 'GET' })
   }
 };
 

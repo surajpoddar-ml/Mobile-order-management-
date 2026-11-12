@@ -139,7 +139,15 @@ router.post('/', verifyToken, async (req, res) => {
       );
 
       const availableCredit = creditRecord
-        ? Math.max(0, Number(creditRecord.total_credit || 0) - Number(creditRecord.used_credit || 0))
+        ? Math.max(
+            0,
+            Number(creditRecord.total_credit || 0) -
+              Number(
+                creditRecord.outstanding_balance !== undefined && creditRecord.outstanding_balance !== null
+                  ? creditRecord.outstanding_balance
+                  : Math.max(0, Number(creditRecord.used_credit || 0) - Number(creditRecord.total_paid || 0))
+              )
+          )
         : 0;
 
       if (availableCredit < authoritativeTotal) {
@@ -209,11 +217,13 @@ router.post('/', verifyToken, async (req, res) => {
         const prevUsed = Number(prevCreditRecord?.used_credit || 0);
         const prevTotal = Number(prevCreditRecord?.total_credit || 0);
         const prevPaid = Number(prevCreditRecord?.total_paid || 0);
-        const prevOutstanding = Number(prevCreditRecord?.outstanding_balance || Math.max(0, prevUsed - prevPaid));
+        const prevOutstanding = prevCreditRecord?.outstanding_balance !== undefined && prevCreditRecord?.outstanding_balance !== null
+          ? Number(prevCreditRecord.outstanding_balance)
+          : Math.max(0, prevUsed - prevPaid);
         const prevAvail = Math.max(0, prevTotal - prevOutstanding);
 
         const newUsed = prevUsed + authoritativeTotal;
-        const newOutstanding = Math.max(0, newUsed - prevPaid);
+        const newOutstanding = Math.max(0, prevOutstanding + authoritativeTotal);
         const newAvail = Math.max(0, prevTotal - newOutstanding);
 
         await queryRun(
@@ -495,11 +505,13 @@ router.put('/admin/:id/status', verifyToken, requireAdmin, async (req, res) => {
         const refTotal = Number(refCreditBefore?.total_credit || 0);
         const refUsedBefore = Number(refCreditBefore?.used_credit || 0);
         const refPaid = Number(refCreditBefore?.total_paid || 0);
-        const refOutstandingBefore = Number(refCreditBefore?.outstanding_balance || Math.max(0, refUsedBefore - refPaid));
+        const refOutstandingBefore = refCreditBefore?.outstanding_balance !== undefined && refCreditBefore?.outstanding_balance !== null
+          ? Number(refCreditBefore.outstanding_balance)
+          : Math.max(0, refUsedBefore - refPaid);
         const refAvailBefore = Math.max(0, refTotal - refOutstandingBefore);
 
         const refUsedAfter = Math.max(0, refUsedBefore - refundAmount);
-        const refOutstandingAfter = Math.max(0, refUsedAfter - refPaid);
+        const refOutstandingAfter = Math.max(0, refOutstandingBefore - refundAmount);
         const refAvailAfter = Math.max(0, refTotal - refOutstandingAfter);
 
         await queryRun(
