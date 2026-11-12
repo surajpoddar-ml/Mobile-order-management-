@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import fs from 'fs';
 import path from 'path';
 
@@ -129,6 +129,41 @@ export const streamS3Object = async (s3Key, res) => {
   } catch (error) {
     console.error(`[AWS S3] Failed to stream key "${s3Key}":`, error.message);
     res.status(404).send('Image not found on S3.');
+  }
+};
+
+/**
+ * Safely delete an S3 object by key or full S3 URL.
+ * Automatically protects official assets from deletion.
+ */
+export const deleteFileFromS3 = async (urlOrKey) => {
+  if (!urlOrKey) return false;
+  const config = getS3Config();
+  if (!config.isConfigured) return false;
+  const client = getS3Client();
+  if (!client) return false;
+
+  try {
+    let key = String(urlOrKey);
+    if (key.includes('.amazonaws.com/')) {
+      key = key.split('.amazonaws.com/')[1];
+    }
+    key = key.replace(/^\/+/, '');
+
+    // Never delete official cat_ or mws_ template assets
+    if (!key || key.startsWith('cat_') || key.startsWith('mws_') || key.includes('/cat_') || key.includes('/mws_')) {
+      return false;
+    }
+
+    await client.send(new DeleteObjectCommand({
+      Bucket: config.bucket,
+      Key: key
+    }));
+    console.log(`[AWS S3] Safely deleted object: ${key}`);
+    return true;
+  } catch (err) {
+    console.warn(`[AWS S3] Failed to delete object: ${urlOrKey}`, err.message);
+    return false;
   }
 };
 

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { queryGet, queryAll, queryRun } from '../database/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
 import { broadcastNewMessage, broadcastMessageDeleted } from '../services/socketService.js';
+import { uploadFileToS3 } from '../services/s3Service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -286,7 +287,21 @@ router.post('/messages/upload', verifyToken, (req, res, next) => {
     }
 
     const caption = (req.body.caption || '').trim();
-    const mediaUrl = `/uploads/chat/${req.file.filename}`;
+    let mediaUrl = `/uploads/chat/${req.file.filename}`;
+    let s3Result = null;
+    try {
+      s3Result = await uploadFileToS3({
+        filePath: req.file.path,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        folder: 'chat'
+      });
+      if (s3Result?.url) {
+        mediaUrl = s3Result.url;
+      }
+    } catch (s3Err) {
+      console.warn('[AWS S3] Chat media fallback to local:', s3Err.message);
+    }
     const now = new Date().toISOString();
 
     const insertSql = `

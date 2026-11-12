@@ -5,7 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
-import { uploadFileToS3 } from '../services/s3Service.js';
+import { uploadFileToS3, deleteFileFromS3 } from '../services/s3Service.js';
 
 const router = express.Router();
 
@@ -309,8 +309,10 @@ router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
 
     await queryRun('DELETE FROM advertisements WHERE id = ?', [id]);
 
-    // If local file, attempt cleanup
-    if (existing.mediaUrl && existing.mediaUrl.startsWith('/uploads/advertisements/')) {
+    // If S3 object, safely clean up
+    if (existing.mediaUrl && existing.mediaUrl.includes('.amazonaws.com/')) {
+      await deleteFileFromS3(existing.mediaUrl);
+    } else if (existing.mediaUrl && existing.mediaUrl.startsWith('/uploads/advertisements/')) {
       const localFilePath = path.join(uploadDir, path.basename(existing.mediaUrl));
       if (fs.existsSync(localFilePath)) {
         fs.unlink(localFilePath, () => {});

@@ -7,6 +7,7 @@ import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
 import { createNotification } from '../services/notificationService.js';
 import { calculateOrderAmount } from '../services/paymentService.js';
+import { uploadFileToS3 } from '../services/s3Service.js';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
@@ -52,17 +53,33 @@ const upload = multer({
 /**
  * 0. Upload Payment Screenshot Proof
  */
-router.post('/upload-payment-proof', verifyToken, upload.single('paymentProof'), (req, res) => {
+router.post('/upload-payment-proof', verifyToken, upload.single('paymentProof'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No screenshot file uploaded.' });
     }
-    const fileUrl = `/uploads/payments/${req.file.filename}`;
+    let fileUrl = `/uploads/payments/${req.file.filename}`;
+    let s3Result = null;
+    try {
+      s3Result = await uploadFileToS3({
+        filePath: req.file.path,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        folder: 'payments'
+      });
+      if (s3Result?.url) {
+        fileUrl = s3Result.url;
+      }
+    } catch (e) {
+      console.warn('[AWS S3] Payment proof fallback to local:', e.message);
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Payment screenshot uploaded successfully.',
       fileUrl,
-      fileName: req.file.filename
+      fileName: s3Result?.filename || req.file.filename,
+      storage: s3Result?.url ? 's3' : 'local'
     });
   } catch (error) {
     console.error('Error uploading payment proof:', error);
