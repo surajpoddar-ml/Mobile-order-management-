@@ -177,7 +177,7 @@ export async function runMigration() {
         }
       }
 
-      // Check if filename matches anywhere
+      // Check if filename matches anywhere or convert standard /uploads/ path directly
       if (!matchedS3 && val.includes('/uploads/')) {
         const basename = path.basename(val);
         for (const [localPath, s3Url] of Object.entries(urlMapping)) {
@@ -185,6 +185,10 @@ export async function runMigration() {
             matchedS3 = s3Url;
             break;
           }
+        }
+        if (!matchedS3) {
+          const clean = val.replace(/^\/?uploads\//, '');
+          matchedS3 = `https://${bucket}.s3.${region}.amazonaws.com/${clean}`;
         }
       }
 

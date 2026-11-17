@@ -22,6 +22,7 @@ import { initSocketIO } from './services/socketService.js';
 import { seedDatabase } from './database/seed.js';
 import { startCreditInterestScheduler } from './services/creditInterestService.js';
 import { streamS3Object, isS3Configured } from './services/s3Service.js';
+import { runMigration } from './scripts/migrateImagesToS3.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -159,10 +160,18 @@ const server = app.listen(listenPort, () => {
 
   // Initialize and seed database in background without crashing the web service
   seedDatabase()
-    .then(() => {
+    .then(async () => {
       dbConnected = true;
       console.log('[DATABASE] MySQL tables initialized and seeded successfully.');
       startCreditInterestScheduler();
+      if (isS3Configured()) {
+        try {
+          console.log('[AWS S3] Checking and migrating any legacy database image paths to S3 URLs...');
+          await runMigration();
+        } catch (migErr) {
+          console.warn('[AWS S3] Auto-migration check notice:', migErr.message);
+        }
+      }
     })
     .catch((err) => {
       dbError = err.message;
