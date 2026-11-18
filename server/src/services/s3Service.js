@@ -7,8 +7,15 @@ let s3Client = null;
 export const getS3Config = () => {
   const accessKeyId = (process.env.AWS_ACCESS_KEY_ID || '').trim();
   const secretAccessKey = (process.env.AWS_SECRET_ACCESS_KEY || '').trim();
-  const region = (process.env.AWS_REGION || 'ap-southeast-2').trim();
+  let region = (process.env.AWS_REGION || 'ap-southeast-2').trim();
   const bucket = (process.env.AWS_S3_BUCKET_NAME || 'mws-eagle').trim();
+
+  // AWS bucket 'mws-eagle' is located in 'ap-southeast-2'.
+  // If .env specifies 'ap-south-1', AWS throws 301 PermanentRedirect.
+  // Enforcing the true region guarantees S3 calls always succeed without redirection errors.
+  if (bucket === 'mws-eagle' || region === 'ap-south-1') {
+    region = 'ap-southeast-2';
+  }
 
   const isConfigured = Boolean(accessKeyId && secretAccessKey && bucket);
 
@@ -103,9 +110,15 @@ export const streamS3Object = async (s3Key, res) => {
   }
 
   try {
+    let cleanKey = String(s3Key || '').trim().replace(/\\/g, '/');
+    if (cleanKey.includes('amazonaws.com/')) {
+      cleanKey = cleanKey.split('amazonaws.com/')[1] || cleanKey;
+    }
+    cleanKey = cleanKey.replace(/^\/+/, '').replace(/^uploads\//, '');
+
     const command = new GetObjectCommand({
       Bucket: config.bucket,
-      Key: s3Key
+      Key: cleanKey
     });
 
     const response = await client.send(command);

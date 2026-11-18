@@ -210,6 +210,14 @@ export async function runMigration() {
   await updateTableColumn('payment_attempts', 'screenshotUrl');
   await updateTableColumn('chat_messages', 'media_url');
 
+  // Auto-correct any legacy or misconfigured S3 regions in MySQL database
+  try {
+    await queryRun("UPDATE products SET imageUrl = REPLACE(imageUrl, 's3.ap-south-1.amazonaws.com', 's3.ap-southeast-2.amazonaws.com') WHERE imageUrl LIKE '%s3.ap-south-1.amazonaws.com%'");
+    await queryRun("UPDATE categories SET imageUrl = REPLACE(imageUrl, 's3.ap-south-1.amazonaws.com', 's3.ap-southeast-2.amazonaws.com') WHERE imageUrl LIKE '%s3.ap-south-1.amazonaws.com%'");
+    await queryRun("UPDATE advertisements SET mediaUrl = REPLACE(mediaUrl, 's3.ap-south-1.amazonaws.com', 's3.ap-southeast-2.amazonaws.com') WHERE mediaUrl LIKE '%s3.ap-south-1.amazonaws.com%'");
+    await queryRun("UPDATE promotional_stickers SET imageUrl = REPLACE(imageUrl, 's3.ap-south-1.amazonaws.com', 's3.ap-southeast-2.amazonaws.com') WHERE imageUrl LIKE '%s3.ap-south-1.amazonaws.com%'");
+  } catch (e) {}
+
   // Also check orders.items JSON
   const orders = await queryAll('SELECT id, items FROM orders WHERE items IS NOT NULL AND items != ""');
   for (const ord of orders) {

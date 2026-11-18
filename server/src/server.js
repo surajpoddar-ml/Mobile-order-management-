@@ -77,12 +77,23 @@ app.get('/api/s3/:folder/:file', (req, res) => {
   const { folder, file } = req.params;
   streamS3Object(`${folder}/${file}`, res);
 });
+app.get('/api/s3/*', (req, res) => {
+  const s3Key = req.params[0] || req.url.replace(/^\/api\/s3\//, '');
+  streamS3Object(s3Key, res);
+});
 
 // Fallback for /uploads/:folder/:file if file was saved directly to S3
 app.get('/uploads/:folder/:file', (req, res, next) => {
   if (isS3Configured()) {
     const { folder, file } = req.params;
     return streamS3Object(`${folder}/${file}`, res);
+  }
+  next();
+});
+app.get('/uploads/*', (req, res, next) => {
+  if (isS3Configured()) {
+    const s3Key = req.params[0] || req.url.replace(/^\/uploads\//, '');
+    return streamS3Object(s3Key, res);
   }
   next();
 });

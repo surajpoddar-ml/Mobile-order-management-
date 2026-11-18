@@ -36,9 +36,35 @@ export const API_BASE_URL = `${API_ORIGIN}/api`;
 export const getMediaUrl = (url) => {
   if (!url) return '';
   const normalized = String(url).trim().replace(/\\/g, '/');
-  if (normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('blob:') || normalized.startsWith('data:')) {
+
+  // Route any AWS S3 URLs through backend proxy so private S3 assets stream reliably with 200 OK without 403 or 301 errors
+  if (normalized.includes('amazonaws.com')) {
+    const match = normalized.match(/(products|categories|advertisements|stickers|payments)\/([^/?#]+)/);
+    if (match) {
+      return `${API_ORIGIN}/api/s3/${match[1]}/${match[2]}`;
+    }
+  }
+
+  // Route /uploads/... through backend proxy
+  if (normalized.startsWith('/uploads/') || normalized.startsWith('uploads/')) {
+    const match = normalized.match(/uploads\/(products|categories|advertisements|stickers|payments)\/([^/?#]+)/);
+    if (match) {
+      return `${API_ORIGIN}/api/s3/${match[1]}/${match[2]}`;
+    }
+    const cleanPath = normalized.startsWith('/') ? normalized : `/${normalized}`;
+    return `${API_ORIGIN}${cleanPath}`;
+  }
+
+  // Blob and data URLs
+  if (normalized.startsWith('blob:') || normalized.startsWith('data:')) {
     return normalized;
   }
+
+  // External web URLs
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized;
+  }
+
   // Public static assets served from client public directory
   if (
     normalized.startsWith('/cat_') || normalized.startsWith('/mws_') || normalized.startsWith('/goa_') || normalized.startsWith('/favicon') ||
