@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   MapPin, Plus, Search, Filter, RefreshCw, ChevronRight, 
-  Building2, Users, IndianRupee, AlertCircle, CheckCircle, ArrowLeft
+  Building2, Users, IndianRupee, AlertCircle, CheckCircle, ArrowLeft,
+  Globe2, Compass, Layers, ShieldCheck, X
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -89,11 +90,10 @@ export default function GeographicalManagement() {
         code: newDistrictCode.trim() || undefined
       });
       if (res.success) {
-        setActionSuccess('District added successfully!');
+        setActionSuccess(`District "${newDistrictName.trim()}" added successfully!`);
         setNewDistrictName('');
         setNewDistrictCode('');
         setShowAddDistrict(false);
-        // Refresh districts
         handleStateSelect(selectedState);
       } else {
         setActionError(res.message || 'Failed to create district');
@@ -115,11 +115,10 @@ export default function GeographicalManagement() {
         pincode: newAreaPincode.trim() || undefined
       });
       if (res.success) {
-        setActionSuccess('Area added successfully!');
+        setActionSuccess(`Area "${newAreaName.trim()}" added successfully!`);
         setNewAreaName('');
         setNewAreaPincode('');
         setShowAddArea(false);
-        // Refresh areas
         handleDistrictSelect(selectedDistrict);
       } else {
         setActionError(res.message || 'Failed to create area');
@@ -137,52 +136,131 @@ export default function GeographicalManagement() {
     return matchesSearch;
   });
 
+  const filteredDistricts = districts.filter(d => 
+    d.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (d.code && d.code.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const filteredAreas = areas.filter(a => 
+    a.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (a.pincode && a.pincode.includes(searchTerm))
+  );
+
+  // Quick stats computed
+  const totalStatesCount = states.filter(s => !s.isUnionTerritory).length;
+  const totalUtsCount = states.filter(s => s.isUnionTerritory).length;
+  const totalDistrictsAggregate = states.reduce((sum, s) => sum + (parseInt(s.totalDistricts) || 0), 0);
+  const totalActiveNetworkAccounts = states.reduce((sum, s) => sum + (parseInt(s.totalActiveAccounts) || 0), 0);
+
   return (
-    <div className="space-y-6">
-      {/* Header & Breadcrumb Navigation */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <div className="space-y-6 animate-fadeIn">
+      {/* 4 Mini Stat Highlights */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Indian States</div>
+            <div className="text-2xl font-black text-slate-900 mt-0.5">{totalStatesCount || 28}</div>
+            <div className="text-[11px] text-blue-600 font-semibold mt-0.5">Sovereign Territories</div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+            <Compass className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Union Territories</div>
+            <div className="text-2xl font-black text-slate-900 mt-0.5">{totalUtsCount || 8}</div>
+            <div className="text-[11px] text-purple-600 font-semibold mt-0.5">Central Administrations</div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+            <Layers className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Mapped Districts</div>
+            <div className="text-2xl font-black text-slate-900 mt-0.5">{totalDistrictsAggregate || 788}</div>
+            <div className="text-[11px] text-emerald-600 font-semibold mt-0.5">Pan-India Network</div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+            <Building2 className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Active Partners</div>
+            <div className="text-2xl font-black text-slate-900 mt-0.5">{totalActiveNetworkAccounts}</div>
+            <div className="text-[11px] text-indigo-600 font-semibold mt-0.5">Assigned Dealers</div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+            <Users className="w-5 h-5" />
+          </div>
+        </div>
+      </div>
+
+      {/* Header & Interactive Breadcrumbs */}
+      <div className="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center space-x-2 text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-1">
+            <div className="flex items-center flex-wrap gap-2 text-xs font-semibold text-slate-500 mb-2">
               <button 
                 onClick={() => { setActiveTab('states'); setSelectedState(null); setSelectedDistrict(null); }}
-                className="hover:underline"
+                className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg transition ${
+                  activeTab === 'states' ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-slate-100 text-slate-700'
+                }`}
               >
-                India (28 States & 8 UTs)
+                <Globe2 className="w-3.5 h-3.5 text-blue-600" />
+                <span>Republic of India</span>
               </button>
+
               {selectedState && (
                 <>
-                  <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                   <button 
                     onClick={() => { setActiveTab('districts'); setSelectedDistrict(null); }}
-                    className="hover:underline text-gray-800"
+                    className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg transition ${
+                      activeTab === 'districts' ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-slate-100 text-slate-700'
+                    }`}
                   >
-                    {selectedState.name}
+                    <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                    <span>{selectedState.name}</span>
                   </button>
                 </>
               )}
+
               {selectedDistrict && (
                 <>
-                  <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-gray-900 font-bold">{selectedDistrict.name}</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-bold">
+                    <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{selectedDistrict.name}</span>
+                  </span>
                 </>
               )}
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-              <MapPin className="w-6 h-6 text-indigo-600" />
+
+            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
               <span>
-                {activeTab === 'states' && 'Official India Geographical Master'}
-                {activeTab === 'districts' && `Districts of ${selectedState?.name}`}
-                {activeTab === 'areas' && `Areas / Localities of ${selectedDistrict?.name}`}
+                {activeTab === 'states' && 'Official India Master Geography (28 States & 8 UTs)'}
+                {activeTab === 'districts' && `Districts under ${selectedState?.name}`}
+                {activeTab === 'areas' && `Registered Areas / Localities of ${selectedDistrict?.name}`}
               </span>
             </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              {activeTab === 'states' && 'Browse, search, and manage all Indian sovereign state and central territory distribution tiers.'}
+              {activeTab === 'districts' && 'Supervise registered district administrative divisions and assigned tier distributors.'}
+              {activeTab === 'areas' && 'Maintain local territory coverage, area-level distributors, and retail delivery pincodes.'}
+            </p>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5 flex-wrap">
             {activeTab === 'districts' && (
               <button
                 onClick={() => setShowAddDistrict(true)}
-                className="inline-flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow transition"
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition hover:shadow"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add District</span>
@@ -191,7 +269,7 @@ export default function GeographicalManagement() {
             {activeTab === 'areas' && (
               <button
                 onClick={() => setShowAddArea(true)}
-                className="inline-flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow transition"
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition hover:shadow"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Area</span>
@@ -203,8 +281,8 @@ export default function GeographicalManagement() {
                 else if (activeTab === 'districts') handleStateSelect(selectedState);
                 else if (activeTab === 'areas') handleDistrictSelect(selectedDistrict);
               }}
-              className="p-2 text-gray-600 hover:text-indigo-600 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
-              title="Refresh"
+              className="p-2.5 text-slate-600 hover:text-blue-600 rounded-xl border border-slate-200 hover:bg-slate-50 transition"
+              title="Refresh Territory Master"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -212,41 +290,46 @@ export default function GeographicalManagement() {
         </div>
 
         {/* Global Filter & Search Bar */}
-        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-gray-100">
+        <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder={activeTab === 'states' ? 'Search State or UT...' : 'Search...'}
+              placeholder={
+                activeTab === 'states' 
+                  ? 'Search by State name or code...' 
+                  : activeTab === 'districts' 
+                    ? 'Search district name or code...' 
+                    : 'Search locality or pincode...'
+              }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-9 pr-4 py-2 text-xs font-medium border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
             />
           </div>
 
           {activeTab === 'states' && (
-            <div className="flex items-center space-x-2 self-start sm:self-auto">
-              <span className="text-xs font-medium text-gray-500">Filter:</span>
+            <div className="flex items-center space-x-1.5 self-start sm:self-auto bg-slate-100/80 p-1 rounded-xl">
               <button
                 onClick={() => setFilterType('ALL')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-                  filterType === 'ALL' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+                  filterType === 'ALL' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                All (36)
+                All Regions ({states.length || 36})
               </button>
               <button
                 onClick={() => setFilterType('STATES')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-                  filterType === 'STATES' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+                  filterType === 'STATES' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 States (28)
               </button>
               <button
                 onClick={() => setFilterType('UTS')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-                  filterType === 'UTS' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+                  filterType === 'UTS' ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Union Territories (8)
@@ -265,7 +348,7 @@ export default function GeographicalManagement() {
                   setSelectedState(null);
                 }
               }}
-              className="inline-flex items-center space-x-1.5 text-xs font-semibold text-gray-600 hover:text-indigo-600 self-start sm:self-auto"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition self-start sm:self-auto"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to {activeTab === 'areas' ? 'Districts' : 'States'}</span>
@@ -275,70 +358,95 @@ export default function GeographicalManagement() {
       </div>
 
       {actionSuccess && (
-        <div className="flex items-center space-x-2 p-3 bg-green-50 text-green-700 text-sm rounded-lg border border-green-200">
-          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{actionSuccess}</span>
+        <div className="flex items-center justify-between p-3.5 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-xl border border-emerald-200 animate-slideDown">
+          <div className="flex items-center space-x-2">
+            <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span>{actionSuccess}</span>
+          </div>
+          <button onClick={() => setActionSuccess('')} className="text-emerald-700 hover:text-emerald-900">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {/* 1. STATES / UTs VIEW */}
       {activeTab === 'states' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-50/90 border-b border-slate-200/80 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4">State / Union Territory</th>
-                  <th className="py-3.5 px-4 text-center">Type</th>
-                  <th className="py-3.5 px-4 text-center">Districts</th>
-                  <th className="py-3.5 px-4 text-center">State Dists</th>
-                  <th className="py-3.5 px-4 text-center">District Dists</th>
-                  <th className="py-3.5 px-4 text-center">Area Dists</th>
-                  <th className="py-3.5 px-4 text-center">Retailers</th>
-                  <th className="py-3.5 px-4 text-center">Active / Total</th>
+                  <th className="py-3.5 px-3 text-center">Designation</th>
+                  <th className="py-3.5 px-3 text-center">Districts</th>
+                  <th className="py-3.5 px-3 text-center">State Dists</th>
+                  <th className="py-3.5 px-3 text-center">Dist. Dists</th>
+                  <th className="py-3.5 px-3 text-center">Area Dists</th>
+                  <th className="py-3.5 px-3 text-center">Retailers</th>
+                  <th className="py-3.5 px-3 text-center">Network Accounts</th>
                   <th className="py-3.5 px-4 text-right">Outstanding (₹)</th>
-                  <th className="py-3.5 px-4 text-right">Collected (₹)</th>
+                  <th className="py-3.5 px-4 text-right">Settled (₹)</th>
                   <th className="py-3.5 px-4 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100">
                 {filteredStates.map((state) => (
-                  <tr key={state.id} className="hover:bg-indigo-50/40 transition">
-                    <td className="py-3 px-4 font-semibold text-gray-900">
-                      <div className="flex items-center space-x-2">
-                        <span className="w-6 text-center text-xs text-gray-400 font-mono">{state.code}</span>
-                        <span>{state.name}</span>
+                  <tr key={state.id} className="hover:bg-blue-50/40 transition">
+                    <td className="py-3 px-4 font-bold text-slate-900">
+                      <div className="flex items-center space-x-2.5">
+                        <span className="w-7 h-6 flex items-center justify-center text-[10px] bg-slate-100 text-slate-600 font-mono font-bold rounded">
+                          {state.code}
+                        </span>
+                        <span className="font-semibold text-slate-900">{state.name}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${
-                        state.isUnionTerritory ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                    <td className="py-3 px-3 text-center">
+                      <span className={`inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
+                        state.isUnionTerritory 
+                          ? 'bg-purple-100 text-purple-700 border border-purple-200' 
+                          : 'bg-blue-100 text-blue-700 border border-blue-200'
                       }`}>
                         {state.isUnionTerritory ? 'Union Territory' : 'State'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-center font-bold text-gray-800">{state.totalDistricts}</td>
-                    <td className="py-3 px-4 text-center font-semibold text-indigo-700">{state.totalStateDistributors}</td>
-                    <td className="py-3 px-4 text-center font-semibold text-blue-700">{state.totalDistrictDistributors}</td>
-                    <td className="py-3 px-4 text-center font-semibold text-cyan-700">{state.totalAreaDistributors}</td>
-                    <td className="py-3 px-4 text-center font-semibold text-emerald-700">{state.totalRetailers}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="text-green-600 font-semibold">{state.totalActiveAccounts}</span>
-                      <span className="text-gray-400"> / </span>
-                      <span className="text-gray-700">{state.totalAccounts}</span>
+                    <td className="py-3 px-3 text-center font-bold text-slate-800">{state.totalDistricts}</td>
+                    <td className="py-3 px-3 text-center font-bold text-indigo-600">
+                      <span className="px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-100">
+                        {state.totalStateDistributors}
+                      </span>
                     </td>
-                    <td className="py-3 px-4 text-right font-medium text-amber-700">
+                    <td className="py-3 px-3 text-center font-bold text-blue-600">
+                      <span className="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-100">
+                        {state.totalDistrictDistributors}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-center font-bold text-cyan-600">
+                      <span className="px-1.5 py-0.5 rounded bg-cyan-50 border border-cyan-100">
+                        {state.totalAreaDistributors}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-center font-bold text-emerald-600">
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-100">
+                        {state.totalRetailers}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <span className="text-emerald-700 font-bold">{state.totalActiveAccounts}</span>
+                      <span className="text-slate-400"> / </span>
+                      <span className="text-slate-600 font-semibold">{state.totalAccounts}</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-bold text-amber-600">
                       ₹{parseFloat(state.totalOutstanding || 0).toLocaleString()}
                     </td>
-                    <td className="py-3 px-4 text-right font-medium text-emerald-700">
+                    <td className="py-3 px-4 text-right font-bold text-emerald-600">
                       ₹{parseFloat(state.totalCollected || 0).toLocaleString()}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <button
                         onClick={() => handleStateSelect(state)}
-                        className="inline-flex items-center space-x-1 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition"
+                        className="inline-flex items-center space-x-1 px-3 py-1.5 text-[11px] font-bold text-blue-700 hover:text-white bg-blue-50 hover:bg-blue-600 rounded-lg transition"
                       >
-                        <span>View Districts</span>
+                        <span>Districts</span>
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </td>
@@ -352,52 +460,61 @@ export default function GeographicalManagement() {
 
       {/* 2. DISTRICTS VIEW */}
       {activeTab === 'districts' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-4 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
-            <span className="text-sm font-semibold text-indigo-900">
-              Showing {districts.length} districts in {selectedState?.name}
+        <div className="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
+          <div className="p-4 bg-blue-50/60 border-b border-blue-100 flex items-center justify-between">
+            <span className="text-xs font-bold text-blue-950 flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-blue-600" />
+              <span>Showing {filteredDistricts.length} registered districts in {selectedState?.name}</span>
             </span>
-            <span className="text-xs text-indigo-600 font-medium">Click a district to view registered areas</span>
+            <span className="text-[11px] text-blue-700 font-semibold">Click "Areas" to drill down to retail localities</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-50/90 border-b border-slate-200/80 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4">District Name</th>
-                  <th className="py-3.5 px-4 text-center">Code</th>
-                  <th className="py-3.5 px-4 text-center">Areas Registered</th>
-                  <th className="py-3.5 px-4 text-center">District Dists</th>
-                  <th className="py-3.5 px-4 text-center">Area Dists</th>
-                  <th className="py-3.5 px-4 text-center">Retailers</th>
-                  <th className="py-3.5 px-4 text-center">Active Accounts</th>
+                  <th className="py-3.5 px-3 text-center">Code</th>
+                  <th className="py-3.5 px-3 text-center">Areas Registered</th>
+                  <th className="py-3.5 px-3 text-center">District Dists</th>
+                  <th className="py-3.5 px-3 text-center">Area Dists</th>
+                  <th className="py-3.5 px-3 text-center">Retailers</th>
+                  <th className="py-3.5 px-3 text-center">Active Accounts</th>
                   <th className="py-3.5 px-4 text-right">Outstanding (₹)</th>
-                  <th className="py-3.5 px-4 text-right">Collected (₹)</th>
+                  <th className="py-3.5 px-4 text-right">Settled (₹)</th>
                   <th className="py-3.5 px-4 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {districts.map((d) => (
-                  <tr key={d.id} className="hover:bg-indigo-50/40 transition">
-                    <td className="py-3 px-4 font-semibold text-gray-900">{d.name}</td>
-                    <td className="py-3 px-4 text-center font-mono text-xs text-gray-500">{d.code || '-'}</td>
-                    <td className="py-3 px-4 text-center font-bold text-gray-800">{d.totalAreas || 0}</td>
-                    <td className="py-3 px-4 text-center font-semibold text-blue-700">{d.totalDistrictDistributors || 0}</td>
-                    <td className="py-3 px-4 text-center font-semibold text-cyan-700">{d.totalAreaDistributors || 0}</td>
-                    <td className="py-3 px-4 text-center font-semibold text-emerald-700">{d.totalRetailers || 0}</td>
-                    <td className="py-3 px-4 text-center text-green-600 font-semibold">{d.totalActiveAccounts || 0}</td>
-                    <td className="py-3 px-4 text-right font-medium text-amber-700">₹{parseFloat(d.totalOutstanding || 0).toLocaleString()}</td>
-                    <td className="py-3 px-4 text-right font-medium text-emerald-700">₹{parseFloat(d.totalCollected || 0).toLocaleString()}</td>
-                    <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => handleDistrictSelect(d)}
-                        className="inline-flex items-center space-x-1 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition"
-                      >
-                        <span>View Areas</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
+              <tbody className="divide-y divide-slate-100">
+                {filteredDistricts.length === 0 ? (
+                  <tr>
+                    <td colSpan="10" className="py-8 text-center text-slate-400 font-medium">
+                      No districts found matching your search.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredDistricts.map((d) => (
+                    <tr key={d.id} className="hover:bg-blue-50/40 transition">
+                      <td className="py-3 px-4 font-bold text-slate-900">{d.name}</td>
+                      <td className="py-3 px-3 text-center font-mono text-[10px] text-slate-500 font-bold">{d.code || '-'}</td>
+                      <td className="py-3 px-3 text-center font-bold text-slate-800">{d.totalAreas || 0}</td>
+                      <td className="py-3 px-3 text-center font-bold text-blue-600">{d.totalDistrictDistributors || 0}</td>
+                      <td className="py-3 px-3 text-center font-bold text-cyan-600">{d.totalAreaDistributors || 0}</td>
+                      <td className="py-3 px-3 text-center font-bold text-emerald-600">{d.totalRetailers || 0}</td>
+                      <td className="py-3 px-3 text-center text-emerald-700 font-bold">{d.totalActiveAccounts || 0}</td>
+                      <td className="py-3 px-4 text-right font-bold text-amber-600">₹{parseFloat(d.totalOutstanding || 0).toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right font-bold text-emerald-600">₹{parseFloat(d.totalCollected || 0).toLocaleString()}</td>
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          onClick={() => handleDistrictSelect(d)}
+                          className="inline-flex items-center space-x-1 px-3 py-1.5 text-[11px] font-bold text-blue-700 hover:text-white bg-blue-50 hover:bg-blue-600 rounded-lg transition"
+                        >
+                          <span>Areas</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -406,15 +523,16 @@ export default function GeographicalManagement() {
 
       {/* 3. AREAS VIEW */}
       {activeTab === 'areas' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-4 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
-            <span className="text-sm font-semibold text-indigo-900">
-              Showing {areas.length} areas in {selectedDistrict?.name}, {selectedState?.name}
+        <div className="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
+          <div className="p-4 bg-emerald-50/60 border-b border-emerald-100 flex items-center justify-between">
+            <span className="text-xs font-bold text-emerald-950 flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-emerald-600" />
+              <span>Showing {filteredAreas.length} localities in {selectedDistrict?.name}, {selectedState?.name}</span>
             </span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-50/90 border-b border-slate-200/80 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4">Area / Locality Name</th>
                   <th className="py-3.5 px-4 text-center">Pincode</th>
@@ -422,26 +540,27 @@ export default function GeographicalManagement() {
                   <th className="py-3.5 px-4 text-center">Retailers</th>
                   <th className="py-3.5 px-4 text-center">Active Accounts</th>
                   <th className="py-3.5 px-4 text-right">Outstanding (₹)</th>
-                  <th className="py-3.5 px-4 text-right">Collected (₹)</th>
+                  <th className="py-3.5 px-4 text-right">Settled (₹)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {areas.length === 0 ? (
+              <tbody className="divide-y divide-slate-100">
+                {filteredAreas.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="py-8 text-center text-gray-400">
-                      No areas registered in this district yet. Click "Add Area" above to create one.
+                    <td colSpan="7" className="py-10 text-center text-slate-400">
+                      <p className="font-semibold text-slate-600">No areas registered in this district yet.</p>
+                      <p className="text-[11px] text-slate-400 mt-1">Click "Add Area" above to register new delivery zones.</p>
                     </td>
                   </tr>
                 ) : (
-                  areas.map((a) => (
-                    <tr key={a.id} className="hover:bg-indigo-50/40 transition">
-                      <td className="py-3 px-4 font-semibold text-gray-900">{a.name}</td>
-                      <td className="py-3 px-4 text-center font-mono text-xs text-gray-600">{a.pincode || '-'}</td>
-                      <td className="py-3 px-4 text-center font-semibold text-cyan-700">{a.totalAreaDistributors || 0}</td>
-                      <td className="py-3 px-4 text-center font-semibold text-emerald-700">{a.totalRetailers || 0}</td>
-                      <td className="py-3 px-4 text-center text-green-600 font-semibold">{a.totalActiveAccounts || 0}</td>
-                      <td className="py-3 px-4 text-right font-medium text-amber-700">₹{parseFloat(a.totalOutstanding || 0).toLocaleString()}</td>
-                      <td className="py-3 px-4 text-right font-medium text-emerald-700">₹{parseFloat(a.totalCollected || 0).toLocaleString()}</td>
+                  filteredAreas.map((a) => (
+                    <tr key={a.id} className="hover:bg-blue-50/40 transition">
+                      <td className="py-3 px-4 font-bold text-slate-900">{a.name}</td>
+                      <td className="py-3 px-4 text-center font-mono text-[11px] font-bold text-slate-700 bg-slate-50">{a.pincode || '-'}</td>
+                      <td className="py-3 px-4 text-center font-bold text-cyan-600">{a.totalAreaDistributors || 0}</td>
+                      <td className="py-3 px-4 text-center font-bold text-emerald-600">{a.totalRetailers || 0}</td>
+                      <td className="py-3 px-4 text-center text-emerald-700 font-bold">{a.totalActiveAccounts || 0}</td>
+                      <td className="py-3 px-4 text-right font-bold text-amber-600">₹{parseFloat(a.totalOutstanding || 0).toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right font-bold text-emerald-600">₹{parseFloat(a.totalCollected || 0).toLocaleString()}</td>
                     </tr>
                   ))
                 )}
@@ -453,45 +572,61 @@ export default function GeographicalManagement() {
 
       {/* Add District Modal */}
       {showAddDistrict && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Add District to {selectedState?.name}</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-slate-100 animate-scaleUp">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex items-center space-x-2">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                <h3 className="text-base font-bold text-slate-900">Add District to {selectedState?.name}</h3>
+              </div>
+              <button 
+                onClick={() => setShowAddDistrict(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
             {actionError && (
-              <div className="p-3 bg-red-50 text-red-700 text-xs rounded mb-3">{actionError}</div>
+              <div className="p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 mb-4 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{actionError}</span>
+              </div>
             )}
+
             <form onSubmit={handleCreateDistrict} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">District Name *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">District Name *</label>
                 <input
                   type="text"
                   required
                   value={newDistrictName}
                   onChange={(e) => setNewDistrictName(e.target.value)}
-                  placeholder="e.g. Pune"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                  placeholder="e.g. Pune, Thane, Surat"
+                  className="w-full px-3.5 py-2.5 text-xs font-medium border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">District Code (Optional)</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">District Code (Optional)</label>
                 <input
                   type="text"
                   value={newDistrictCode}
                   onChange={(e) => setNewDistrictCode(e.target.value)}
-                  placeholder="e.g. PU"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg uppercase"
+                  placeholder="e.g. PU, TH, SU"
+                  className="w-full px-3.5 py-2.5 text-xs font-mono border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 uppercase"
                 />
               </div>
-              <div className="flex justify-end space-x-3 pt-3">
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAddDistrict(false)}
-                  className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg"
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow"
+                  className="px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition"
                 >
                   Save District
                 </button>
@@ -503,47 +638,63 @@ export default function GeographicalManagement() {
 
       {/* Add Area Modal */}
       {showAddArea && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Add Area to {selectedDistrict?.name}</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-slate-100 animate-scaleUp">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex items-center space-x-2">
+                <MapPin className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-base font-bold text-slate-900">Add Locality to {selectedDistrict?.name}</h3>
+              </div>
+              <button 
+                onClick={() => setShowAddArea(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
             {actionError && (
-              <div className="p-3 bg-red-50 text-red-700 text-xs rounded mb-3">{actionError}</div>
+              <div className="p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 mb-4 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{actionError}</span>
+              </div>
             )}
+
             <form onSubmit={handleCreateArea} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Area / Locality Name *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Area / Locality Name *</label>
                 <input
                   type="text"
                   required
                   value={newAreaName}
                   onChange={(e) => setNewAreaName(e.target.value)}
-                  placeholder="e.g. Andheri West"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                  placeholder="e.g. Andheri West, Shivaji Nagar"
+                  className="w-full px-3.5 py-2.5 text-xs font-medium border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Postal Pincode</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Postal Pincode</label>
                 <input
                   type="text"
                   value={newAreaPincode}
                   onChange={(e) => setNewAreaPincode(e.target.value)}
                   placeholder="e.g. 400058"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                  className="w-full px-3.5 py-2.5 text-xs font-mono border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
-              <div className="flex justify-end space-x-3 pt-3">
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAddArea(false)}
-                  className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg"
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow"
+                  className="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs transition"
                 >
-                  Save Area
+                  Save Locality
                 </button>
               </div>
             </form>
@@ -553,4 +704,3 @@ export default function GeographicalManagement() {
     </div>
   );
 }
-

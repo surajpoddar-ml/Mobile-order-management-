@@ -331,66 +331,135 @@ export default function SuperAdminDistributionNetwork() {
       {/* 12 Master Statistics Cards */}
       {metrics && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm">
-            <span className="text-[11px] font-semibold text-gray-500 uppercase">States & UTs</span>
-            <div className="text-xl font-bold text-gray-900 mt-1">{metrics.totalStatesAndUTs}</div>
-            <span className="text-[10px] text-gray-400">28 States + 8 UTs</span>
-          </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm">
-            <span className="text-[11px] font-semibold text-indigo-600 uppercase">State Dists</span>
-            <div className="text-xl font-bold text-indigo-700 mt-1">{metrics.totalStateDistributors}</div>
-            <span className="text-[10px] text-gray-400">Tier 1 Hierarchy</span>
-          </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm">
-            <span className="text-[11px] font-semibold text-blue-600 uppercase">District Dists</span>
-            <div className="text-xl font-bold text-blue-700 mt-1">{metrics.totalDistrictDistributors}</div>
-            <span className="text-[10px] text-gray-400">Tier 2 Hierarchy</span>
-          </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm">
-            <span className="text-[11px] font-semibold text-cyan-600 uppercase">Area Dists</span>
-            <div className="text-xl font-bold text-cyan-700 mt-1">{metrics.totalAreaDistributors}</div>
-            <span className="text-[10px] text-gray-400">Tier 3 Hierarchy</span>
-          </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm">
-            <span className="text-[11px] font-semibold text-emerald-600 uppercase">Retailers</span>
-            <div className="text-xl font-bold text-emerald-700 mt-1">{metrics.totalRetailers}</div>
-            <span className="text-[10px] text-gray-400">Tier 4 Retail Outlets</span>
-          </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm">
-            <span className="text-[11px] font-semibold text-green-600 uppercase">Active Accounts</span>
-            <div className="text-xl font-bold text-green-700 mt-1">{metrics.totalActiveDistributors}</div>
-            <span className="text-[10px] text-gray-400">Operational</span>
+          {/* Card 1: States */}
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-150 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-slate-400" />
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">States & UTs</span>
+              <MapPin className="w-3.5 h-3.5 text-slate-400" />
+            </div>
+            <div className="text-2xl font-black text-slate-900 tracking-tight">{metrics.totalStatesAndUTs}</div>
+            <span className="text-[10px] text-slate-400 font-medium">28 States + 8 UTs</span>
           </div>
 
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm">
-            <span className="text-[11px] font-semibold text-amber-600 uppercase">Pending Review</span>
-            <div className="text-xl font-bold text-amber-700 mt-1">{metrics.totalPendingDistributors}</div>
-            <span className="text-[10px] text-gray-400">Awaiting Super Admin</span>
+          {/* Card 2: State Dists */}
+          <div className="bg-white p-3.5 rounded-2xl border border-indigo-100 shadow-xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-150 relative overflow-hidden bg-gradient-to-b from-indigo-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-600" />
+            <div className="flex items-center justify-between text-indigo-600 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">State Dists</span>
+              <Building2 className="w-3.5 h-3.5 text-indigo-500" />
+            </div>
+            <div className="text-2xl font-black text-indigo-700 tracking-tight">{metrics.totalStateDistributors}</div>
+            <span className="text-[10px] text-indigo-600 font-medium">Tier 1 National</span>
           </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm">
-            <span className="text-[11px] font-semibold text-red-600 uppercase">Suspended</span>
-            <div className="text-xl font-bold text-red-700 mt-1">{metrics.totalSuspendedAccounts}</div>
-            <span className="text-[10px] text-gray-400">Access Restricted</span>
+
+          {/* Card 3: District Dists */}
+          <div className="bg-white p-3.5 rounded-2xl border border-blue-100 shadow-xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-150 relative overflow-hidden bg-gradient-to-b from-blue-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-600" />
+            <div className="flex items-center justify-between text-blue-600 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">District Dists</span>
+              <Users className="w-3.5 h-3.5 text-blue-500" />
+            </div>
+            <div className="text-2xl font-black text-blue-700 tracking-tight">{metrics.totalDistrictDistributors}</div>
+            <span className="text-[10px] text-blue-600 font-medium">Tier 2 Regional</span>
           </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm">
-            <span className="text-[11px] font-semibold text-amber-700 uppercase">Outstanding (₹)</span>
-            <div className="text-xl font-bold text-amber-800 mt-1">₹{metrics.totalOutstandingPayments.toLocaleString()}</div>
-            <span className="text-[10px] text-gray-400">Receivable</span>
+
+          {/* Card 4: Area Dists */}
+          <div className="bg-white p-3.5 rounded-2xl border border-cyan-100 shadow-xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-150 relative overflow-hidden bg-gradient-to-b from-cyan-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-cyan-600" />
+            <div className="flex items-center justify-between text-cyan-600 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Area Dists</span>
+              <Store className="w-3.5 h-3.5 text-cyan-500" />
+            </div>
+            <div className="text-2xl font-black text-cyan-700 tracking-tight">{metrics.totalAreaDistributors}</div>
+            <span className="text-[10px] text-cyan-600 font-medium">Tier 3 Local Hubs</span>
           </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm">
-            <span className="text-[11px] font-semibold text-emerald-700 uppercase">Collected (₹)</span>
-            <div className="text-xl font-bold text-emerald-800 mt-1">₹{metrics.totalPaymentsReceived.toLocaleString()}</div>
-            <span className="text-[10px] text-gray-400">Verified In Bank</span>
+
+          {/* Card 5: Retailers */}
+          <div className="bg-white p-3.5 rounded-2xl border border-emerald-100 shadow-xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-150 relative overflow-hidden bg-gradient-to-b from-emerald-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-600" />
+            <div className="flex items-center justify-between text-emerald-600 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Retailers</span>
+              <Store className="w-3.5 h-3.5 text-emerald-500" />
+            </div>
+            <div className="text-2xl font-black text-emerald-700 tracking-tight">{metrics.totalRetailers}</div>
+            <span className="text-[10px] text-emerald-600 font-medium">Tier 4 Retail Outlets</span>
           </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm">
-            <span className="text-[11px] font-semibold text-rose-600 uppercase">Overdue (₹)</span>
-            <div className="text-xl font-bold text-rose-700 mt-1">₹{metrics.totalOverduePayments.toLocaleString()}</div>
-            <span className="text-[10px] text-gray-400">Past Due Date</span>
+
+          {/* Card 6: Active Accounts */}
+          <div className="bg-white p-3.5 rounded-2xl border border-green-100 shadow-xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-150 relative overflow-hidden bg-gradient-to-b from-green-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-green-600" />
+            <div className="flex items-center justify-between text-green-600 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Active</span>
+              <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+            </div>
+            <div className="text-2xl font-black text-green-700 tracking-tight">{metrics.totalActiveDistributors}</div>
+            <span className="text-[10px] text-green-600 font-medium">Operational</span>
           </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm bg-gradient-to-br from-indigo-50 to-blue-50">
-            <span className="text-[11px] font-semibold text-indigo-900 uppercase">Network Value</span>
-            <div className="text-xl font-bold text-indigo-900 mt-1">₹{metrics.totalDistributionNetworkValue.toLocaleString()}</div>
-            <span className="text-[10px] text-indigo-700">Total Billed Gross</span>
+
+          {/* Card 7: Pending */}
+          <div className="bg-white p-3.5 rounded-2xl border border-amber-100 shadow-xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-150 relative overflow-hidden bg-gradient-to-b from-amber-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
+            <div className="flex items-center justify-between text-amber-600 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Pending Review</span>
+              <Clock className="w-3.5 h-3.5 text-amber-500" />
+            </div>
+            <div className="text-2xl font-black text-amber-700 tracking-tight">{metrics.totalPendingDistributors}</div>
+            <span className="text-[10px] text-amber-600 font-medium">Awaiting Approval</span>
+          </div>
+
+          {/* Card 8: Suspended */}
+          <div className="bg-white p-3.5 rounded-2xl border border-rose-100 shadow-xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-150 relative overflow-hidden bg-gradient-to-b from-rose-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-rose-600" />
+            <div className="flex items-center justify-between text-rose-600 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Suspended</span>
+              <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+            </div>
+            <div className="text-2xl font-black text-rose-700 tracking-tight">{metrics.totalSuspendedAccounts}</div>
+            <span className="text-[10px] text-rose-600 font-medium">Blocked</span>
+          </div>
+
+          {/* Card 9: Outstanding */}
+          <div className="bg-white p-3.5 rounded-2xl border border-amber-100 shadow-xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-150 relative overflow-hidden bg-gradient-to-b from-amber-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-amber-600" />
+            <div className="flex items-center justify-between text-amber-700 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Outstanding</span>
+              <IndianRupee className="w-3.5 h-3.5 text-amber-600" />
+            </div>
+            <div className="text-xl font-black text-amber-800 tracking-tight">₹{metrics.totalOutstandingPayments.toLocaleString()}</div>
+            <span className="text-[10px] text-amber-600 font-medium">Receivables</span>
+          </div>
+
+          {/* Card 10: Collected */}
+          <div className="bg-white p-3.5 rounded-2xl border border-emerald-100 shadow-xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-150 relative overflow-hidden bg-gradient-to-b from-emerald-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-600" />
+            <div className="flex items-center justify-between text-emerald-700 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Collected</span>
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
+            </div>
+            <div className="text-xl font-black text-emerald-800 tracking-tight">₹{metrics.totalPaymentsReceived.toLocaleString()}</div>
+            <span className="text-[10px] text-emerald-600 font-medium">Verified In Bank</span>
+          </div>
+
+          {/* Card 11: Overdue */}
+          <div className="bg-white p-3.5 rounded-2xl border border-rose-100 shadow-xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-150 relative overflow-hidden bg-gradient-to-b from-rose-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-rose-600" />
+            <div className="flex items-center justify-between text-rose-600 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Overdue</span>
+              <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+            </div>
+            <div className="text-xl font-black text-rose-700 tracking-tight">₹{metrics.totalOverduePayments.toLocaleString()}</div>
+            <span className="text-[10px] text-rose-600 font-medium">Past Due Date</span>
+          </div>
+
+          {/* Card 12: Network Value */}
+          <div className="p-3.5 rounded-2xl border border-indigo-200/80 shadow-xs hover:shadow-sm hover:-translate-y-0.5 transition-all duration-150 relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white">
+            <div className="flex items-center justify-between text-indigo-100 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Network Value</span>
+              <Layers className="w-3.5 h-3.5 text-indigo-200" />
+            </div>
+            <div className="text-xl font-black text-white tracking-tight">₹{metrics.totalDistributionNetworkValue.toLocaleString()}</div>
+            <span className="text-[10px] text-indigo-200 font-medium">Total Billed Gross</span>
           </div>
         </div>
       )}
@@ -499,89 +568,110 @@ export default function SuperAdminDistributionNetwork() {
 
       {/* SUB-VIEW 1: TABLE */}
       {activeSubTab === 'list' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <thead className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4">Account ID & User</th>
-                  <th className="py-3.5 px-4">Level</th>
+                  <th className="py-3.5 px-4">Hierarchy Level</th>
                   <th className="py-3.5 px-4">Assigned Territory</th>
                   <th className="py-3.5 px-4">Reporting Parent</th>
                   <th className="py-3.5 px-4 text-center">Status</th>
-                  <th className="py-3.5 px-4 text-center">Reliability</th>
+                  <th className="py-3.5 px-4 text-center">Payment Reliability</th>
                   <th className="py-3.5 px-4 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100">
                 {accounts.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="py-10 text-center text-gray-400">
+                    <td colSpan="7" className="py-12 text-center text-slate-400">
                       No accounts found matching your filter criteria.
                     </td>
                   </tr>
                 ) : (
                   accounts.map((acc) => (
-                    <tr key={acc.id} className="hover:bg-indigo-50/30 transition">
-                      <td className="py-3 px-4">
-                        <div className="font-mono text-xs font-bold text-indigo-700">{acc.userId}</div>
-                        <div className="font-semibold text-gray-900">{acc.fullName}</div>
-                        {acc.businessName && <div className="text-xs text-gray-500 font-medium">{acc.businessName}</div>}
-                        <div className="text-xs text-gray-400">{acc.email} • {acc.phoneNumber}</div>
+                    <tr key={acc.id} className="hover:bg-indigo-50/20 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="font-mono text-[11px] font-bold text-indigo-700 bg-indigo-50/80 px-2 py-0.5 rounded w-fit mb-1 border border-indigo-100">
+                          {acc.userId}
+                        </div>
+                        <div className="font-bold text-slate-900 text-sm">{acc.fullName}</div>
+                        {acc.businessName && <div className="text-xs text-slate-600 font-semibold">{acc.businessName}</div>}
+                        <div className="text-[11px] text-slate-400">{acc.email} • {acc.phoneNumber}</div>
                       </td>
-                      <td className="py-3 px-4">
-                        <span className={`inline-block px-2.5 py-1 text-xs font-semibold rounded-full ${
-                          acc.distributorLevel === 'StateDistributor' ? 'bg-indigo-100 text-indigo-700' :
-                          acc.distributorLevel === 'DistrictDistributor' ? 'bg-blue-100 text-blue-700' :
-                          acc.distributorLevel === 'AreaDistributor' ? 'bg-cyan-100 text-cyan-700' :
-                          'bg-emerald-100 text-emerald-700'
+                      <td className="py-3.5 px-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border ${
+                          acc.distributorLevel === 'StateDistributor' ? 'bg-indigo-50 text-indigo-700 border-indigo-200/80' :
+                          acc.distributorLevel === 'DistrictDistributor' ? 'bg-blue-50 text-blue-700 border-blue-200/80' :
+                          acc.distributorLevel === 'AreaDistributor' ? 'bg-cyan-50 text-cyan-700 border-cyan-200/80' :
+                          'bg-emerald-50 text-emerald-700 border-emerald-200/80'
                         }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            acc.distributorLevel === 'StateDistributor' ? 'bg-indigo-600' :
+                            acc.distributorLevel === 'DistrictDistributor' ? 'bg-blue-600' :
+                            acc.distributorLevel === 'AreaDistributor' ? 'bg-cyan-600' :
+                            'bg-emerald-600'
+                          }`} />
                           {acc.distributorLevel === 'StateDistributor' ? 'State Distributor' :
                            acc.distributorLevel === 'DistrictDistributor' ? 'District Distributor' :
                            acc.distributorLevel === 'AreaDistributor' ? 'Area Distributor' :
-                           'Retailer'}
+                           'Authorized Retailer'}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-xs">
-                        {acc.stateName && <div className="font-medium text-gray-800">State: {acc.stateName}</div>}
-                        {acc.districtName && <div className="text-gray-600">District: {acc.districtName}</div>}
-                        {acc.areaName && <div className="text-gray-500">Area: {acc.areaName}</div>}
-                        {!acc.stateName && <span className="text-gray-400">Unassigned</span>}
+                      <td className="py-3.5 px-4 text-xs">
+                        {acc.stateName && <div className="font-semibold text-slate-800">State: {acc.stateName}</div>}
+                        {acc.districtName && <div className="text-slate-600 font-medium">District: {acc.districtName}</div>}
+                        {acc.areaName && <div className="text-slate-500">Area: {acc.areaName}</div>}
+                        {!acc.stateName && <span className="text-slate-400 italic">Unassigned</span>}
                       </td>
-                      <td className="py-3 px-4 text-xs">
+                      <td className="py-3.5 px-4 text-xs">
                         {acc.parentName ? (
                           <div>
-                            <div className="font-semibold text-gray-800">{acc.parentName}</div>
-                            <div className="text-gray-500">{acc.parentLevel}</div>
+                            <div className="font-bold text-slate-800">{acc.parentName}</div>
+                            <div className="text-[11px] text-slate-500 font-medium">{acc.parentLevel}</div>
                           </div>
                         ) : (
-                          <span className="text-indigo-600 font-medium">Direct to Super Admin</span>
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                            Direct Super Admin
+                          </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${
-                          acc.accountStatus === 'Active' ? 'bg-green-100 text-green-700' :
-                          acc.accountStatus === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                          acc.accountStatus === 'Suspended' ? 'bg-red-100 text-red-700' :
-                          'bg-gray-100 text-gray-700'
+                      <td className="py-3.5 px-4 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-bold rounded-full border ${
+                          acc.accountStatus === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          acc.accountStatus === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                          acc.accountStatus === 'Suspended' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                          'bg-slate-100 text-slate-700 border-slate-200'
                         }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            acc.accountStatus === 'Active' ? 'bg-emerald-500 animate-pulse' :
+                            acc.accountStatus === 'Pending' ? 'bg-amber-500' :
+                            acc.accountStatus === 'Suspended' ? 'bg-rose-500' :
+                            'bg-slate-400'
+                          }`} />
                           {acc.accountStatus}
                         </span>
                         {acc.mustChangePassword === 1 && (
-                          <div className="text-[10px] text-amber-600 font-medium mt-0.5">Temp Password</div>
+                          <div className="text-[10px] text-amber-600 font-bold mt-1">Temp Credentials</div>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center">
                         {acc.overallScore !== null && acc.overallScore !== undefined ? (
                           <div>
-                            <div className="text-xs font-bold text-gray-900">{acc.overallScore}/100</div>
-                            <div className="text-[10px] text-emerald-600 font-medium">{acc.ratingTier}</div>
+                            <div className="text-xs font-black text-slate-900">{acc.overallScore}/100</div>
+                            <div className={`text-[10px] font-bold px-1.5 py-0.2 rounded w-fit mx-auto mt-0.5 ${
+                              acc.overallScore >= 85 ? 'text-emerald-700 bg-emerald-50' :
+                              acc.overallScore >= 70 ? 'text-blue-700 bg-blue-50' :
+                              acc.overallScore >= 50 ? 'text-amber-700 bg-amber-50' :
+                              'text-rose-700 bg-rose-50'
+                            }`}>{acc.ratingTier}</div>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-400">Not Rated</span>
+                          <span className="text-xs text-slate-400 font-medium">Not Rated</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center space-x-1.5">
                           <button
                             onClick={() => {
@@ -590,7 +680,7 @@ export default function SuperAdminDistributionNetwork() {
                               setStatusRemarks('');
                               setShowStatusModal(true);
                             }}
-                            className="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                            className="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-slate-200/60 hover:border-indigo-200 transition"
                             title="Update Status"
                           >
                             <ShieldAlert className="w-4 h-4" />
@@ -600,7 +690,7 @@ export default function SuperAdminDistributionNetwork() {
                               setSelectedAccount(acc);
                               setShowResetModal(true);
                             }}
-                            className="p-1.5 text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded"
+                            className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg border border-slate-200/60 hover:border-amber-200 transition"
                             title="Reset Credentials"
                           >
                             <Key className="w-4 h-4" />
@@ -615,7 +705,7 @@ export default function SuperAdminDistributionNetwork() {
                               setTransferReason('');
                               setShowTransferModal(true);
                             }}
-                            className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded"
+                            className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-200/60 hover:border-blue-200 transition"
                             title="Transfer Territory"
                           >
                             <ArrowRightLeft className="w-4 h-4" />

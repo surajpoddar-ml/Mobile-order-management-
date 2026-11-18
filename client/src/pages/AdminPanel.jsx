@@ -22,6 +22,7 @@ import DistributionPaymentManagement from '../components/distribution/Distributi
 import PaymentReliabilityView from '../components/distribution/PaymentReliabilityView';
 import DistributionReports from '../components/distribution/DistributionReports';
 import DistributionAuditLogs from '../components/distribution/DistributionAuditLogs';
+import DistributionNavHeader from '../components/distribution/DistributionNavHeader';
 import { MessageSquare, Network, MapPin, Award, Receipt } from 'lucide-react';
 
 export const AdminPanel = () => {
@@ -1108,31 +1109,55 @@ export const AdminPanel = () => {
     zIndex: 200
   };
 
-  // Sidebar Menu Items Definition
-  const navMenuItems = [
-    { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard, badge: null, color: 'var(--primary)' },
-    { id: 'orders', label: 'Orders', icon: ShoppingCart, badge: orders?.length ?? 0, color: '#2563eb' },
-    { id: 'messages', label: 'Live Messages', icon: MessageSquare, badge: chatUnreadCount > 0 ? chatUnreadCount : null, color: '#0284c7' },
-    { id: 'create-offers', label: 'Create Offers', icon: QrCode, badge: null, color: '#f59e0b' },
-    { id: 'rewards-payouts', label: 'Reward Redemptions', icon: Gift, badge: null, color: '#10b981' },
-    { id: 'pending', label: 'Pending Approvals', icon: Clock, badge: metrics?.distributors?.pending ?? 0, color: 'var(--status-pending)' },
-    { id: 'distributors', label: 'Distributors', icon: Building2, badge: metrics?.distributors?.approved ?? 0, color: 'var(--distributor-accent)' },
-    { id: 'distributor-credit', label: 'Distributor Credit System', icon: CreditCard, badge: null, color: '#0284c7' },
-    { id: 'distribution-network', label: 'Multi-Level Distribution', icon: Network, badge: null, color: '#4f46e5' },
-    { id: 'geographical-management', label: 'Geographical Master (India)', icon: MapPin, badge: null, color: '#059669' },
-    { id: 'distribution-payments', label: 'Wholesale Settlements', icon: Receipt, badge: null, color: '#d97706' },
-    { id: 'reliability-scores', label: 'Payment Reliability', icon: Award, badge: null, color: '#7c3aed' },
-    { id: 'distribution-reports', label: 'Territory Reports', icon: FileText, badge: null, color: '#0284c7' },
-    { id: 'distribution-audit', label: 'Distribution Audit Trail', icon: ShieldCheck, badge: null, color: '#475569' },
-    { id: 'customers', label: 'Customers', icon: Users, badge: metrics?.customers?.active ?? 0, color: 'var(--customer-accent)' },
-    { id: 'products', label: 'Product Management', icon: Package, badge: allProducts?.length ?? 0, color: '#0d9488' },
-    { id: 'warranties', label: 'Product Warranty', icon: ShieldCheck, badge: null, color: '#0284c7' },
-    { id: 'categories', label: 'Categories', icon: FolderTree, badge: categories?.length ?? 0, color: '#8b5cf6' },
-    { id: 'advertisements', label: 'Ad Board & Media', icon: Film, badge: advertisements?.length ?? 0, color: '#ea580c' },
-    { id: 'persistent-media', label: 'Persistent Media Storage', icon: ImageIcon, badge: null, color: '#0284c7' },
-    { id: 'stickers', label: 'Promotional Stickers', icon: Sparkles, badge: null, color: '#ec4899' },
-    { id: 'all', label: 'All User Accounts', icon: Search, badge: users?.length ?? 0, color: '#6366f1' },
+  // Categorized Sidebar Navigation Sections
+  const navMenuSections = [
+    {
+      title: 'Operations',
+      items: [
+        { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard, badge: null, color: 'var(--primary)' },
+        { id: 'orders', label: 'Orders', icon: ShoppingCart, badge: orders?.length ?? 0, color: '#2563eb' },
+        { id: 'messages', label: 'Live Messages', icon: MessageSquare, badge: chatUnreadCount > 0 ? chatUnreadCount : null, color: '#0284c7' },
+        { id: 'pending', label: 'Pending Approvals', icon: Clock, badge: metrics?.distributors?.pending ?? 0, color: 'var(--status-pending)' }
+      ]
+    },
+    {
+      title: 'Distribution Ecosystem',
+      badge: 'INDIA MASTER',
+      badgeColor: '#4f46e5',
+      items: [
+        { id: 'distribution-network', label: 'Multi-Level Network', icon: Network, badge: null, color: '#4f46e5' },
+        { id: 'geographical-management', label: 'Geographical Master', icon: MapPin, badge: '36 States/UT', color: '#059669' },
+        { id: 'distribution-payments', label: 'Wholesale Settlements', icon: Receipt, badge: null, color: '#d97706' },
+        { id: 'reliability-scores', label: 'Payment Reliability', icon: Award, badge: null, color: '#7c3aed' },
+        { id: 'distribution-reports', label: 'Territory Reports', icon: FileText, badge: null, color: '#0284c7' },
+        { id: 'distribution-audit', label: 'Distribution Audit Trail', icon: ShieldCheck, badge: null, color: '#475569' },
+        { id: 'distributor-credit', label: 'Distributor Credit System', icon: CreditCard, badge: null, color: '#0284c7' }
+      ]
+    },
+    {
+      title: 'Partners & Accounts',
+      items: [
+        { id: 'distributors', label: 'Distributors', icon: Building2, badge: metrics?.distributors?.approved ?? 0, color: 'var(--distributor-accent)' },
+        { id: 'customers', label: 'Customers', icon: Users, badge: metrics?.customers?.active ?? 0, color: 'var(--customer-accent)' },
+        { id: 'all', label: 'All User Accounts', icon: Search, badge: users?.length ?? 0, color: '#6366f1' }
+      ]
+    },
+    {
+      title: 'Catalog & Storefront',
+      items: [
+        { id: 'products', label: 'Product Management', icon: Package, badge: allProducts?.length ?? 0, color: '#0d9488' },
+        { id: 'warranties', label: 'Product Warranty', icon: ShieldCheck, badge: null, color: '#0284c7' },
+        { id: 'categories', label: 'Categories', icon: FolderTree, badge: categories?.length ?? 0, color: '#8b5cf6' },
+        { id: 'advertisements', label: 'Ad Board & Media', icon: Film, badge: advertisements?.length ?? 0, color: '#ea580c' },
+        { id: 'persistent-media', label: 'Persistent Media Storage', icon: ImageIcon, badge: null, color: '#0284c7' },
+        { id: 'stickers', label: 'Promotional Stickers', icon: Sparkles, badge: null, color: '#ec4899' },
+        { id: 'create-offers', label: 'Create Offers', icon: QrCode, badge: null, color: '#f59e0b' },
+        { id: 'rewards-payouts', label: 'Reward Redemptions', icon: Gift, badge: null, color: '#10b981' }
+      ]
+    }
   ];
+
+  const navMenuItems = navMenuSections.flatMap(section => section.items);
 
   return (
     <div style={{
@@ -1196,68 +1221,96 @@ export const AdminPanel = () => {
             </div>
           </div>
 
-          {/* Navigation Links */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '0 10px 4px 10px' }}>
-              Management Controls
-            </div>
-
-            {navMenuItems.map(item => {
-              const active = activeTab === item.id;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    setMobileSidebarOpen(false);
-                    if (item.id === 'pending') { setStatusFilter('Pending'); setTypeFilter('Distributor'); }
-                    else if (item.id === 'distributors') { setStatusFilter('All'); setTypeFilter('Distributor'); }
-                    else if (item.id === 'customers') { setStatusFilter('All'); setTypeFilter('Customer'); }
-                    else if (item.id === 'all') { setStatusFilter('All'); setTypeFilter('All'); }
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '11px 14px',
-                    borderRadius: 'var(--radius-md)',
-                    border: 'none',
-                    background: active ? 'rgba(79, 70, 229, 0.09)' : 'transparent',
-                    color: active ? 'var(--primary)' : 'var(--text-main)',
-                    fontWeight: active ? 800 : 600,
-                    fontSize: '0.88rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.16s ease',
-                    textAlign: 'left'
-                  }}
-                  onMouseEnter={e => {
-                    if (!active) e.currentTarget.style.background = 'rgba(120, 90, 40, 0.05)';
-                  }}
-                  onMouseLeave={e => {
-                    if (!active) e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Icon size={18} color={active ? 'var(--primary)' : '#64748b'} />
-                    <span>{item.label}</span>
-                  </div>
-
-                  {item.badge !== null && item.badge > 0 && (
+          {/* Navigation Links Grouped by Operational Sections */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {navMenuSections.map(section => (
+              <div key={section.title} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '4px 10px 4px 10px',
+                  fontSize: '0.67rem',
+                  fontWeight: 800,
+                  color: '#64748b',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.07em'
+                }}>
+                  <span>{section.title}</span>
+                  {section.badge && (
                     <span style={{
-                      fontSize: '0.72rem',
+                      fontSize: '0.58rem',
                       fontWeight: 800,
-                      padding: '2px 8px',
-                      borderRadius: 'var(--radius-full)',
-                      background: active ? item.color : '#e2e8f0',
-                      color: active ? '#ffffff' : '#475569'
+                      padding: '1.5px 5.5px',
+                      borderRadius: '4px',
+                      background: 'rgba(79, 70, 229, 0.09)',
+                      color: section.badgeColor,
+                      letterSpacing: '0.04em'
                     }}>
-                      {item.badge}
+                      {section.badge}
                     </span>
                   )}
-                </button>
-              );
-            })}
+                </div>
+
+                {section.items.map(item => {
+                  const active = activeTab === item.id;
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        setMobileSidebarOpen(false);
+                        if (item.id === 'pending') { setStatusFilter('Pending'); setTypeFilter('Distributor'); }
+                        else if (item.id === 'distributors') { setStatusFilter('All'); setTypeFilter('Distributor'); }
+                        else if (item.id === 'customers') { setStatusFilter('All'); setTypeFilter('Customer'); }
+                        else if (item.id === 'all') { setStatusFilter('All'); setTypeFilter('All'); }
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '9px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        border: 'none',
+                        borderLeft: active ? '3px solid var(--primary)' : '3px solid transparent',
+                        background: active ? 'rgba(79, 70, 229, 0.09)' : 'transparent',
+                        color: active ? 'var(--primary)' : 'var(--text-main)',
+                        fontWeight: active ? 800 : 600,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.16s ease',
+                        textAlign: 'left'
+                      }}
+                      onMouseEnter={e => {
+                        if (!active) e.currentTarget.style.background = 'rgba(120, 90, 40, 0.04)';
+                      }}
+                      onMouseLeave={e => {
+                        if (!active) e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+                        <Icon size={17} color={active ? 'var(--primary)' : (item.color || '#64748b')} />
+                        <span style={{ lineHeight: 1.25 }}>{item.label}</span>
+                      </div>
+
+                      {item.badge !== null && item.badge !== undefined && (
+                        <span style={{
+                          fontSize: '0.66rem',
+                          fontWeight: 800,
+                          padding: '1.5px 6.5px',
+                          borderRadius: 'var(--radius-full)',
+                          background: active ? item.color : '#f1f5f9',
+                          color: active ? '#ffffff' : '#475569'
+                        }}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -1344,55 +1397,86 @@ export const AdminPanel = () => {
                 </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {navMenuItems.map(item => {
-                  const active = activeTab === item.id;
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        setActiveTab(item.id);
-                        setMobileSidebarOpen(false);
-                        if (item.id === 'pending') { setStatusFilter('Pending'); setTypeFilter('Distributor'); }
-                        else if (item.id === 'distributors') { setStatusFilter('All'); setTypeFilter('Distributor'); }
-                        else if (item.id === 'customers') { setStatusFilter('All'); setTypeFilter('Customer'); }
-                        else if (item.id === 'all') { setStatusFilter('All'); setTypeFilter('All'); }
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '12px 14px',
-                        borderRadius: 'var(--radius-md)',
-                        border: 'none',
-                        background: active ? 'rgba(79, 70, 229, 0.1)' : 'transparent',
-                        color: active ? 'var(--primary)' : 'var(--text-main)',
-                        fontWeight: active ? 800 : 600,
-                        fontSize: '0.9rem',
-                        cursor: 'pointer',
-                        textAlign: 'left'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Icon size={18} color={active ? 'var(--primary)' : '#64748b'} />
-                        <span>{item.label}</span>
-                      </div>
-                      {item.badge !== null && item.badge > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: 'calc(100vh - 170px)', overflowY: 'auto' }}>
+                {navMenuSections.map(section => (
+                  <div key={section.title} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '4px 8px 4px 8px',
+                      fontSize: '0.66rem',
+                      fontWeight: 800,
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.07em'
+                    }}>
+                      <span>{section.title}</span>
+                      {section.badge && (
                         <span style={{
-                          fontSize: '0.72rem',
+                          fontSize: '0.58rem',
                           fontWeight: 800,
-                          padding: '2px 8px',
-                          borderRadius: 'var(--radius-full)',
-                          background: active ? item.color : '#e2e8f0',
-                          color: active ? '#ffffff' : '#475569'
+                          padding: '1px 5px',
+                          borderRadius: '4px',
+                          background: 'rgba(79, 70, 229, 0.09)',
+                          color: section.badgeColor
                         }}>
-                          {item.badge}
+                          {section.badge}
                         </span>
                       )}
-                    </button>
-                  );
-                })}
+                    </div>
+
+                    {section.items.map(item => {
+                      const active = activeTab === item.id;
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setActiveTab(item.id);
+                            setMobileSidebarOpen(false);
+                            if (item.id === 'pending') { setStatusFilter('Pending'); setTypeFilter('Distributor'); }
+                            else if (item.id === 'distributors') { setStatusFilter('All'); setTypeFilter('Distributor'); }
+                            else if (item.id === 'customers') { setStatusFilter('All'); setTypeFilter('Customer'); }
+                            else if (item.id === 'all') { setStatusFilter('All'); setTypeFilter('All'); }
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '10px 12px',
+                            borderRadius: 'var(--radius-md)',
+                            border: 'none',
+                            borderLeft: active ? '3px solid var(--primary)' : '3px solid transparent',
+                            background: active ? 'rgba(79, 70, 229, 0.1)' : 'transparent',
+                            color: active ? 'var(--primary)' : 'var(--text-main)',
+                            fontWeight: active ? 800 : 600,
+                            fontSize: '0.88rem',
+                            cursor: 'pointer',
+                            textAlign: 'left'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Icon size={18} color={active ? 'var(--primary)' : (item.color || '#64748b')} />
+                            <span>{item.label}</span>
+                          </div>
+                          {item.badge !== null && item.badge !== undefined && (
+                            <span style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-full)',
+                              background: active ? item.color : '#f1f5f9',
+                              color: active ? '#ffffff' : '#475569'
+                            }}>
+                              {item.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -2867,42 +2951,60 @@ export const AdminPanel = () => {
         {/* ========= VIEW: MULTI-LEVEL DISTRIBUTION NETWORK ======= */}
         {/* ======================================================== */}
         {activeTab === 'distribution-network' && (
-          <SuperAdminDistributionNetwork />
+          <div>
+            <DistributionNavHeader activeTab={activeTab} onSelectTab={setActiveTab} />
+            <SuperAdminDistributionNetwork onNavigateTab={setActiveTab} />
+          </div>
         )}
 
         {/* ======================================================== */}
         {/* ======= VIEW: GEOGRAPHICAL MANAGEMENT (INDIA MASTER) ==== */}
         {/* ======================================================== */}
         {activeTab === 'geographical-management' && (
-          <GeographicalManagement />
+          <div>
+            <DistributionNavHeader activeTab={activeTab} onSelectTab={setActiveTab} />
+            <GeographicalManagement />
+          </div>
         )}
 
         {/* ======================================================== */}
         {/* ======== VIEW: WHOLESALE INVOICES & SETTLEMENTS ======== */}
         {/* ======================================================== */}
         {activeTab === 'distribution-payments' && (
-          <DistributionPaymentManagement />
+          <div>
+            <DistributionNavHeader activeTab={activeTab} onSelectTab={setActiveTab} />
+            <DistributionPaymentManagement />
+          </div>
         )}
 
         {/* ======================================================== */}
         {/* ====== VIEW: DISTRIBUTOR PAYMENT RELIABILITY =========== */}
         {/* ======================================================== */}
         {activeTab === 'reliability-scores' && (
-          <PaymentReliabilityView />
+          <div>
+            <DistributionNavHeader activeTab={activeTab} onSelectTab={setActiveTab} />
+            <PaymentReliabilityView />
+          </div>
         )}
 
         {/* ======================================================== */}
         {/* ============ VIEW: HIERARCHICAL REPORTS ================= */}
         {/* ======================================================== */}
         {activeTab === 'distribution-reports' && (
-          <DistributionReports />
+          <div>
+            <DistributionNavHeader activeTab={activeTab} onSelectTab={setActiveTab} />
+            <DistributionReports />
+          </div>
         )}
 
         {/* ======================================================== */}
         {/* ============ VIEW: DISTRIBUTION AUDIT TRAIL ============ */}
         {/* ======================================================== */}
         {activeTab === 'distribution-audit' && (
-          <DistributionAuditLogs />
+          <div>
+            <DistributionNavHeader activeTab={activeTab} onSelectTab={setActiveTab} />
+            <DistributionAuditLogs />
+          </div>
         )}
 
         {activeTab === 'advertisements' && (
