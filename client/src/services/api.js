@@ -735,6 +735,78 @@ export const api = {
 
     getDistributorInterestHistory: (distributorId) =>
       request(`/credits/admin/interest-history/${encodeURIComponent(distributorId)}`, { method: 'GET' })
+  },
+
+  distribution: {
+    // Geography
+    getStates: () => request('/distribution/geo/states'),
+    getDistricts: (stateId) => request(`/distribution/geo/districts/${stateId}`),
+    getAreas: (districtId) => request(`/distribution/geo/areas/${districtId}`),
+    createDistrict: (data) => request('/distribution/geo/districts', { method: 'POST', body: JSON.stringify(data) }),
+    createArea: (data) => request('/distribution/geo/areas', { method: 'POST', body: JSON.stringify(data) }),
+
+    // Network Tree
+    getNetworkTree: () => request('/distribution/network/tree'),
+
+    // Dashboards
+    getSuperAdminDashboard: () => request('/distribution/dashboard/super-admin'),
+    getStateDashboard: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return request(`/distribution/dashboard/state${q ? `?${q}` : ''}`);
+    },
+    getDistrictDashboard: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return request(`/distribution/dashboard/district${q ? `?${q}` : ''}`);
+    },
+    getAreaDashboard: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return request(`/distribution/dashboard/area${q ? `?${q}` : ''}`);
+    },
+    getRetailerDashboard: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return request(`/distribution/dashboard/retailer${q ? `?${q}` : ''}`);
+    },
+
+    // Accounts CRUD
+    getAccounts: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return request(`/distribution/accounts${q ? `?${q}` : ''}`);
+    },
+    createAccount: (data) => request('/distribution/accounts/create', { method: 'POST', body: JSON.stringify(data) }),
+    updateAccount: (id, data) => request(`/distribution/accounts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    updateAccountStatus: (id, data) => request(`/distribution/accounts/${id}/status`, { method: 'PATCH', body: JSON.stringify(data) }),
+    resetPassword: (id) => request(`/distribution/accounts/${id}/reset-password`, { method: 'POST' }),
+    transferTerritory: (id, data) => request(`/distribution/accounts/${id}/transfer`, { method: 'POST', body: JSON.stringify(data) }),
+
+    // Invoices & Payments
+    getInvoices: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return request(`/distribution/invoices${q ? `?${q}` : ''}`);
+    },
+    createInvoice: (data) => request('/distribution/invoices', { method: 'POST', body: JSON.stringify(data) }),
+    getPayments: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return request(`/distribution/payments${q ? `?${q}` : ''}`);
+    },
+    recordPayment: (data) => request('/distribution/payments/record', { method: 'POST', body: JSON.stringify(data) }),
+    getSettlements: () => request('/distribution/settlements'),
+
+    // Reliability
+    getReliabilityScores: () => request('/distribution/reliability-scores'),
+    getUserReliability: (userId) => request(`/distribution/reliability/${userId}`),
+
+    // Reports & Logs
+    getReportsSummary: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return request(`/distribution/reports/summary${q ? `?${q}` : ''}`);
+    },
+    getAuditLogs: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return request(`/distribution/audit-logs${q ? `?${q}` : ''}`);
+    },
+
+    // Password Change
+    changePassword: (data) => request('/distribution/change-password', { method: 'POST', body: JSON.stringify(data) })
   }
 };
 

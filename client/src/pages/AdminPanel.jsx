@@ -16,7 +16,13 @@ import { AdminProductWarranty } from '../components/warranty/AdminProductWarrant
 import { AdminChatManagement } from '../components/chat/AdminChatManagement';
 import AdminMediaGallery from '../components/media/AdminMediaGallery';
 import AdminDistributorCredit from '../components/credit/AdminDistributorCredit';
-import { MessageSquare } from 'lucide-react';
+import SuperAdminDistributionNetwork from '../components/distribution/SuperAdminDistributionNetwork';
+import GeographicalManagement from '../components/distribution/GeographicalManagement';
+import DistributionPaymentManagement from '../components/distribution/DistributionPaymentManagement';
+import PaymentReliabilityView from '../components/distribution/PaymentReliabilityView';
+import DistributionReports from '../components/distribution/DistributionReports';
+import DistributionAuditLogs from '../components/distribution/DistributionAuditLogs';
+import { MessageSquare, Network, MapPin, Award, Receipt } from 'lucide-react';
 
 export const AdminPanel = () => {
   const { user, navigate, logout } = useAuth();
@@ -1112,6 +1118,12 @@ export const AdminPanel = () => {
     { id: 'pending', label: 'Pending Approvals', icon: Clock, badge: metrics?.distributors?.pending ?? 0, color: 'var(--status-pending)' },
     { id: 'distributors', label: 'Distributors', icon: Building2, badge: metrics?.distributors?.approved ?? 0, color: 'var(--distributor-accent)' },
     { id: 'distributor-credit', label: 'Distributor Credit System', icon: CreditCard, badge: null, color: '#0284c7' },
+    { id: 'distribution-network', label: 'Multi-Level Distribution', icon: Network, badge: null, color: '#4f46e5' },
+    { id: 'geographical-management', label: 'Geographical Master (India)', icon: MapPin, badge: null, color: '#059669' },
+    { id: 'distribution-payments', label: 'Wholesale Settlements', icon: Receipt, badge: null, color: '#d97706' },
+    { id: 'reliability-scores', label: 'Payment Reliability', icon: Award, badge: null, color: '#7c3aed' },
+    { id: 'distribution-reports', label: 'Territory Reports', icon: FileText, badge: null, color: '#0284c7' },
+    { id: 'distribution-audit', label: 'Distribution Audit Trail', icon: ShieldCheck, badge: null, color: '#475569' },
     { id: 'customers', label: 'Customers', icon: Users, badge: metrics?.customers?.active ?? 0, color: 'var(--customer-accent)' },
     { id: 'products', label: 'Product Management', icon: Package, badge: allProducts?.length ?? 0, color: '#0d9488' },
     { id: 'warranties', label: 'Product Warranty', icon: ShieldCheck, badge: null, color: '#0284c7' },
@@ -2849,6 +2861,48 @@ export const AdminPanel = () => {
         {/* ======================================================== */}
         {activeTab === 'distributor-credit' && (
           <AdminDistributorCredit />
+        )}
+
+        {/* ======================================================== */}
+        {/* ========= VIEW: MULTI-LEVEL DISTRIBUTION NETWORK ======= */}
+        {/* ======================================================== */}
+        {activeTab === 'distribution-network' && (
+          <SuperAdminDistributionNetwork />
+        )}
+
+        {/* ======================================================== */}
+        {/* ======= VIEW: GEOGRAPHICAL MANAGEMENT (INDIA MASTER) ==== */}
+        {/* ======================================================== */}
+        {activeTab === 'geographical-management' && (
+          <GeographicalManagement />
+        )}
+
+        {/* ======================================================== */}
+        {/* ======== VIEW: WHOLESALE INVOICES & SETTLEMENTS ======== */}
+        {/* ======================================================== */}
+        {activeTab === 'distribution-payments' && (
+          <DistributionPaymentManagement />
+        )}
+
+        {/* ======================================================== */}
+        {/* ====== VIEW: DISTRIBUTOR PAYMENT RELIABILITY =========== */}
+        {/* ======================================================== */}
+        {activeTab === 'reliability-scores' && (
+          <PaymentReliabilityView />
+        )}
+
+        {/* ======================================================== */}
+        {/* ============ VIEW: HIERARCHICAL REPORTS ================= */}
+        {/* ======================================================== */}
+        {activeTab === 'distribution-reports' && (
+          <DistributionReports />
+        )}
+
+        {/* ======================================================== */}
+        {/* ============ VIEW: DISTRIBUTION AUDIT TRAIL ============ */}
+        {/* ======================================================== */}
+        {activeTab === 'distribution-audit' && (
+          <DistributionAuditLogs />
         )}
 
         {activeTab === 'advertisements' && (

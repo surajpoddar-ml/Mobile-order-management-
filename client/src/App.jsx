@@ -6,6 +6,7 @@ import { LandingPage } from './pages/LandingPage';
 import { AuthPage } from './pages/AuthPage';
 import { CustomerPortal } from './pages/CustomerPortal';
 import { DistributorPortal } from './pages/DistributorPortal';
+import DistributionHierarchyPortal from './pages/DistributionHierarchyPortal';
 import { AdminPanel } from './pages/AdminPanel';
 import { WarrantyVerificationPage } from './pages/WarrantyVerificationPage';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -81,8 +82,12 @@ function AppContent() {
 
     if (path === '/portal/distributor' || path === '/distributor') {
       return (
-        <ProtectedRoute allowedRoles={['Distributor']}>
-          <DistributorPortal />
+        <ProtectedRoute allowedRoles={['Distributor', 'Retailer']}>
+          {user?.distributorLevel || user?.userType === 'Retailer' ? (
+            <DistributionHierarchyPortal user={user} onLogout={() => navigate('/login')} />
+          ) : (
+            <DistributorPortal />
+          )}
         </ProtectedRoute>
       );
     }

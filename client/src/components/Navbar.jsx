@@ -313,7 +313,7 @@ export const Navbar = () => {
             <div
               onClick={() => {
                 if (user?.role === 'Customer' || user?.userType === 'Customer') navigate('/customer');
-                else if (user?.role === 'Distributor' || user?.userType === 'Distributor') navigate('/distributor');
+                else if (user?.role === 'Distributor' || user?.userType === 'Distributor' || user?.userType === 'Retailer' || user?.distributorLevel) navigate('/distributor');
                 else if (user?.role === 'Admin' || user?.userType === 'Admin') navigate('/admin');
                 else navigate('/');
               }}
@@ -451,7 +451,7 @@ export const Navbar = () => {
                       onClick={() => {
                         setUserDropdownOpen(false);
                         if (user.userType === 'Customer') navigate('/portal/customer');
-                        else if (user.userType === 'Distributor') navigate('/portal/distributor');
+                        else if (user.userType === 'Distributor' || user.userType === 'Retailer' || user.distributorLevel) navigate('/portal/distributor');
                         else if (user.userType === 'Admin') navigate('/admin');
                       }}
                       style={{
@@ -617,7 +617,7 @@ export const Navbar = () => {
           <button
             onClick={() => {
               if (user?.role === 'Customer' || user?.userType === 'Customer') navigate('/customer');
-              else if (user?.role === 'Distributor' || user?.userType === 'Distributor') navigate('/distributor');
+              else if (user?.role === 'Distributor' || user?.userType === 'Distributor' || user?.userType === 'Retailer' || user?.distributorLevel) navigate('/distributor');
               else if (user?.role === 'Admin' || user?.userType === 'Admin') navigate('/admin');
               else navigate('/');
             }}
@@ -751,7 +751,7 @@ export const Navbar = () => {
                     onClick={() => {
                       setMobileMenuOpen(false);
                       if (user.userType === 'Customer') navigate('/portal/customer');
-                      else if (user.userType === 'Distributor') navigate('/portal/distributor');
+                      else if (user.userType === 'Distributor' || user.userType === 'Retailer' || user.distributorLevel) navigate('/portal/distributor');
                       else if (user.userType === 'Admin') navigate('/admin');
                     }}
                     className="btn btn-primary btn-sm"

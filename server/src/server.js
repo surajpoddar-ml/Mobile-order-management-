@@ -18,6 +18,7 @@ import customerWarrantyRouter, { adminWarrantyRouter } from './routes/warrantyRo
 import chatRoutes from './routes/chatRoutes.js';
 import imageRoutes, { serveImageHandler } from './routes/imageRoutes.js';
 import creditRoutes from './routes/creditRoutes.js';
+import distributionRoutes from './routes/distributionRoutes.js';
 import { initSocketIO } from './services/socketService.js';
 import { seedDatabase } from './database/seed.js';
 import { startCreditInterestScheduler } from './services/creditInterestService.js';
@@ -99,6 +100,7 @@ app.use('/api/rewards', rewardRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/credits', creditRoutes);
+app.use('/api/distribution', distributionRoutes);
 app.get('/images/:filename', serveImageHandler);
 app.use('/api/images', imageRoutes);
 app.use('/api/admin/warranties', adminWarrantyRouter);

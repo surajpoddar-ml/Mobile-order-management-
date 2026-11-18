@@ -817,6 +817,14 @@ export const initDb = async () => {
     // Ignore
   }
 
+  // Initialize multi-level distribution system tables & Indian geographical master data
+  try {
+    const { initDistributionTables } = await import('./distributionDb.js');
+    await initDistributionTables();
+  } catch (distErr) {
+    console.error('[DISTRIBUTION DB ERROR] Failed to initialize distribution tables:', distErr.message);
+  }
+
   console.log('MySQL database tables verified and ready.');
 };
 

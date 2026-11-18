@@ -475,13 +475,18 @@ router.post('/login', async (req, res) => {
     }
 
     // Verify account type if the user explicitly submitted under a specific portal tab
+    const isDistributorGroup = user.userType === 'Distributor' || user.userType === 'Retailer' || ['StateDistributor', 'DistrictDistributor', 'AreaDistributor', 'Retailer'].includes(user.distributorLevel);
     if (requestedPortal && requestedPortal !== 'Any' && requestedPortal !== user.userType && user.userType !== 'Admin') {
-      return res.status(403).json({
-        success: false,
-        mismatchedRole: true,
-        userType: user.userType,
-        message: `This account is registered as a ${user.userType}. Please switch to the ${user.userType} login tab.`
-      });
+      if (requestedPortal === 'Distributor' && isDistributorGroup) {
+        // Permitted: Multi-level distributors & retailers log in via Distributor portal
+      } else {
+        return res.status(403).json({
+          success: false,
+          mismatchedRole: true,
+          userType: user.userType,
+          message: `This account is registered as a ${user.userType}. Please switch to the ${user.userType} login tab.`
+        });
+      }
     }
 
     // Role-specific account status verification

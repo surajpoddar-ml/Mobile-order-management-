@@ -49,7 +49,12 @@ export const ProtectedRoute = ({ allowedRoles = [], children }) => {
     );
   }
 
-  if (!allowedRoles.includes(user.userType)) {
+  const isAllowed = 
+    allowedRoles.includes(user.userType) ||
+    (user.distributorLevel && allowedRoles.includes(user.distributorLevel)) ||
+    (allowedRoles.includes('Distributor') && (user.userType === 'Retailer' || ['StateDistributor', 'DistrictDistributor', 'AreaDistributor', 'Retailer'].includes(user.distributorLevel)));
+
+  if (!isAllowed) {
     const userPortal =
       user.userType === 'Customer' ? '/portal/customer' :
       user.userType === 'Distributor' ? '/portal/distributor' : '/admin';

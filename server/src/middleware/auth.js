@@ -90,7 +90,14 @@ export const requireRole = (roles = []) => {
           message: 'Unauthorized. Authentication required.'
         });
       }
-      if (!roles.includes(req.user.userType)) {
+      const userRole = req.user.userType;
+      const userLevel = req.user.distributorLevel;
+      const hasPermission = 
+        roles.includes(userRole) || 
+        (userLevel && roles.includes(userLevel)) ||
+        (roles.includes('Distributor') && (userRole === 'Distributor' || ['StateDistributor', 'DistrictDistributor', 'AreaDistributor'].includes(userLevel)));
+
+      if (!hasPermission) {
         return res.status(403).json({
           success: false,
           message: `Forbidden. Access restricted to [${roles.join(', ')}] only.`
