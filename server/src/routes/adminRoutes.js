@@ -652,9 +652,9 @@ router.get('/users/:id/audits', async (req, res) => {
 
     const logs = await queryAll(
       `SELECT * FROM audit_logs 
-       WHERE targetUserId = ? OR targetAccount = ?
+       WHERE targetUserId = ? OR targetAccount = ? OR entityId = ?
        ORDER BY id DESC LIMIT 50`,
-      [targetUser.userId, targetUser.userId]
+      [targetUser.userId, targetUser.userId, id]
     );
 
     return res.status(200).json({
