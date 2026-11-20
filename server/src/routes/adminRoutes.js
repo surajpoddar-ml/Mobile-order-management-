@@ -18,13 +18,13 @@ const resolveAdminProfileUploadDir = () => {
   if (process.env.IMAGE_UPLOAD_DIR) {
     const customDir = path.resolve(process.env.IMAGE_UPLOAD_DIR, 'profiles');
     if (!fs.existsSync(customDir)) {
-      try { fs.mkdirSync(customDir, { recursive: true }); } catch (e) {}
+      try { fs.mkdirSync(customDir, { recursive: true }); } catch (e) { }
     }
     return customDir;
   }
   const defaultDir = path.resolve(__dirname, '../../uploads/profiles');
   if (!fs.existsSync(defaultDir)) {
-    try { fs.mkdirSync(defaultDir, { recursive: true }); } catch (e) {}
+    try { fs.mkdirSync(defaultDir, { recursive: true }); } catch (e) { }
   }
   return defaultDir;
 };
@@ -261,7 +261,7 @@ const handleApproveUser = async (req, res) => {
         details: { applicantId: applicant.id, userId: applicant.userId, role: applicant.userType, name: applicant.fullName },
         ipAddress: req.ip
       });
-    } catch (e) {}
+    } catch (e) { }
 
     // Notify user of approval
     const roleTitle = applicant.userType === 'Retailer' ? 'Retailer' : 'Distributor';
@@ -325,7 +325,7 @@ const handleRejectUser = async (req, res) => {
         details: { applicantId: applicant.id, userId: applicant.userId, role: applicant.userType, reason },
         ipAddress: req.ip
       });
-    } catch (e) {}
+    } catch (e) { }
 
     // Notify user of rejection
     const roleTitle = applicant.userType === 'Retailer' ? 'Retailer' : 'Distributor';
@@ -391,7 +391,7 @@ router.patch('/users/:id/suspend', async (req, res) => {
         details: { targetUserId: targetUser.id, userId: targetUser.userId, role: targetUser.userType, reason },
         ipAddress: req.ip
       });
-    } catch (e) {}
+    } catch (e) { }
 
     // Notify user of suspension
     await createNotification({
@@ -452,7 +452,7 @@ router.patch('/users/:id/activate', async (req, res) => {
         details: { targetUserId: targetUser.id, userId: targetUser.userId, role: targetUser.userType },
         ipAddress: req.ip
       });
-    } catch (e) {}
+    } catch (e) { }
 
     // Notify user of activation
     await createNotification({
@@ -566,7 +566,7 @@ router.put('/users/:id', async (req, res) => {
         remarks: `Admin updated account information for ${updated.fullName} (${existing.userId})`,
         ipAddress: req.ip
       });
-    } catch (e) {}
+    } catch (e) { }
 
     return res.status(200).json({
       success: true,
@@ -656,7 +656,7 @@ router.post('/users/:id/photo', adminProfileUpload.single('photo'), async (req, 
         updatedValues: { avatarS3Key: uploadResult.s3Key, avatarUrl: uploadResult.displayUrl },
         ipAddress: req.ip
       });
-    } catch (e) {}
+    } catch (e) { }
 
     return res.status(200).json({
       success: true,
@@ -746,8 +746,8 @@ router.post('/users/:id/reset-password', async (req, res) => {
     }
 
     // Generate random 8-character password if not provided
-    const tempPassword = newPassword && newPassword.trim() 
-      ? newPassword.trim() 
+    const tempPassword = newPassword && newPassword.trim()
+      ? newPassword.trim()
       : `Mws@${crypto.randomBytes(3).toString('hex')}!`;
 
     const salt = await bcrypt.genSalt(10);
@@ -770,7 +770,7 @@ router.post('/users/:id/reset-password', async (req, res) => {
         details: { targetUserId: targetUser.id, userId: targetUser.userId },
         ipAddress: req.ip
       });
-    } catch (e) {}
+    } catch (e) { }
 
     return res.status(200).json({
       success: true,
@@ -839,7 +839,7 @@ router.delete('/users/:id', async (req, res) => {
         details: { deletedUser: targetUser.fullName, email: targetUser.email, userId: targetUser.userId },
         ipAddress: req.ip
       });
-    } catch (e) {}
+    } catch (e) { }
 
     return res.status(200).json({
       success: true,
