@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import AdvertisementBoard from '../components/AdvertisementBoard';
 import PromotionalSticker from '../components/PromotionalSticker';
+import UserProfileCard from '../components/UserProfileCard';
+import UserProfileModal from '../components/UserProfileModal';
 import api, { getMediaUrl, getProductFallbackImage, getCategoryFallbackImage } from '../services/api';
 import {
   Building2,
@@ -44,6 +46,7 @@ export const DistributorPortal = () => {
   } = useCart();
 
   const [activeTab, setActiveTab] = useState('catalog');
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -265,77 +268,22 @@ export const DistributorPortal = () => {
       {/* ====== 1. AD DISPLAY TV VIEWER (CONTROLLABLE BY ADMIN) ====== */}
       <AdvertisementBoard />
 
-      {/* ====== 2. DISTRIBUTOR IDENTITY & AVAILABLE CREDIT QUICK STATUS BAR ====== */}
-      <section style={{
-        maxWidth: '1240px',
-        margin: '10px auto 4px auto',
-        padding: '0 12px'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '10px',
-          padding: '10px 16px',
-          background: '#ffffff',
-          borderRadius: '12px',
-          border: '1px solid rgba(2, 132, 199, 0.22)',
-          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{
-              padding: '3px 9px',
-              borderRadius: '6px',
-              background: '#0284c7',
-              color: '#ffffff',
-              fontSize: '0.75rem',
-              fontWeight: 800,
-              fontFamily: 'monospace',
-              letterSpacing: '0.5px'
-            }}>
-              ID: {user?.userId || 'DISTRIBUTOR'}
-            </span>
-            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a' }}>
-              {user?.businessName || user?.fullName}
-            </span>
-            <span style={{
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              padding: '2px 8px',
-              borderRadius: '10px',
-              background: 'rgba(2, 132, 199, 0.1)',
-              color: '#0284c7'
-            }}>
-              Verified Wholesale Account
-            </span>
-          </div>
+      {/* ====== 2. DISTRIBUTOR PROFILE CARD & CREDIT BAR (EXACT REFERENCE DESIGN) ====== */}
+      <UserProfileCard
+        onOpenProfile={() => setIsProfileModalOpen(true)}
+        onCreditClick={() => setActiveTab('credit')}
+        creditAmount={distributorCredit?.availableCredit}
+      />
 
-          <div
-            onClick={() => setActiveTab('credit')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.12) 100%)',
-              border: '1.5px solid rgba(16, 185, 129, 0.35)',
-              padding: '5px 14px',
-              borderRadius: '24px',
-              transition: 'all 0.2s ease'
-            }}
-            title="Click to view full credit ledger"
-          >
-            <CreditCard size={16} color="#059669" />
-            <span style={{ fontSize: '0.78rem', color: '#065f46', fontWeight: 700 }}>
-              Available Credit:
-            </span>
-            <span style={{ fontSize: '0.98rem', fontWeight: 900, color: '#059669' }}>
-              ₹{(distributorCredit?.availableCredit ?? 0).toLocaleString('en-IN')}
-            </span>
-          </div>
-        </div>
-      </section>
+      {/* User Personal Profile Details Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onCreditClick={() => {
+          setIsProfileModalOpen(false);
+          setActiveTab('credit');
+        }}
+      />
 
       {/* ====== 3. FIVE EVENLY SPACED NAVIGATION CARDS: PRODUCT CATALOG, MY ORDERS, CREDIT BALANCE, MY REWARD, LIVE CHAT ====== */}
       <section className="portal-header-section" style={{

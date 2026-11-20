@@ -1,10 +1,61 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireRole } from '../middleware/auth.js';
 import { createNotification } from '../services/notificationService.js';
-import { recordAuditLog } from '../services/auditService.js';
+import { recordAuditLog, getAuditLogs } from '../services/auditService.js';
+import { uploadFileToS3 } from '../services/s3Service.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const resolveAdminProfileUploadDir = () => {
+  if (process.env.IMAGE_UPLOAD_DIR) {
+    const customDir = path.resolve(process.env.IMAGE_UPLOAD_DIR, 'profiles');
+    if (!fs.existsSync(customDir)) {
+      try { fs.mkdirSync(customDir, { recursive: true }); } catch (e) {}
+    }
+    return customDir;
+  }
+  const defaultDir = path.resolve(__dirname, '../../uploads/profiles');
+  if (!fs.existsSync(defaultDir)) {
+    try { fs.mkdirSync(defaultDir, { recursive: true }); } catch (e) {}
+  }
+  return defaultDir;
+};
+
+const adminProfileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, resolveAdminProfileUploadDir());
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    const safeBase = `profile_${Date.now()}_${crypto.randomBytes(3).toString('hex')}${ext}`;
+    cb(null, safeBase);
+  }
+});
+
+const adminProfileFilter = (req, file, cb) => {
+  const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (allowed.includes(file.mimetype.toLowerCase())) {
+    cb(null, true);
+  } else {
+    const error = new Error('Invalid file format. Only JPG, JPEG, PNG, and WEBP profile photos are supported.');
+    error.status = 400;
+    cb(error, false);
+  }
+};
+
+const adminProfileUpload = multer({
+  storage: adminProfileStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: adminProfileFilter
+});
 
 const router = express.Router();
 
@@ -451,7 +502,8 @@ router.put('/users/:id', async (req, res) => {
       pincode,
       address,
       panVatNumber,
-      accountStatus
+      accountStatus,
+      avatarUrl
     } = req.body;
 
     const now = new Date().toISOString();
@@ -473,6 +525,7 @@ router.put('/users/:id', async (req, res) => {
         address = COALESCE(?, address),
         panVatNumber = COALESCE(?, panVatNumber),
         accountStatus = COALESCE(?, accountStatus),
+        avatarUrl = COALESCE(?, avatarUrl),
         updatedDate = ?
       WHERE id = ?`,
       [
@@ -491,6 +544,7 @@ router.put('/users/:id', async (req, res) => {
         address?.trim() || null,
         panVatNumber?.trim() || null,
         accountStatus || null,
+        avatarUrl?.trim() || null,
         now,
         id
       ]
@@ -504,9 +558,12 @@ router.put('/users/:id', async (req, res) => {
         actionType: 'UPDATE_ACCOUNT',
         entityType: existing.userType.toUpperCase(),
         entityId: existing.id,
-        performedByUserId: req.user.id,
-        performedByName: req.user.fullName || req.user.email,
-        details: { updatedFields: req.body },
+        targetAccount: existing.userId,
+        targetUserId: existing.userId,
+        performedBy: req.user.fullName || req.user.email,
+        userRole: 'Admin',
+        updatedValues: req.body,
+        remarks: `Admin updated account information for ${updated.fullName} (${existing.userId})`,
         ipAddress: req.ip
       });
     } catch (e) {}
@@ -519,6 +576,96 @@ router.put('/users/:id', async (req, res) => {
   } catch (error) {
     console.error('Error updating user:', error);
     return res.status(500).json({ success: false, message: 'Failed to update user account.' });
+  }
+});
+
+/**
+ * 5b. Admin Upload / Update User Profile Photo
+ */
+router.post('/users/:id/photo', adminProfileUpload.single('photo'), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const targetUser = await queryGet('SELECT * FROM users WHERE id = ?', [id]);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please select an image file to upload.' });
+    }
+
+    let finalUrl = `/uploads/profiles/${req.file.filename}`;
+    try {
+      const s3Result = await uploadFileToS3({
+        filePath: req.file.path,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        folder: 'profiles'
+      });
+      if (s3Result && s3Result.url) {
+        finalUrl = s3Result.url;
+      }
+    } catch (s3Err) {
+      console.warn('[ADMIN S3 UPLOAD] Falling back to local storage URL:', s3Err.message);
+    }
+
+    const now = new Date().toISOString();
+    await queryRun('UPDATE users SET avatarUrl = ?, updatedDate = ? WHERE id = ?', [finalUrl, now, id]);
+    const updated = await queryGet('SELECT * FROM users WHERE id = ?', [id]);
+
+    try {
+      await recordAuditLog({
+        actionType: 'ADMIN_UPDATE_PROFILE_PHOTO',
+        entityType: targetUser.userType.toUpperCase(),
+        targetAccount: targetUser.userId,
+        targetUserId: targetUser.userId,
+        performedBy: req.user.fullName || req.user.email,
+        userRole: 'Admin',
+        remarks: `Admin updated profile photo for ${targetUser.fullName}`,
+        updatedValues: { avatarUrl: finalUrl },
+        ipAddress: req.ip
+      });
+    } catch (e) {}
+
+    return res.status(200).json({
+      success: true,
+      message: `Profile photo for ${targetUser.fullName} updated successfully!`,
+      avatarUrl: finalUrl,
+      user: updated
+    });
+  } catch (error) {
+    console.error('Admin profile photo upload error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Failed to upload photo.' });
+  }
+});
+
+/**
+ * 5c. Admin Retrieve User Profile Modification Audit History
+ */
+router.get('/users/:id/audits', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const targetUser = await queryGet('SELECT * FROM users WHERE id = ?', [id]);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    const logs = await queryAll(
+      `SELECT * FROM audit_logs 
+       WHERE targetUserId = ? OR targetAccount = ?
+       ORDER BY id DESC LIMIT 50`,
+      [targetUser.userId, targetUser.userId]
+    );
+
+    return res.status(200).json({
+      success: true,
+      userId: targetUser.userId,
+      fullName: targetUser.fullName,
+      audits: logs
+    });
+  } catch (error) {
+    console.error('Error fetching user audits:', error);
+    return res.status(500).json({ success: false, message: 'Failed to retrieve modification audit logs.' });
   }
 });
 

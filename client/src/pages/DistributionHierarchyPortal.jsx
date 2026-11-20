@@ -5,11 +5,14 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import ForcePasswordChangeModal from '../components/distribution/ForcePasswordChangeModal';
+import UserProfileCard from '../components/UserProfileCard';
+import UserProfileModal from '../components/UserProfileModal';
 
 export default function DistributionHierarchyPortal({ user, onLogout }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const level = user?.distributorLevel || (user?.userType === 'Retailer' ? 'Retailer' : 'StateDistributor');
 
@@ -95,6 +98,18 @@ export default function DistributionHierarchyPortal({ user, onLogout }) {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+        {/* User Profile Card (Exact Reference Design) */}
+        <UserProfileCard
+          onOpenProfile={() => setIsProfileModalOpen(true)}
+          creditAmount={data?.walletBalance || data?.creditLimit}
+        />
+
+        {/* User Personal Profile Details Modal */}
+        <UserProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+        />
+
         {error && (
           <div className="p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200 flex items-center space-x-2">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />

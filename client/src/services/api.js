@@ -181,6 +181,12 @@ export const api = {
     getMe: () =>
       request('/auth/me', {
         method: 'GET'
+      }),
+
+    uploadProfilePhoto: (formData) =>
+      request('/auth/profile/photo', {
+        method: 'POST',
+        body: formData
       })
   },
 
@@ -254,6 +260,17 @@ export const api = {
 
     getUserHistory: (id) =>
       request(`/admin/users/${id}/history`, {
+        method: 'GET'
+      }),
+
+    uploadUserPhoto: (id, formData) =>
+      request(`/admin/users/${id}/photo`, {
+        method: 'POST',
+        body: formData
+      }),
+
+    getUserAudits: (id) =>
+      request(`/admin/users/${id}/audits`, {
         method: 'GET'
       }),
 

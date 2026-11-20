@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import AdvertisementBoard from '../components/AdvertisementBoard';
 import PromotionalSticker from '../components/PromotionalSticker';
+import UserProfileCard from '../components/UserProfileCard';
+import UserProfileModal from '../components/UserProfileModal';
 import api, { getMediaUrl, getProductFallbackImage, getCategoryFallbackImage } from '../services/api';
 import {
   User,
@@ -44,6 +46,7 @@ export const CustomerPortal = () => {
   } = useCart();
 
   const [activeTab, setActiveTab] = useState('catalog');
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -229,6 +232,19 @@ export const CustomerPortal = () => {
     <div style={{ overflowX: 'hidden' }}>
       {/* ====== 1. AD DISPLAY TV VIEWER (CONTROLLABLE BY ADMIN) ====== */}
       <AdvertisementBoard />
+
+      {/* ====== 1b. CUSTOMER PROFILE CARD (EXACT REFERENCE DESIGN) ====== */}
+      {user && (
+        <UserProfileCard
+          onOpenProfile={() => setIsProfileModalOpen(true)}
+        />
+      )}
+
+      {/* User Personal Profile Details Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
 
       {/* ====== 2. THREE EVENLY SPACED NAVIGATION CARDS: PRODUCT CATALOG, MY ORDERS, MY REWARD ====== */}
       <section className="portal-header-section" style={{

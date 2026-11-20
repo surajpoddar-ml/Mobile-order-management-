@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import api from '../services/api';
+import api, { getMediaUrl } from '../services/api';
+import { UserProfileModal } from './UserProfileModal';
 import {
   Search,
   User,
@@ -50,6 +51,7 @@ export const Navbar = () => {
   } = useCart();
 
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dbCategories, setDbCategories] = useState([]);
 
@@ -253,7 +255,12 @@ export const Navbar = () => {
             </button>
           </div>
         </div>
-      </header>
+        {/* Personal Profile Details Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
+    </header>
     );
   }
 
@@ -420,8 +427,26 @@ export const Navbar = () => {
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                   className="nav-profile-circle-btn"
                   aria-label="User profile menu"
+                  style={{
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0
+                  }}
                 >
-                  <User size={18} color="#ffffff" />
+                  {user.avatarUrl ? (
+                    <img
+                      src={getMediaUrl(user.avatarUrl)}
+                      alt={user.fullName || 'User Profile'}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <User size={18} color="#ffffff" />
+                  )}
                 </button>
 
                 {/* User Dropdown */}
@@ -431,7 +456,7 @@ export const Navbar = () => {
                       position: 'absolute',
                       top: 'calc(100% + 8px)',
                       right: 0,
-                      width: '210px',
+                      width: '220px',
                       background: '#ffffff',
                       border: '1px solid #e2e8f0',
                       borderRadius: '12px',
@@ -442,10 +467,68 @@ export const Navbar = () => {
                     }}
                     onMouseLeave={() => setUserDropdownOpen(false)}
                   >
-                    <div style={{ padding: '8px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                      <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a' }}>{user.fullName}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{user.userType} Account</div>
+                    <div style={{ padding: '10px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          border: '2px solid #0284c7',
+                          overflow: 'hidden',
+                          background: '#e0f2fe',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}
+                      >
+                        {user.avatarUrl ? (
+                          <img
+                            src={getMediaUrl(user.avatarUrl)}
+                            alt={user.fullName}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <User size={18} color="#0284c7" />
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {user.shopName || user.businessName || user.fullName}
+                        </div>
+                        <div style={{ fontSize: '0.70rem', color: '#0284c7', fontWeight: 700 }}>
+                          {user.userType} Account
+                        </div>
+                      </div>
                     </div>
+
+                    {/* View Personal Profile Details Button */}
+                    <button
+                      onClick={() => {
+                        setUserDropdownOpen(false);
+                        setIsProfileModalOpen(true);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '9px 16px',
+                        background: '#f0f9ff',
+                        border: 'none',
+                        textAlign: 'left',
+                        fontSize: '0.86rem',
+                        color: '#0369a1',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        borderBottom: '1px solid #f1f5f9'
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#e0f2fe')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '#f0f9ff')}
+                    >
+                      <User size={15} color="#0284c7" />
+                      View Personal Profile
+                    </button>
 
                     <button
                       onClick={() => {
@@ -911,6 +994,11 @@ export const Navbar = () => {
           </div>
         </div>
       )}
+      {/* Personal Profile Details Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
     </header>
   );
 };

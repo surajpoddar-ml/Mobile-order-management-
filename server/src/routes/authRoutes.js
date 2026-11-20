@@ -2,9 +2,61 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { queryGet, queryRun } from '../database/db.js';
 import { verifyToken } from '../middleware/auth.js';
 import { createNotification } from '../services/notificationService.js';
+import { uploadFileToS3 } from '../services/s3Service.js';
+import { recordAuditLog } from '../services/auditService.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const resolveProfileUploadDir = () => {
+  if (process.env.IMAGE_UPLOAD_DIR) {
+    const customDir = path.resolve(process.env.IMAGE_UPLOAD_DIR, 'profiles');
+    if (!fs.existsSync(customDir)) {
+      try { fs.mkdirSync(customDir, { recursive: true }); } catch (e) {}
+    }
+    return customDir;
+  }
+  const defaultDir = path.resolve(__dirname, '../../uploads/profiles');
+  if (!fs.existsSync(defaultDir)) {
+    try { fs.mkdirSync(defaultDir, { recursive: true }); } catch (e) {}
+  }
+  return defaultDir;
+};
+
+const profileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, resolveProfileUploadDir());
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    const safeBase = `profile_${Date.now()}_${crypto.randomBytes(3).toString('hex')}${ext}`;
+    cb(null, safeBase);
+  }
+});
+
+const profileFileFilter = (req, file, cb) => {
+  const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (allowed.includes(file.mimetype.toLowerCase())) {
+    cb(null, true);
+  } else {
+    const error = new Error('Invalid file format. Only JPG, JPEG, PNG, and WEBP profile photos are supported.');
+    error.status = 400;
+    cb(error, false);
+  }
+};
+
+const profileUpload = multer({
+  storage: profileStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: profileFileFilter
+});
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'mobile_parts_super_secret_jwt_key_2026_auth_system';
@@ -1066,6 +1118,76 @@ router.get('/me', verifyToken, async (req, res) => {
   return res.status(200).json({
     success: true,
     user: req.user
+  });
+});
+
+/**
+ * 8. Profile Photo Upload / Change for Current User
+ * Supports JPG, JPEG, PNG, WEBP, camera capture or gallery
+ */
+router.post('/profile/photo', verifyToken, profileUpload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please select an image file to upload.' });
+    }
+
+    let finalUrl = `/uploads/profiles/${req.file.filename}`;
+    try {
+      const s3Result = await uploadFileToS3({
+        filePath: req.file.path,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        folder: 'profiles'
+      });
+      if (s3Result && s3Result.url) {
+        finalUrl = s3Result.url;
+      }
+    } catch (s3Err) {
+      console.warn('[PROFILE S3 UPLOAD] Falling back to local storage URL:', s3Err.message);
+    }
+
+    const now = new Date().toISOString();
+    await queryRun(
+      'UPDATE users SET avatarUrl = ?, updatedDate = ? WHERE id = ?',
+      [finalUrl, now, req.user.id]
+    );
+
+    const updatedUser = await queryGet('SELECT * FROM users WHERE id = ?', [req.user.id]);
+    const { passwordHash: _, ...safeUser } = updatedUser;
+
+    try {
+      await recordAuditLog({
+        actionType: 'UPDATE_PROFILE_PHOTO',
+        entityType: req.user.userType ? req.user.userType.toUpperCase() : 'USER',
+        performedBy: req.user.fullName || req.user.email,
+        targetUserId: req.user.userId,
+        remarks: 'User updated profile photo'
+      });
+    } catch (e) {}
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile photo updated successfully!',
+      avatarUrl: finalUrl,
+      user: safeUser
+    });
+  } catch (error) {
+    console.error('Profile photo upload error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update profile photo.'
+    });
+  }
+});
+
+/**
+ * 9. Regular User Profile Edit Attempt
+ * Strictly blocks user from modifying registered personal details (Admin-Only policy)
+ */
+router.put('/profile', verifyToken, async (req, res) => {
+  return res.status(403).json({
+    success: false,
+    message: 'Account details are locked and administrative-controlled. Only profile photos can be changed by account holders. Please contact an administrator to request account updates.'
   });
 });
 

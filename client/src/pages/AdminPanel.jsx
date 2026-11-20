@@ -4,7 +4,7 @@ import api, { getMediaUrl, getProductFallbackImage } from '../services/api';
 import {
   ShieldCheck, Users, User, Building2, Store, Clock, CheckCircle, XCircle,
   Search, Eye, Trash2, Check, X, PauseCircle, PlayCircle, RefreshCw, Layers,
-  Film, Image as ImageIcon, Upload, Plus, ExternalLink, Sparkles,
+  Film, Image as ImageIcon, Upload, Plus, ExternalLink, Sparkles, Camera,
   LayoutDashboard, Package, Menu, Edit, ArrowLeft, AlertCircle, Key, History,
   ShoppingCart, Truck, FileText, QrCode, Calculator, Percent, Tag, EyeOff, Info, ArrowRightLeft, ToggleLeft, ToggleRight,
   FolderTree, Battery, BatteryCharging, Cable, Headphones, Shield, Smartphone, Cpu, Zap, Wallet, Gift, CreditCard
@@ -110,6 +110,10 @@ export const AdminPanel = () => {
   const [historyUser, setHistoryUser] = useState(null);
   const [userHistoryOrders, setUserHistoryOrders] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [auditModalUser, setAuditModalUser] = useState(null);
+  const [userAudits, setUserAudits] = useState([]);
+  const [loadingAudits, setLoadingAudits] = useState(false);
+  const [uploadingAdminPhoto, setUploadingAdminPhoto] = useState(false);
 
   // Product management & authority state
   const [allProducts, setAllProducts] = useState([]);
@@ -602,6 +606,44 @@ export const AdminPanel = () => {
       console.error(e);
     } finally {
       setLoadingHistory(false);
+    }
+  };
+
+  const handleViewAudits = async (u) => {
+    setAuditModalUser(u);
+    setUserAudits([]);
+    setLoadingAudits(true);
+    try {
+      const r = await api.admin.getUserAudits(u.id);
+      if (r.success && Array.isArray(r.audits)) {
+        setUserAudits(r.audits);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingAudits(false);
+    }
+  };
+
+  const handleAdminPhotoUpload = async (userId, file) => {
+    if (!file) return;
+    setUploadingAdminPhoto(true);
+    const formData = new FormData();
+    formData.append('photo', file);
+    try {
+      const r = await api.admin.uploadUserPhoto(userId, formData);
+      notify(r.message || 'Profile picture updated successfully!');
+      if (selectedUser && selectedUser.id === userId) {
+        setSelectedUser(prev => ({ ...prev, avatarUrl: r.avatarUrl }));
+      }
+      if (editingUser && editingUser.id === userId) {
+        setEditingUser(prev => ({ ...prev, avatarUrl: r.avatarUrl }));
+      }
+      loadUserData();
+    } catch (e) {
+      alert(e.message || 'Failed to upload profile photo.');
+    } finally {
+      setUploadingAdminPhoto(false);
     }
   };
 
@@ -3694,10 +3736,37 @@ export const AdminPanel = () => {
                       >
                         {/* User */}
                         <td style={{ padding: '13px 16px' }}>
-                          <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{u.fullName || u.ownerName || 'User'}</div>
-                          <div style={{ fontSize: '0.76rem', color: 'var(--text-body)' }}>{u.email}</div>
-                          {u.phoneNumber && <div style={{ fontSize: '0.74rem', color: '#0369a1' }}>📞 {u.phoneNumber}</div>}
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>{u.userId}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '50%',
+                              border: '2px solid #0284c7',
+                              overflow: 'hidden',
+                              background: '#e0f2fe',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}>
+                              {u.avatarUrl ? (
+                                <img
+                                  src={getMediaUrl(u.avatarUrl)}
+                                  alt={u.fullName}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={e => { e.target.style.display = 'none'; }}
+                                />
+                              ) : (
+                                <User size={20} color="#0284c7" />
+                              )}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{u.fullName || u.ownerName || 'User'}</div>
+                              <div style={{ fontSize: '0.76rem', color: 'var(--text-body)' }}>{u.email}</div>
+                              {u.phoneNumber && <div style={{ fontSize: '0.74rem', color: '#0369a1' }}>📞 {u.phoneNumber}</div>}
+                              <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>{u.userId}</div>
+                            </div>
+                          </div>
                         </td>
 
                         {/* Role */}
@@ -3790,6 +3859,11 @@ export const AdminPanel = () => {
                             {/* View History */}
                             <button onClick={() => handleViewHistory(u)} title="View Account Order History" className="btn btn-secondary btn-sm" style={{ padding: '5px 8px', color: '#0284c7' }}>
                               <History size={13} />
+                            </button>
+
+                            {/* View Modification Audit Trail */}
+                            <button onClick={() => handleViewAudits(u)} title="View Profile Modification History" className="btn btn-secondary btn-sm" style={{ padding: '5px 8px', color: '#7c3aed' }}>
+                              <FileText size={13} />
                             </button>
 
                             {/* Suspend / Activate */}
@@ -5351,17 +5425,74 @@ export const AdminPanel = () => {
             overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                    {selectedUser.fullName || selectedUser.ownerName || 'User Account'}
-                  </h3>
-                  <span className={`badge badge-${(selectedUser.accountStatus || 'active').toLowerCase()}`}>
-                    {selectedUser.accountStatus || 'Active'}
-                  </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ position: 'relative', width: '56px', height: '56px', flexShrink: 0 }}>
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    border: '2.5px solid #0284c7',
+                    background: '#e0f2fe',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {selectedUser.avatarUrl ? (
+                      <img
+                        src={getMediaUrl(selectedUser.avatarUrl)}
+                        alt={selectedUser.fullName}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <User size={26} color="#0284c7" />
+                    )}
+                  </div>
+                  <label
+                    title="Change account photo"
+                    style={{
+                      position: 'absolute',
+                      bottom: '-2px',
+                      right: '-2px',
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      background: '#0284c7',
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: uploadingAdminPhoto ? 'not-allowed' : 'pointer',
+                      border: '2px solid #ffffff',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                    }}
+                  >
+                    <Camera size={11} />
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/jpg"
+                      disabled={uploadingAdminPhoto}
+                      style={{ display: 'none' }}
+                      onChange={e => {
+                        if (e.target.files?.[0]) {
+                          handleAdminPhotoUpload(selectedUser.id, e.target.files[0]);
+                        }
+                      }}
+                    />
+                  </label>
                 </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-dim)' }}>
-                  User ID: {selectedUser.userId}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                      {selectedUser.fullName || selectedUser.ownerName || 'User Account'}
+                    </h3>
+                    <span className={`badge badge-${(selectedUser.accountStatus || 'active').toLowerCase()}`}>
+                      {selectedUser.accountStatus || 'Active'}
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                    User ID: {selectedUser.userId}
+                  </div>
                 </div>
               </div>
               <button onClick={() => setSelectedUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
@@ -5466,7 +5597,17 @@ export const AdminPanel = () => {
                   className="btn btn-secondary btn-sm"
                   style={{ gap: '4px', color: '#0284c7' }}
                 >
-                  <History size={13} /> History
+                  <History size={13} /> Orders
+                </button>
+                <button
+                  onClick={() => {
+                    handleViewAudits(selectedUser);
+                    setSelectedUser(null);
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  style={{ gap: '4px', color: '#7c3aed' }}
+                >
+                  <FileText size={13} /> Modification History
                 </button>
               </div>
 
@@ -5528,6 +5669,74 @@ export const AdminPanel = () => {
             </div>
 
             <form onSubmit={handleEditUserSubmit}>
+              {/* Profile Photo Upload Section */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                padding: '12px 14px',
+                background: '#f8fafc',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid #e2e8f0',
+                marginBottom: '16px'
+              }}>
+                <div style={{
+                  width: '58px',
+                  height: '58px',
+                  borderRadius: '50%',
+                  border: '2.5px solid #0284c7',
+                  background: '#e0f2fe',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  {editingUser.avatarUrl ? (
+                    <img
+                      src={getMediaUrl(editingUser.avatarUrl)}
+                      alt={editingUser.fullName}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <User size={28} color="#0284c7" />
+                  )}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a' }}>Profile Photograph</div>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', marginBottom: '8px' }}>
+                    Admin upload/change photo for this account (JPG, PNG, WEBP max 5MB)
+                  </div>
+                  <label style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#0284c7',
+                    color: '#ffffff',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    fontSize: '0.76rem',
+                    fontWeight: 700,
+                    cursor: uploadingAdminPhoto ? 'not-allowed' : 'pointer',
+                    opacity: uploadingAdminPhoto ? 0.7 : 1
+                  }}>
+                    <Camera size={13} />
+                    <span>{uploadingAdminPhoto ? 'Uploading...' : 'Upload / Change Photo'}</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/jpg"
+                      disabled={uploadingAdminPhoto}
+                      style={{ display: 'none' }}
+                      onChange={e => {
+                        if (e.target.files?.[0]) {
+                          handleAdminPhotoUpload(editingUser.id, e.target.files[0]);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '4px', color: '#374151' }}>Full Name / Contact</label>
@@ -5800,6 +6009,107 @@ export const AdminPanel = () => {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '14px', borderTop: '1px solid #f1f5f9', marginTop: '10px' }}>
               <button onClick={() => setHistoryUser(null)} className="btn btn-secondary">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* ============ MODAL: PROFILE MODIFICATION AUDIT ========= */}
+      {/* ======================================================== */}
+      {auditModalUser && (
+        <div style={modalOverlay}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: 'var(--radius-xl)',
+            maxWidth: '680px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--border-subtle)',
+            maxHeight: '85vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FileText size={18} color="#7c3aed" /> Profile Modification Audit Trail
+                </h3>
+                <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                  {auditModalUser.fullName || auditModalUser.shopName} ({auditModalUser.userId}) • {auditModalUser.userType}
+                </div>
+              </div>
+              <button onClick={() => setAuditModalUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {loadingAudits ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>Loading audit records...</div>
+              ) : userAudits.length === 0 ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
+                  No modification audit logs recorded for this account.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {userAudits.map(aud => (
+                    <div
+                      key={aud.id}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        background: '#f8fafc',
+                        fontSize: '0.82rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{
+                          fontWeight: 800,
+                          color: (aud.actionType || aud.action)?.includes('PHOTO') ? '#0284c7' : (aud.actionType || aud.action)?.includes('APPROVE') ? '#059669' : '#7c3aed',
+                          fontSize: '0.84rem'
+                        }}>
+                          {aud.actionType || aud.action || 'PROFILE_MODIFIED'}
+                        </span>
+                        <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                          {(aud.timestamp || aud.createdDate) ? new Date(aud.timestamp || aud.createdDate).toLocaleString() : 'N/A'}
+                        </span>
+                      </div>
+                      <div style={{ color: '#334155', marginBottom: '4px' }}>
+                        <strong>Modified by:</strong> {aud.performedBy || 'System / Admin'}
+                        {aud.userRole && <span style={{ marginLeft: '6px', fontSize: '0.72rem', color: '#64748b' }}>({aud.userRole})</span>}
+                      </div>
+                      {aud.remarks && (
+                        <div style={{ color: '#1e293b', fontSize: '0.8rem', marginBottom: '4px' }}>
+                          <strong>Remarks:</strong> {aud.remarks}
+                        </div>
+                      )}
+                      {(aud.updatedValues || aud.details) && (
+                        <div style={{
+                          background: '#ffffff',
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '0.74rem',
+                          color: '#475569',
+                          wordBreak: 'break-all'
+                        }}>
+                          {typeof (aud.updatedValues || aud.details) === 'object'
+                            ? JSON.stringify(aud.updatedValues || aud.details)
+                            : String(aud.updatedValues || aud.details)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '14px', borderTop: '1px solid #f1f5f9', marginTop: '10px' }}>
+              <button onClick={() => setAuditModalUser(null)} className="btn btn-secondary">Close</button>
             </div>
           </div>
         </div>
