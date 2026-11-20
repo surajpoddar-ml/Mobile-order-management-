@@ -172,6 +172,12 @@ export const api = {
         body: JSON.stringify(payload)
       }),
 
+    registerRetailer: (payload) =>
+      request('/auth/register/retailer', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+
     getMe: () =>
       request('/auth/me', {
         method: 'GET'
@@ -201,6 +207,17 @@ export const api = {
         method: 'GET'
       }),
 
+    approveUser: (id) =>
+      request(`/admin/users/${id}/approve`, {
+        method: 'PATCH'
+      }),
+
+    rejectUser: (id, reason) =>
+      request(`/admin/users/${id}/reject`, {
+        method: 'PATCH',
+        body: JSON.stringify({ reason })
+      }),
+
     approveDistributor: (id) =>
       request(`/admin/distributors/${id}/approve`, {
         method: 'PATCH'
@@ -221,6 +238,23 @@ export const api = {
     activateUser: (id) =>
       request(`/admin/users/${id}/activate`, {
         method: 'PATCH'
+      }),
+
+    updateUser: (id, data) =>
+      request(`/admin/users/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }),
+
+    resetUserPassword: (id, newPassword) =>
+      request(`/admin/users/${id}/reset-password`, {
+        method: 'POST',
+        body: JSON.stringify({ newPassword })
+      }),
+
+    getUserHistory: (id) =>
+      request(`/admin/users/${id}/history`, {
+        method: 'GET'
       }),
 
     deleteUser: (id) =>

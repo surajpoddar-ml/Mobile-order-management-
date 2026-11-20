@@ -51,9 +51,9 @@ const requireSuperAdmin = (req, res, next) => {
 
 /**
  * GET /api/distribution/geo/states
- * Returns all 28 States and 8 Union Territories with aggregate metrics
+ * Returns all 28 States and 8 Union Territories with aggregate metrics (Public for registration & admin)
  */
-router.get('/geo/states', verifyToken, async (req, res) => {
+router.get('/geo/states', async (req, res) => {
   try {
     const states = await getAllStatesWithMetrics();
     res.json({ success: true, count: states.length, data: states });
@@ -65,9 +65,9 @@ router.get('/geo/states', verifyToken, async (req, res) => {
 
 /**
  * GET /api/distribution/geo/districts/:stateId
- * Returns districts under a specific state
+ * Returns districts under a specific state (Public for registration & admin)
  */
-router.get('/geo/districts/:stateId', verifyToken, async (req, res) => {
+router.get('/geo/districts/:stateId', async (req, res) => {
   try {
     const { stateId } = req.params;
     const districts = await getDistrictsByState(stateId);
@@ -80,9 +80,9 @@ router.get('/geo/districts/:stateId', verifyToken, async (req, res) => {
 
 /**
  * GET /api/distribution/geo/areas/:districtId
- * Returns areas under a specific district
+ * Returns areas under a specific district (Public for registration & admin)
  */
-router.get('/geo/areas/:districtId', verifyToken, async (req, res) => {
+router.get('/geo/areas/:districtId', async (req, res) => {
   try {
     const { districtId } = req.params;
     const areas = await getAreasByDistrict(districtId);

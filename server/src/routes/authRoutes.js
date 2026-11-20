@@ -117,7 +117,28 @@ const isValidPhone = (phone) => {
  */
 router.post('/register/customer', async (req, res) => {
   try {
-    const { fullName, email, phoneNumber, password, profileInfo } = req.body;
+    const {
+      fullName,
+      email,
+      phoneNumber: rawPhone,
+      phone,
+      password,
+      profileInfo,
+      country = 'India',
+      state,
+      district,
+      city,
+      area,
+      locality,
+      townVillage,
+      pincode,
+      address,
+      assignedStateId,
+      assignedDistrictId,
+      assignedAreaId
+    } = req.body;
+
+    const phoneNumber = (rawPhone || phone || '').trim();
 
     if (!fullName || !email || !phoneNumber || !password) {
       return res.status(400).json({
@@ -147,12 +168,18 @@ router.post('/register/customer', async (req, res) => {
       });
     }
 
-    // Check duplicate email
-    const existing = await queryGet('SELECT id FROM users WHERE LOWER(email) = LOWER(?)', [email]);
+    // Check duplicate email or phone number
+    const existing = await queryGet(
+      'SELECT id, email, phoneNumber FROM users WHERE LOWER(email) = LOWER(?) OR phoneNumber = ?',
+      [email.trim(), phoneNumber.trim()]
+    );
     if (existing) {
+      const isEmailMatch = existing.email && existing.email.toLowerCase() === email.trim().toLowerCase();
       return res.status(409).json({
         success: false,
-        message: 'An account with this email address already exists.'
+        message: isEmailMatch
+          ? 'An account with this email address already exists.'
+          : 'An account with this phone number already exists.'
       });
     }
 
@@ -163,12 +190,38 @@ router.post('/register/customer', async (req, res) => {
     const now = new Date().toISOString();
     const userId = `CUST-${Date.now().toString().slice(-6)}`;
 
+    const resolvedCity = city || area || null;
+    const resolvedLocality = locality || townVillage || null;
+    const resolvedAddress = address || null;
+
     const result = await queryRun(
       `INSERT INTO users (
         userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
-        profileInfo, createdDate, updatedDate, lastLogin
-      ) VALUES (?, ?, ?, ?, ?, 'Customer', 'Active', ?, ?, ?, ?)`,
-      [userId, fullName.trim(), email.trim().toLowerCase(), phoneNumber.trim(), passwordHash, profileInfo || '', now, now, now]
+        profileInfo, createdDate, updatedDate, lastLogin,
+        country, state, district, city, locality, pincode, address,
+        assignedStateId, assignedDistrictId, assignedAreaId
+      ) VALUES (?, ?, ?, ?, ?, 'Customer', 'Active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        fullName.trim(),
+        email.trim().toLowerCase(),
+        phoneNumber.trim(),
+        passwordHash,
+        profileInfo || 'Customer Account',
+        now,
+        now,
+        now,
+        country || 'India',
+        state || null,
+        district || null,
+        resolvedCity,
+        resolvedLocality,
+        pincode || null,
+        resolvedAddress,
+        assignedStateId || null,
+        assignedDistrictId || null,
+        assignedAreaId || null
+      ]
     );
 
     const newUser = await queryGet('SELECT * FROM users WHERE id = ?', [result.lastID]);
@@ -204,7 +257,8 @@ router.post('/register/distributor', async (req, res) => {
     const {
       fullName,
       email,
-      phoneNumber,
+      phoneNumber: rawPhone,
+      phone,
       password,
       businessName,
       businessAddress,
@@ -212,8 +266,22 @@ router.post('/register/distributor', async (req, res) => {
       contactPerson,
       businessPhone,
       businessEmail,
-      profileInfo
+      profileInfo,
+      country = 'India',
+      state,
+      district,
+      city,
+      area,
+      locality,
+      townVillage,
+      pincode,
+      address,
+      assignedStateId,
+      assignedDistrictId,
+      assignedAreaId
     } = req.body;
+
+    const phoneNumber = (rawPhone || phone || '').trim();
 
     // Validate required personal & business fields
     if (!email || !phoneNumber || !password) {
@@ -223,10 +291,10 @@ router.post('/register/distributor', async (req, res) => {
       });
     }
 
-    if (!businessName || !businessAddress) {
+    if (!businessName || (!businessAddress && !address)) {
       return res.status(400).json({
         success: false,
-        message: 'Business details (Business Name, Business Address) are required.'
+        message: 'Business details (Business Name, Complete Address) are required.'
       });
     }
 
@@ -258,12 +326,18 @@ router.post('/register/distributor', async (req, res) => {
       });
     }
 
-    // Check duplicate email
-    const existing = await queryGet('SELECT id FROM users WHERE LOWER(email) = LOWER(?)', [email]);
+    // Check duplicate email or phone
+    const existing = await queryGet(
+      'SELECT id, email, phoneNumber FROM users WHERE LOWER(email) = LOWER(?) OR phoneNumber = ?',
+      [email.trim(), phoneNumber.trim()]
+    );
     if (existing) {
+      const isEmailMatch = existing.email && existing.email.toLowerCase() === email.trim().toLowerCase();
       return res.status(409).json({
         success: false,
-        message: 'An account with this email address already exists.'
+        message: isEmailMatch
+          ? 'An account with this email address already exists.'
+          : 'An account with this phone number already exists.'
       });
     }
 
@@ -287,13 +361,19 @@ router.post('/register/distributor', async (req, res) => {
       ? contactPerson.trim()
       : null;
 
-    // Status is strictly 'Pending'
+    const resolvedAddress = (businessAddress || address || '').trim();
+    const resolvedCity = city || area || null;
+    const resolvedLocality = locality || townVillage || null;
+
+    // Status is strictly 'Pending' awaiting admin approval
     await queryRun(
       `INSERT INTO users (
         userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
         profileInfo, createdDate, updatedDate,
-        businessName, businessAddress, panVatNumber, contactPerson, businessPhone, businessEmail
-      ) VALUES (?, ?, ?, ?, ?, 'Distributor', 'Pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        businessName, businessAddress, panVatNumber, contactPerson, businessPhone, businessEmail,
+        country, state, district, city, locality, pincode, address,
+        assignedStateId, assignedDistrictId, assignedAreaId, distributorLevel
+      ) VALUES (?, ?, ?, ?, ?, 'Distributor', 'Pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'StateDistributor')`,
       [
         userId,
         effectiveFullName,
@@ -304,11 +384,21 @@ router.post('/register/distributor', async (req, res) => {
         now,
         now,
         businessName.trim(),
-        businessAddress.trim(),
+        resolvedAddress,
         effectivePanVat,
         effectiveContactPerson,
         (businessPhone || phoneNumber).trim(),
-        (businessEmail || email).trim().toLowerCase()
+        (businessEmail || email).trim().toLowerCase(),
+        country || 'India',
+        state || null,
+        district || null,
+        resolvedCity,
+        resolvedLocality,
+        pincode || null,
+        resolvedAddress,
+        assignedStateId || null,
+        assignedDistrictId || null,
+        assignedAreaId || null
       ]
     );
 
@@ -318,7 +408,7 @@ router.post('/register/distributor', async (req, res) => {
       recipientId: 'ADMIN',
       recipientRole: 'Admin',
       title: `🏢 New Distributor Application`,
-      message: `${businessName.trim()} submitted a wholesale distributor application${displayPan}.`,
+      message: `${businessName.trim()} submitted a wholesale distributor application${displayPan} from ${state || 'India'}.`,
       type: 'distributor_pending',
       entityId: userId,
       linkUrl: '/admin?tab=pending',
@@ -348,6 +438,186 @@ router.post('/register/distributor', async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to submit distributor registration. Please try again.'
+    });
+  }
+});
+
+/**
+ * 2b. Retailer Sign Up Request (Initial status: Pending)
+ */
+router.post('/register/retailer', async (req, res) => {
+  try {
+    const {
+      fullName,
+      ownerName,
+      shopName,
+      businessName,
+      email,
+      phoneNumber: rawPhone,
+      phone,
+      password,
+      country = 'India',
+      state,
+      district,
+      city,
+      area,
+      locality,
+      townVillage,
+      pincode,
+      address,
+      businessAddress,
+      assignedStateId,
+      assignedDistrictId,
+      assignedAreaId,
+      profileInfo
+    } = req.body;
+
+    const phoneNumber = (rawPhone || phone || '').trim();
+
+    const resolvedOwner = (ownerName || fullName || '').trim();
+    const resolvedShop = (shopName || businessName || '').trim();
+
+    if (!email || !phoneNumber || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Owner credentials (Email, Phone, Password) are required.'
+      });
+    }
+
+    if (!resolvedOwner) {
+      return res.status(400).json({
+        success: false,
+        message: 'Owner Name is required.'
+      });
+    }
+
+    if (!resolvedShop) {
+      return res.status(400).json({
+        success: false,
+        message: 'Business / Shop Name is required.'
+      });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address.'
+      });
+    }
+
+    if (!isValidPhone(phoneNumber)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid phone number.'
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long.'
+      });
+    }
+
+    // Check duplicate email or phone
+    const existing = await queryGet(
+      'SELECT id, email, phoneNumber FROM users WHERE LOWER(email) = LOWER(?) OR phoneNumber = ?',
+      [email.trim(), phoneNumber.trim()]
+    );
+    if (existing) {
+      const isEmailMatch = existing.email && existing.email.toLowerCase() === email.trim().toLowerCase();
+      return res.status(409).json({
+        success: false,
+        message: isEmailMatch
+          ? 'An account with this email address already exists.'
+          : 'An account with this phone number already exists.'
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    const now = new Date().toISOString();
+    const userId = `RET-${Date.now().toString().slice(-6)}`;
+
+    const resolvedAddress = (businessAddress || address || '').trim();
+    const resolvedCity = city || area || null;
+    const resolvedLocality = locality || townVillage || null;
+
+    // Status is strictly 'Pending' awaiting admin review
+    await queryRun(
+      `INSERT INTO users (
+        userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
+        profileInfo, createdDate, updatedDate,
+        businessName, businessAddress, contactPerson, businessPhone, businessEmail,
+        country, state, district, city, locality, pincode, address,
+        ownerName, shopName,
+        assignedStateId, assignedDistrictId, assignedAreaId, distributorLevel
+      ) VALUES (?, ?, ?, ?, ?, 'Retailer', 'Pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Retailer')`,
+      [
+        userId,
+        resolvedOwner,
+        email.trim().toLowerCase(),
+        phoneNumber.trim(),
+        passwordHash,
+        profileInfo || 'Authorized Retailer Applicant',
+        now,
+        now,
+        resolvedShop,
+        resolvedAddress,
+        resolvedOwner,
+        phoneNumber.trim(),
+        email.trim().toLowerCase(),
+        country || 'India',
+        state || null,
+        district || null,
+        resolvedCity,
+        resolvedLocality,
+        pincode || null,
+        resolvedAddress,
+        resolvedOwner,
+        resolvedShop,
+        assignedStateId || null,
+        assignedDistrictId || null,
+        assignedAreaId || null
+      ]
+    );
+
+    // 1. Notify Admin of new retailer registration
+    await createNotification({
+      recipientId: 'ADMIN',
+      recipientRole: 'Admin',
+      title: `🏪 New Retailer Application`,
+      message: `${resolvedShop} (${resolvedOwner}) submitted a retailer application from ${district || state || 'India'}.`,
+      type: 'retailer_pending',
+      entityId: userId,
+      linkUrl: '/admin?tab=pending',
+      dedupKey: `retailer_pending_${userId}_ADMIN`
+    });
+
+    // 2. Notify Retailer of pending review status
+    await createNotification({
+      recipientId: userId,
+      recipientRole: 'Retailer',
+      title: `Application Under Review`,
+      message: `Welcome to MWS Eagle! Your retailer registration for "${resolvedShop}" has been received and is currently awaiting administrator review.`,
+      type: 'retailer_pending',
+      entityId: userId,
+      linkUrl: '/login',
+      dedupKey: `retailer_welcome_${userId}`
+    });
+
+    return res.status(201).json({
+      success: true,
+      requiresApproval: true,
+      message: 'Retailer registration submitted successfully. Your account is awaiting administrator review and approval before you can log in.',
+      userId
+    });
+  } catch (error) {
+    console.error('Retailer registration error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to submit retailer registration. Please try again.'
     });
   }
 });
@@ -475,11 +745,12 @@ router.post('/login', async (req, res) => {
     }
 
     // Verify account type if the user explicitly submitted under a specific portal tab
-    const isDistributorGroup = user.userType === 'Distributor' || user.userType === 'Retailer' || ['StateDistributor', 'DistrictDistributor', 'AreaDistributor', 'Retailer'].includes(user.distributorLevel);
-    if (requestedPortal && requestedPortal !== 'Any' && requestedPortal !== user.userType && user.userType !== 'Admin') {
-      if (requestedPortal === 'Distributor' && isDistributorGroup) {
-        // Permitted: Multi-level distributors & retailers log in via Distributor portal
-      } else {
+    if (requestedPortal && requestedPortal !== 'Any' && user.userType !== 'Admin') {
+      const isRetailerMatch = requestedPortal === 'Retailer' && (user.userType === 'Retailer' || user.distributorLevel === 'Retailer');
+      const isDistributorMatch = requestedPortal === 'Distributor' && (user.userType === 'Distributor' || ['StateDistributor', 'DistrictDistributor', 'AreaDistributor'].includes(user.distributorLevel));
+      const isCustomerMatch = requestedPortal === 'Customer' && user.userType === 'Customer';
+
+      if (!isRetailerMatch && !isDistributorMatch && !isCustomerMatch && requestedPortal !== user.userType) {
         return res.status(403).json({
           success: false,
           mismatchedRole: true,
@@ -490,12 +761,13 @@ router.post('/login', async (req, res) => {
     }
 
     // Role-specific account status verification
-    if (user.userType === 'Distributor') {
+    if (user.userType === 'Distributor' || user.userType === 'Retailer') {
+      const roleName = user.userType === 'Retailer' ? 'retailer' : 'distributor';
       if (user.accountStatus === 'Pending') {
         return res.status(403).json({
           success: false,
           accountStatus: 'Pending',
-          message: 'Your distributor account is awaiting admin approval.'
+          message: `Your ${roleName} account is awaiting admin approval.`
         });
       }
 
@@ -504,7 +776,7 @@ router.post('/login', async (req, res) => {
           success: false,
           accountStatus: 'Rejected',
           statusRemark: user.statusRemark,
-          message: 'Your distributor registration has been rejected. Please contact the administrator.'
+          message: `Your ${roleName} registration has been rejected. Remark: ${user.statusRemark || 'Please contact administrator.'}`
         });
       }
 
@@ -513,7 +785,7 @@ router.post('/login', async (req, res) => {
           success: false,
           accountStatus: 'Suspended',
           statusRemark: user.statusRemark,
-          message: 'Your distributor account has been suspended. Please contact the administrator.'
+          message: `Your ${roleName} account has been suspended. Please contact the administrator.`
         });
       }
     } else {

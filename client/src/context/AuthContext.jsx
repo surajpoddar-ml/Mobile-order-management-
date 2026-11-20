@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }) => {
             const currentPath = window.location.pathname;
             if (currentPath === '/login') {
               if (response.user.userType === 'Customer') navigate('/portal/customer');
-              else if (response.user.userType === 'Distributor') navigate('/portal/distributor');
+              else if (response.user.userType === 'Distributor' || response.user.userType === 'Retailer') navigate('/portal/distributor');
               else if (response.user.userType === 'Admin') navigate('/admin');
             }
             setLoading(false);
@@ -90,7 +90,7 @@ export const AuthProvider = ({ children }) => {
           const currentPath = window.location.pathname;
           if (currentPath === '/login') {
             if (refreshRes.user.userType === 'Customer') navigate('/portal/customer');
-            else if (refreshRes.user.userType === 'Distributor') navigate('/portal/distributor');
+            else if (refreshRes.user.userType === 'Distributor' || refreshRes.user.userType === 'Retailer') navigate('/portal/distributor');
             else if (refreshRes.user.userType === 'Admin') navigate('/admin');
           }
         } else {
@@ -143,7 +143,7 @@ export const AuthProvider = ({ children }) => {
       // Portal Redirection Rule (Section 6)
       if (res.user.userType === 'Customer') {
         navigate('/portal/customer');
-      } else if (res.user.userType === 'Distributor') {
+      } else if (res.user.userType === 'Distributor' || res.user.userType === 'Retailer') {
         navigate('/portal/distributor');
       } else if (res.user.userType === 'Admin') {
         navigate('/admin');
@@ -179,7 +179,7 @@ export const AuthProvider = ({ children }) => {
 
       if (res.user.userType === 'Customer') {
         navigate('/portal/customer');
-      } else if (res.user.userType === 'Distributor') {
+      } else if (res.user.userType === 'Distributor' || res.user.userType === 'Retailer') {
         navigate('/portal/distributor');
       } else if (res.user.userType === 'Admin') {
         navigate('/admin');
@@ -211,6 +211,12 @@ export const AuthProvider = ({ children }) => {
   // Distributor signup handler (returns pending confirmation notice)
   const registerDistributor = async (formData) => {
     const res = await api.auth.registerDistributor(formData);
+    return res;
+  };
+
+  // Retailer signup handler (returns pending confirmation notice)
+  const registerRetailer = async (formData) => {
+    const res = await api.auth.registerRetailer(formData);
     return res;
   };
 
@@ -270,6 +276,7 @@ export const AuthProvider = ({ children }) => {
         loginWithGoogle,
         registerCustomer,
         registerDistributor,
+        registerRetailer,
         logout,
         switchAccount,
         refreshUser

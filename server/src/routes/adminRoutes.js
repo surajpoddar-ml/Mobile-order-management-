@@ -1,7 +1,10 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireRole } from '../middleware/auth.js';
 import { createNotification } from '../services/notificationService.js';
+import { recordAuditLog } from '../services/auditService.js';
 
 const router = express.Router();
 
@@ -10,7 +13,7 @@ router.use(verifyToken, requireRole(['Admin']));
 
 /**
  * 1. Admin Metrics Overview
- * Returns customer and distributor aggregate counts
+ * Returns customer, distributor, and retailer aggregate counts
  */
 router.get('/metrics', async (req, res) => {
   try {
@@ -34,20 +37,38 @@ router.get('/metrics', async (req, res) => {
       WHERE userType = 'Distributor'
     `);
 
+    const retailerStats = await queryGet(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN accountStatus = 'Pending' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN accountStatus = 'Active' THEN 1 ELSE 0 END) as approved,
+        SUM(CASE WHEN accountStatus = 'Rejected' THEN 1 ELSE 0 END) as rejected,
+        SUM(CASE WHEN accountStatus = 'Suspended' THEN 1 ELSE 0 END) as suspended
+      FROM users 
+      WHERE userType = 'Retailer'
+    `);
+
     return res.status(200).json({
       success: true,
       metrics: {
         customers: {
-          total: customerStats.total || 0,
-          active: customerStats.active || 0,
-          suspended: customerStats.suspended || 0
+          total: customerStats?.total || 0,
+          active: customerStats?.active || 0,
+          suspended: customerStats?.suspended || 0
         },
         distributors: {
-          total: distributorStats.total || 0,
-          pending: distributorStats.pending || 0,
-          approved: distributorStats.approved || 0,
-          rejected: distributorStats.rejected || 0,
-          suspended: distributorStats.suspended || 0
+          total: distributorStats?.total || 0,
+          pending: distributorStats?.pending || 0,
+          approved: distributorStats?.approved || 0,
+          rejected: distributorStats?.rejected || 0,
+          suspended: distributorStats?.suspended || 0
+        },
+        retailers: {
+          total: retailerStats?.total || 0,
+          pending: retailerStats?.pending || 0,
+          approved: retailerStats?.approved || 0,
+          rejected: retailerStats?.rejected || 0,
+          suspended: retailerStats?.suspended || 0
         }
       }
     });
@@ -65,7 +86,16 @@ router.get('/users', async (req, res) => {
   try {
     const { userType, accountStatus, search } = req.query;
 
-    let sql = 'SELECT id, userId, fullName, email, phoneNumber, userType, accountStatus, profileInfo, createdDate, updatedDate, lastLogin, approvalDate, approvedBy, businessName, businessAddress, panVatNumber, contactPerson, businessPhone, businessEmail, statusRemark FROM users WHERE 1=1';
+    let sql = `
+      SELECT 
+        id, userId, fullName, email, phoneNumber, userType, accountStatus, profileInfo, 
+        createdDate, updatedDate, lastLogin, approvalDate, approvedBy, 
+        businessName, businessAddress, panVatNumber, contactPerson, businessPhone, businessEmail, 
+        statusRemark, country, state, district, city, locality, pincode, address, 
+        ownerName, shopName, assignedStateId, assignedDistrictId, assignedAreaId, distributorLevel
+      FROM users 
+      WHERE 1=1
+    `;
     const params = [];
 
     if (userType && userType !== 'All') {
@@ -86,9 +116,13 @@ router.get('/users', async (req, res) => {
         userId LIKE ? OR 
         phoneNumber LIKE ? OR 
         businessName LIKE ? OR 
+        shopName LIKE ? OR
+        ownerName LIKE ? OR
+        district LIKE ? OR
+        state LIKE ? OR
         panVatNumber LIKE ?
       )`;
-      params.push(term, term, term, term, term, term);
+      params.push(term, term, term, term, term, term, term, term, term, term);
     }
 
     sql += ' ORDER BY createdDate DESC';
@@ -112,7 +146,13 @@ router.get('/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const user = await queryGet(
-      'SELECT id, userId, fullName, email, phoneNumber, userType, accountStatus, profileInfo, createdDate, updatedDate, lastLogin, approvalDate, approvedBy, businessName, businessAddress, panVatNumber, contactPerson, businessPhone, businessEmail, statusRemark FROM users WHERE id = ?',
+      `SELECT 
+        id, userId, fullName, email, phoneNumber, userType, accountStatus, profileInfo, 
+        createdDate, updatedDate, lastLogin, approvalDate, approvedBy, 
+        businessName, businessAddress, panVatNumber, contactPerson, businessPhone, businessEmail, 
+        statusRemark, country, state, district, city, locality, pincode, address, 
+        ownerName, shopName, assignedStateId, assignedDistrictId, assignedAreaId, distributorLevel
+      FROM users WHERE id = ?`,
       [id]
     );
 
@@ -128,16 +168,16 @@ router.get('/users/:id', async (req, res) => {
 });
 
 /**
- * 4. Approve Distributor
+ * 4. Approve User (Distributor or Retailer)
  * Sets status to 'Active', records approval timestamp and admin email
  */
-router.patch('/distributors/:id/approve', async (req, res) => {
+const handleApproveUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const distributor = await queryGet('SELECT * FROM users WHERE id = ? AND userType = "Distributor"', [id]);
+    const applicant = await queryGet('SELECT * FROM users WHERE id = ? AND userType IN ("Distributor", "Retailer")', [id]);
 
-    if (!distributor) {
-      return res.status(404).json({ success: false, message: 'Distributor application not found.' });
+    if (!applicant) {
+      return res.status(404).json({ success: false, message: 'Distributor or Retailer application not found.' });
     }
 
     const now = new Date().toISOString();
@@ -154,43 +194,63 @@ router.patch('/distributors/:id/approve', async (req, res) => {
       [now, adminEmail, now, id]
     );
 
-    const updated = await queryGet('SELECT id, userId, fullName, email, userType, accountStatus, approvalDate, approvedBy FROM users WHERE id = ?', [id]);
+    const updated = await queryGet(
+      'SELECT id, userId, fullName, email, userType, accountStatus, approvalDate, approvedBy FROM users WHERE id = ?',
+      [id]
+    );
 
-    // Notify distributor of approval
+    // Audit log
+    try {
+      await recordAuditLog({
+        actionType: 'APPROVE_ACCOUNT',
+        entityType: applicant.userType.toUpperCase(),
+        entityId: applicant.id,
+        performedByUserId: req.user.id,
+        performedByName: req.user.fullName || req.user.email,
+        details: { applicantId: applicant.id, userId: applicant.userId, role: applicant.userType, name: applicant.fullName },
+        ipAddress: req.ip
+      });
+    } catch (e) {}
+
+    // Notify user of approval
+    const roleTitle = applicant.userType === 'Retailer' ? 'Retailer' : 'Distributor';
     await createNotification({
-      recipientId: distributor.userId || distributor.email,
-      recipientRole: 'Distributor',
-      title: `🎉 Distributor Account Approved!`,
-      message: `Your wholesale distributor application for "${distributor.businessName || distributor.fullName}" has been approved! You now have full access to wholesale tier pricing.`,
-      type: 'distributor_approved',
-      entityId: distributor.userId,
-      linkUrl: '/distributor',
-      dedupKey: `distributor_approved_${id}`
+      recipientId: applicant.userId || applicant.email,
+      recipientRole: applicant.userType,
+      title: `🎉 ${roleTitle} Account Approved!`,
+      message: `Your ${roleTitle.toLowerCase()} application for "${applicant.shopName || applicant.businessName || applicant.fullName}" has been approved! You now have full access to your account.`,
+      type: 'account_approved',
+      entityId: applicant.userId,
+      linkUrl: '/login',
+      dedupKey: `${applicant.userType.toLowerCase()}_approved_${id}`
     });
 
     return res.status(200).json({
       success: true,
-      message: `Distributor "${distributor.businessName || distributor.fullName}" approved successfully. They can now log in.`,
+      message: `${roleTitle} "${applicant.shopName || applicant.businessName || applicant.fullName}" approved successfully. They can now log in.`,
       user: updated
     });
   } catch (error) {
-    console.error('Error approving distributor:', error);
-    return res.status(500).json({ success: false, message: 'Failed to approve distributor.' });
+    console.error('Error approving user:', error);
+    return res.status(500).json({ success: false, message: 'Failed to approve application.' });
   }
-});
+};
+
+router.patch('/users/:id/approve', handleApproveUser);
+router.patch('/distributors/:id/approve', handleApproveUser);
 
 /**
- * 5. Reject Distributor
+ * 5. Reject User (Distributor or Retailer)
  * Sets status to 'Rejected', records optional reason
  */
-router.patch('/distributors/:id/reject', async (req, res) => {
+const handleRejectUser = async (req, res) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
 
-    const distributor = await queryGet('SELECT * FROM users WHERE id = ? AND userType = "Distributor"', [id]);
-    if (!distributor) {
-      return res.status(404).json({ success: false, message: 'Distributor application not found.' });
+    const applicant = await queryGet('SELECT * FROM users WHERE id = ? AND userType IN ("Distributor", "Retailer")', [id]);
+    if (!applicant) {
+      return res.status(404).json({ success: false, message: 'Distributor or Retailer application not found.' });
     }
 
     const now = new Date().toISOString();
@@ -203,31 +263,47 @@ router.patch('/distributors/:id/reject', async (req, res) => {
       [reason || 'Application rejected by administrator.', now, id]
     );
 
-    // Notify distributor of rejection
+    // Audit log
+    try {
+      await recordAuditLog({
+        actionType: 'REJECT_ACCOUNT',
+        entityType: applicant.userType.toUpperCase(),
+        entityId: applicant.id,
+        performedByUserId: req.user.id,
+        performedByName: req.user.fullName || req.user.email,
+        details: { applicantId: applicant.id, userId: applicant.userId, role: applicant.userType, reason },
+        ipAddress: req.ip
+      });
+    } catch (e) {}
+
+    // Notify user of rejection
+    const roleTitle = applicant.userType === 'Retailer' ? 'Retailer' : 'Distributor';
     await createNotification({
-      recipientId: distributor.userId || distributor.email,
-      recipientRole: 'Distributor',
-      title: `Distributor Application Rejected`,
-      message: `Your application for "${distributor.businessName || distributor.fullName}" was rejected: "${reason || 'Application rejected by administrator.'}"`,
-      type: 'distributor_rejected',
-      entityId: distributor.userId,
+      recipientId: applicant.userId || applicant.email,
+      recipientRole: applicant.userType,
+      title: `${roleTitle} Application Rejected`,
+      message: `Your application for "${applicant.shopName || applicant.businessName || applicant.fullName}" was rejected: "${reason || 'Application rejected by administrator.'}"`,
+      type: 'account_rejected',
+      entityId: applicant.userId,
       linkUrl: '/login',
-      dedupKey: `distributor_rejected_${id}_${Date.now()}`
+      dedupKey: `${applicant.userType.toLowerCase()}_rejected_${id}_${Date.now()}`
     });
 
     return res.status(200).json({
       success: true,
-      message: `Distributor "${distributor.businessName || distributor.fullName}" has been rejected.`
+      message: `${roleTitle} "${applicant.shopName || applicant.businessName || applicant.fullName}" has been rejected.`
     });
   } catch (error) {
-    console.error('Error rejecting distributor:', error);
-    return res.status(500).json({ success: false, message: 'Failed to reject distributor.' });
+    console.error('Error rejecting user:', error);
+    return res.status(500).json({ success: false, message: 'Failed to reject application.' });
   }
-});
+};
+
+router.patch('/users/:id/reject', handleRejectUser);
+router.patch('/distributors/:id/reject', handleRejectUser);
 
 /**
- * 6. Suspend User (Distributor or Customer)
- * Suspended accounts immediately lose access on all requests
+ * 6. Suspend User (Distributor, Retailer, or Customer)
  */
 router.patch('/users/:id/suspend', async (req, res) => {
   try {
@@ -253,6 +329,19 @@ router.patch('/users/:id/suspend', async (req, res) => {
       [reason || 'Account suspended by administrator.', now, id]
     );
 
+    // Audit log
+    try {
+      await recordAuditLog({
+        actionType: 'SUSPEND_ACCOUNT',
+        entityType: targetUser.userType.toUpperCase(),
+        entityId: targetUser.id,
+        performedByUserId: req.user.id,
+        performedByName: req.user.fullName || req.user.email,
+        details: { targetUserId: targetUser.id, userId: targetUser.userId, role: targetUser.userType, reason },
+        ipAddress: req.ip
+      });
+    } catch (e) {}
+
     // Notify user of suspension
     await createNotification({
       recipientId: targetUser.userId || targetUser.email,
@@ -277,7 +366,6 @@ router.patch('/users/:id/suspend', async (req, res) => {
 
 /**
  * 7. Activate / Reactivate User
- * Changes status to 'Active'
  */
 router.patch('/users/:id/activate', async (req, res) => {
   try {
@@ -302,6 +390,19 @@ router.patch('/users/:id/activate', async (req, res) => {
       [now, adminEmail, now, id]
     );
 
+    // Audit log
+    try {
+      await recordAuditLog({
+        actionType: 'ACTIVATE_ACCOUNT',
+        entityType: targetUser.userType.toUpperCase(),
+        entityId: targetUser.id,
+        performedByUserId: req.user.id,
+        performedByName: req.user.fullName || req.user.email,
+        details: { targetUserId: targetUser.id, userId: targetUser.userId, role: targetUser.userType },
+        ipAddress: req.ip
+      });
+    } catch (e) {}
+
     // Notify user of activation
     await createNotification({
       recipientId: targetUser.userId || targetUser.email,
@@ -310,7 +411,7 @@ router.patch('/users/:id/activate', async (req, res) => {
       message: `Your account has been reactivated. You may now log in to the marketplace.`,
       type: 'account_status',
       entityId: targetUser.userId,
-      linkUrl: targetUser.userType === 'Distributor' ? '/distributor' : '/customer',
+      linkUrl: '/login',
       dedupKey: `account_activated_${id}_${Date.now()}`
     });
 
@@ -325,7 +426,182 @@ router.patch('/users/:id/activate', async (req, res) => {
 });
 
 /**
- * 8. Delete User
+ * 8. Edit / Update User Information
+ */
+router.put('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await queryGet('SELECT * FROM users WHERE id = ?', [id]);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    const {
+      fullName,
+      email,
+      phoneNumber,
+      businessName,
+      shopName,
+      ownerName,
+      country = 'India',
+      state,
+      district,
+      city,
+      locality,
+      pincode,
+      address,
+      panVatNumber,
+      accountStatus
+    } = req.body;
+
+    const now = new Date().toISOString();
+
+    await queryRun(
+      `UPDATE users SET
+        fullName = COALESCE(?, fullName),
+        email = COALESCE(?, email),
+        phoneNumber = COALESCE(?, phoneNumber),
+        businessName = COALESCE(?, businessName),
+        shopName = COALESCE(?, shopName),
+        ownerName = COALESCE(?, ownerName),
+        country = COALESCE(?, country),
+        state = COALESCE(?, state),
+        district = COALESCE(?, district),
+        city = COALESCE(?, city),
+        locality = COALESCE(?, locality),
+        pincode = COALESCE(?, pincode),
+        address = COALESCE(?, address),
+        panVatNumber = COALESCE(?, panVatNumber),
+        accountStatus = COALESCE(?, accountStatus),
+        updatedDate = ?
+      WHERE id = ?`,
+      [
+        fullName?.trim() || null,
+        email?.trim().toLowerCase() || null,
+        phoneNumber?.trim() || null,
+        businessName?.trim() || null,
+        shopName?.trim() || null,
+        ownerName?.trim() || null,
+        country || 'India',
+        state || null,
+        district || null,
+        city || null,
+        locality || null,
+        pincode || null,
+        address?.trim() || null,
+        panVatNumber?.trim() || null,
+        accountStatus || null,
+        now,
+        id
+      ]
+    );
+
+    const updated = await queryGet('SELECT * FROM users WHERE id = ?', [id]);
+
+    // Audit log
+    try {
+      await recordAuditLog({
+        actionType: 'UPDATE_ACCOUNT',
+        entityType: existing.userType.toUpperCase(),
+        entityId: existing.id,
+        performedByUserId: req.user.id,
+        performedByName: req.user.fullName || req.user.email,
+        details: { updatedFields: req.body },
+        ipAddress: req.ip
+      });
+    } catch (e) {}
+
+    return res.status(200).json({
+      success: true,
+      message: `Account details for ${updated.fullName} updated successfully.`,
+      user: updated
+    });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update user account.' });
+  }
+});
+
+/**
+ * 9. Reset User Password Securely
+ */
+router.post('/users/:id/reset-password', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    const targetUser = await queryGet('SELECT * FROM users WHERE id = ?', [id]);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    // Generate random 8-character password if not provided
+    const tempPassword = newPassword && newPassword.trim() 
+      ? newPassword.trim() 
+      : `Mws@${crypto.randomBytes(3).toString('hex')}!`;
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(tempPassword, salt);
+    const now = new Date().toISOString();
+
+    await queryRun(
+      'UPDATE users SET passwordHash = ?, temporaryPassword = ?, mustChangePassword = 1, updatedDate = ? WHERE id = ?',
+      [passwordHash, tempPassword, now, id]
+    );
+
+    // Audit log
+    try {
+      await recordAuditLog({
+        actionType: 'RESET_PASSWORD',
+        entityType: targetUser.userType.toUpperCase(),
+        entityId: targetUser.id,
+        performedByUserId: req.user.id,
+        performedByName: req.user.fullName || req.user.email,
+        details: { targetUserId: targetUser.id, userId: targetUser.userId },
+        ipAddress: req.ip
+      });
+    } catch (e) {}
+
+    return res.status(200).json({
+      success: true,
+      message: `Password reset successfully for ${targetUser.fullName}.`,
+      temporaryPassword: tempPassword
+    });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    return res.status(500).json({ success: false, message: 'Failed to reset password.' });
+  }
+});
+
+/**
+ * 10. View User Account History & Orders
+ */
+router.get('/users/:id/history', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const targetUser = await queryGet('SELECT id, userId, fullName, email FROM users WHERE id = ?', [id]);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    const orders = await queryAll(
+      'SELECT id, orderNumber, totalAmount, paymentStatus, orderStatus, createdDate, items FROM orders WHERE userId = ? OR customerEmail = ? ORDER BY id DESC LIMIT 20',
+      [targetUser.userId, targetUser.email]
+    );
+
+    return res.status(200).json({
+      success: true,
+      orders,
+      user: targetUser
+    });
+  } catch (error) {
+    console.error('Error fetching user history:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch user history.' });
+  }
+});
+
+/**
+ * 11. Delete User
  */
 router.delete('/users/:id', async (req, res) => {
   try {
@@ -341,6 +617,19 @@ router.delete('/users/:id', async (req, res) => {
     }
 
     await queryRun('DELETE FROM users WHERE id = ?', [id]);
+
+    // Audit log
+    try {
+      await recordAuditLog({
+        actionType: 'DELETE_ACCOUNT',
+        entityType: targetUser.userType.toUpperCase(),
+        entityId: targetUser.id,
+        performedByUserId: req.user.id,
+        performedByName: req.user.fullName || req.user.email,
+        details: { deletedUser: targetUser.fullName, email: targetUser.email, userId: targetUser.userId },
+        ipAddress: req.ip
+      });
+    } catch (e) {}
 
     return res.status(200).json({
       success: true,

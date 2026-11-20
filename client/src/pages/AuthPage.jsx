@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import {
   User,
   Building2,
+  Store,
   Eye,
   EyeOff,
   AlertCircle,
@@ -19,12 +21,383 @@ import {
   Briefcase
 } from 'lucide-react';
 
+// List of 28 States and 8 Union Territories of India
+const INDIAN_STATES_AND_UTS = [
+  { name: 'Andhra Pradesh', type: 'STATE' },
+  { name: 'Arunachal Pradesh', type: 'STATE' },
+  { name: 'Assam', type: 'STATE' },
+  { name: 'Bihar', type: 'STATE' },
+  { name: 'Chhattisgarh', type: 'STATE' },
+  { name: 'Goa', type: 'STATE' },
+  { name: 'Gujarat', type: 'STATE' },
+  { name: 'Haryana', type: 'STATE' },
+  { name: 'Himachal Pradesh', type: 'STATE' },
+  { name: 'Jharkhand', type: 'STATE' },
+  { name: 'Karnataka', type: 'STATE' },
+  { name: 'Kerala', type: 'STATE' },
+  { name: 'Madhya Pradesh', type: 'STATE' },
+  { name: 'Maharashtra', type: 'STATE' },
+  { name: 'Manipur', type: 'STATE' },
+  { name: 'Meghalaya', type: 'STATE' },
+  { name: 'Mizoram', type: 'STATE' },
+  { name: 'Nagaland', type: 'STATE' },
+  { name: 'Odisha', type: 'STATE' },
+  { name: 'Punjab', type: 'STATE' },
+  { name: 'Rajasthan', type: 'STATE' },
+  { name: 'Sikkim', type: 'STATE' },
+  { name: 'Tamil Nadu', type: 'STATE' },
+  { name: 'Telangana', type: 'STATE' },
+  { name: 'Tripura', type: 'STATE' },
+  { name: 'Uttar Pradesh', type: 'STATE' },
+  { name: 'Uttarakhand', type: 'STATE' },
+  { name: 'West Bengal', type: 'STATE' },
+  { name: 'Andaman and Nicobar Islands', type: 'UT' },
+  { name: 'Chandigarh', type: 'UT' },
+  { name: 'Dadra and Nagar Haveli and Daman and Diu', type: 'UT' },
+  { name: 'Delhi', type: 'UT' },
+  { name: 'Jammu and Kashmir', type: 'UT' },
+  { name: 'Ladakh', type: 'UT' },
+  { name: 'Lakshadweep', type: 'UT' },
+  { name: 'Puducherry', type: 'UT' }
+];
+
+const locInputStyle = {
+  width: '100%',
+  padding: '12px 14px',
+  background: '#ffffff',
+  border: '1.5px solid #d1d5db',
+  borderRadius: '8px',
+  color: '#111827',
+  fontSize: '16px',
+  fontWeight: 500,
+  outline: 'none',
+  boxSizing: 'border-box'
+};
+
+const locLabelStyle = {
+  display: 'block',
+  fontSize: '0.86rem',
+  fontWeight: 700,
+  marginBottom: '6px',
+  color: '#1f2937'
+};
+
+// Cascading Indian Location Picker Component
+const IndianLocationPicker = ({ form, setForm, isBusiness = false }) => {
+  const [states, setStates] = useState(INDIAN_STATES_AND_UTS);
+  const [districts, setDistricts] = useState([]);
+  const [areas, setAreas] = useState([]);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+  const [loadingAreas, setLoadingAreas] = useState(false);
+  const [customArea, setCustomArea] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    if (api.distribution?.getStates) {
+      api.distribution.getStates()
+        .then(res => {
+          if (mounted && res?.data?.length > 0) {
+            setStates(res.data);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => { mounted = false; };
+  }, []);
+
+  // Fetch districts when state changes
+  useEffect(() => {
+    if (!form.state) {
+      setDistricts([]);
+      setAreas([]);
+      return;
+    }
+    const selectedState = states.find(s => s.name?.toLowerCase() === form.state?.toLowerCase());
+    const stateId = selectedState?.id || form.state;
+
+    setLoadingDistricts(true);
+    if (api.distribution?.getDistricts) {
+      api.distribution.getDistricts(stateId)
+        .then(res => {
+          if (res?.data && res.data.length > 0) {
+            setDistricts(res.data);
+          } else {
+            setDistricts([]);
+          }
+        })
+        .catch(() => setDistricts([]))
+        .finally(() => setLoadingDistricts(false));
+    } else {
+      setLoadingDistricts(false);
+    }
+  }, [form.state, states]);
+
+  // Fetch areas when district changes
+  useEffect(() => {
+    if (!form.district) {
+      setAreas([]);
+      return;
+    }
+    const selectedDist = districts.find(d => d.name?.toLowerCase() === form.district?.toLowerCase());
+    const distId = selectedDist?.id || form.district;
+
+    setLoadingAreas(true);
+    if (api.distribution?.getAreas) {
+      api.distribution.getAreas(distId)
+        .then(res => {
+          if (res?.data && res.data.length > 0) {
+            setAreas(res.data);
+          } else {
+            setAreas([]);
+          }
+        })
+        .catch(() => setAreas([]))
+        .finally(() => setLoadingAreas(false));
+    } else {
+      setLoadingAreas(false);
+    }
+  }, [form.district, districts]);
+
+  return (
+    <div style={{
+      background: '#f8fafc',
+      border: '1.5px solid #e2e8f0',
+      borderRadius: '12px',
+      padding: '16px',
+      marginBottom: '18px'
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        color: '#0f766e',
+        fontWeight: 800,
+        fontSize: '0.84rem',
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+        marginBottom: '14px',
+        paddingBottom: '8px',
+        borderBottom: '1.5px solid #ccfbf1'
+      }}>
+        <MapPin size={16} />
+        India Geographical Location & Address
+      </div>
+
+      {/* Country (Fixed India) */}
+      <div style={{ marginBottom: '14px' }}>
+        <label style={locLabelStyle}>Country</label>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '10px 14px',
+          background: '#f1f5f9',
+          border: '1.5px solid #cbd5e1',
+          borderRadius: '8px',
+          fontWeight: 700,
+          color: '#1e293b',
+          fontSize: '0.92rem'
+        }}>
+          <span style={{ fontSize: '1.2rem' }}>🇮🇳</span> India (Official Territory)
+        </div>
+      </div>
+
+      {/* State & District row */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '12px',
+        marginBottom: '14px'
+      }}>
+        {/* State Dropdown */}
+        <div>
+          <label style={locLabelStyle}>
+            State / Union Territory <span style={{ color: '#dc2626' }}>*</span>
+          </label>
+          <select
+            required
+            value={form.state || ''}
+            onChange={e => {
+              const val = e.target.value;
+              setForm(prev => ({
+                ...prev,
+                state: val,
+                district: '',
+                city: '',
+                locality: ''
+              }));
+              setCustomArea(false);
+            }}
+            style={locInputStyle}
+          >
+            <option value="">-- Select State / UT --</option>
+            <optgroup label="States (28)">
+              {states.filter(s => s.type !== 'UT').map(s => (
+                <option key={s.id || s.name} value={s.name}>{s.name}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Union Territories (8)">
+              {states.filter(s => s.type === 'UT').map(s => (
+                <option key={s.id || s.name} value={s.name}>{s.name} (UT)</option>
+              ))}
+            </optgroup>
+          </select>
+        </div>
+
+        {/* District Dropdown */}
+        <div>
+          <label style={locLabelStyle}>
+            District <span style={{ color: '#dc2626' }}>*</span>
+            {loadingDistricts && <span style={{ fontSize: '0.72rem', color: '#0284c7', marginLeft: '6px' }}>(Loading...)</span>}
+          </label>
+          {districts.length > 0 ? (
+            <select
+              required
+              disabled={!form.state || loadingDistricts}
+              value={form.district || ''}
+              onChange={e => {
+                const val = e.target.value;
+                setForm(prev => ({
+                  ...prev,
+                  district: val,
+                  city: '',
+                  locality: ''
+                }));
+                setCustomArea(false);
+              }}
+              style={locInputStyle}
+            >
+              <option value="">-- Select District --</option>
+              {districts.map(d => (
+                <option key={d.id || d.name} value={d.name}>{d.name}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              required
+              disabled={!form.state}
+              placeholder={form.state ? "Enter District Name" : "Select State first"}
+              value={form.district || ''}
+              onChange={e => setForm(prev => ({ ...prev, district: e.target.value }))}
+              style={locInputStyle}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Area / City & Locality / Ward row */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '12px',
+        marginBottom: '14px'
+      }}>
+        {/* Area / City / Municipality */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <label style={{ ...locLabelStyle, margin: 0 }}>
+              Area / City / Municipality <span style={{ color: '#dc2626' }}>*</span>
+            </label>
+            {areas.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setCustomArea(!customArea)}
+                style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                {customArea ? 'Choose from list' : '+ Enter custom'}
+              </button>
+            )}
+          </div>
+          {areas.length > 0 && !customArea ? (
+            <select
+              required
+              disabled={!form.district || loadingAreas}
+              value={form.city || ''}
+              onChange={e => setForm(prev => ({ ...prev, city: e.target.value }))}
+              style={locInputStyle}
+            >
+              <option value="">-- Select Area / City --</option>
+              {areas.map(a => (
+                <option key={a.id || a.name} value={a.name}>{a.name}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              required
+              placeholder="e.g. Andheri East / Central Market"
+              value={form.city || ''}
+              onChange={e => setForm(prev => ({ ...prev, city: e.target.value }))}
+              style={locInputStyle}
+            />
+          )}
+        </div>
+
+        {/* Town / Village / Locality / Ward */}
+        <div>
+          <label style={locLabelStyle}>
+            Town / Village / Locality / Ward
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. Sector 4, MG Road, Ward 12"
+            value={form.locality || ''}
+            onChange={e => setForm(prev => ({ ...prev, locality: e.target.value }))}
+            style={locInputStyle}
+          />
+        </div>
+      </div>
+
+      {/* PIN Code & Address */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '12px'
+      }}>
+        <div>
+          <label style={locLabelStyle}>
+            PIN Code (Postal Code) <span style={{ color: '#dc2626' }}>*</span>
+          </label>
+          <input
+            type="text"
+            required
+            pattern="[0-9]{6}"
+            maxLength={6}
+            placeholder="6-digit PIN (e.g. 110001)"
+            value={form.pincode || ''}
+            onChange={e => {
+              const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+              setForm(prev => ({ ...prev, pincode: val }));
+            }}
+            style={locInputStyle}
+          />
+        </div>
+
+        <div>
+          <label style={locLabelStyle}>
+            {isBusiness ? 'Complete Business / Shop Address' : 'Complete Delivery Address'} <span style={{ color: '#dc2626' }}>*</span>
+          </label>
+          <input
+            type="text"
+            required
+            placeholder="Shop/Building No., Floor, Street Name"
+            value={form.address || ''}
+            onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))}
+            style={locInputStyle}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const AuthPage = ({ prefillData }) => {
-  const { login, loginWithGoogle, switchAccount, registerCustomer, registerDistributor, navigate } = useAuth();
+  const { login, loginWithGoogle, switchAccount, registerCustomer, registerDistributor, registerRetailer, navigate } = useAuth();
 
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
-  const [loginRole, setLoginRole] = useState('Customer'); // 'Customer' | 'Distributor'
-  const [signupRole, setSignupRole] = useState('Customer'); // 'Customer' | 'Distributor'
+  const [loginRole, setLoginRole] = useState('Customer'); // 'Customer' | 'Distributor' | 'Retailer'
+  const [signupRole, setSignupRole] = useState('Customer'); // 'Customer' | 'Distributor' | 'Retailer'
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -45,7 +418,7 @@ export const AuthPage = ({ prefillData }) => {
   useEffect(() => {
     if (rememberedAccount && !loginEmail) {
       if (rememberedAccount.email) setLoginEmail(rememberedAccount.email);
-      if (rememberedAccount.userType && (rememberedAccount.userType === 'Customer' || rememberedAccount.userType === 'Distributor' || rememberedAccount.userType === 'Admin')) {
+      if (rememberedAccount.userType && (rememberedAccount.userType === 'Customer' || rememberedAccount.userType === 'Distributor' || rememberedAccount.userType === 'Retailer' || rememberedAccount.userType === 'Admin')) {
         setLoginRole(rememberedAccount.userType);
       }
     }
@@ -68,8 +441,8 @@ export const AuthPage = ({ prefillData }) => {
       if (data.accountStatus === 'Pending') {
         setStatusAlert({
           type: 'pending',
-          title: 'Distributor Awaiting Admin Approval',
-          message: 'Your Google-linked distributor account is awaiting administrator review.'
+          title: `${loginRole} Awaiting Admin Approval`,
+          message: `Your Google-linked ${loginRole.toLowerCase()} account is awaiting administrator review.`
         });
       } else if (data.accountStatus === 'Suspended') {
         setStatusAlert({
@@ -152,7 +525,14 @@ export const AuthPage = ({ prefillData }) => {
     email: '',
     phoneNumber: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    country: 'India',
+    state: '',
+    district: '',
+    city: '',
+    locality: '',
+    pincode: '',
+    address: ''
   });
 
   // Distributor Form
@@ -167,7 +547,31 @@ export const AuthPage = ({ prefillData }) => {
     panVatNumber: '',
     contactPerson: '',
     businessPhone: '',
-    businessEmail: ''
+    businessEmail: '',
+    country: 'India',
+    state: '',
+    district: '',
+    city: '',
+    locality: '',
+    pincode: '',
+    address: ''
+  });
+
+  // Retailer Form
+  const [retailerForm, setRetailerForm] = useState({
+    ownerName: '',
+    shopName: '',
+    email: '',
+    phoneNumber: '',
+    password: '',
+    confirmPassword: '',
+    country: 'India',
+    state: '',
+    district: '',
+    city: '',
+    locality: '',
+    pincode: '',
+    address: ''
   });
 
   const [loading, setLoading] = useState(false);
@@ -184,10 +588,12 @@ export const AuthPage = ({ prefillData }) => {
       if (modeParam === 'signup') {
         setAuthMode('signup');
         if (roleParam === 'Distributor') setSignupRole('Distributor');
+        else if (roleParam === 'Retailer') setSignupRole('Retailer');
         else if (roleParam === 'Customer') setSignupRole('Customer');
       } else if (modeParam === 'login' || modeParam === 'admin') {
         setAuthMode('login');
         if (roleParam === 'Distributor') setLoginRole('Distributor');
+        else if (roleParam === 'Retailer') setLoginRole('Retailer');
         else if (roleParam === 'Admin' || modeParam === 'admin') setLoginRole('Admin');
       }
     } catch (e) {}
@@ -219,18 +625,19 @@ export const AuthPage = ({ prefillData }) => {
     } catch (err) {
       const data = err.data || {};
       const status = data.accountStatus;
+      const roleTitle = loginRole === 'Admin' ? 'Admin' : loginRole;
 
       if (status === 'Pending') {
         setStatusAlert({
           type: 'pending',
-          title: 'Distributor Awaiting Admin Approval',
-          message: 'Your distributor account registration has been submitted and is awaiting administrator verification. You cannot log in until your account is approved.'
+          title: `${roleTitle} Account Awaiting Admin Approval`,
+          message: `Your ${roleTitle.toLowerCase()} account registration has been submitted and is awaiting administrator verification. You cannot log in until your account is approved.`
         });
       } else if (status === 'Rejected') {
         setStatusAlert({
           type: 'rejected',
-          title: 'Distributor Registration Rejected',
-          message: 'Your distributor registration was reviewed and rejected by the administrator.',
+          title: `${roleTitle} Registration Rejected`,
+          message: `Your ${roleTitle.toLowerCase()} registration was reviewed and rejected by the administrator.`,
           remark: data.statusRemark
         });
       } else if (status === 'Suspended') {
@@ -266,7 +673,14 @@ export const AuthPage = ({ prefillData }) => {
         fullName: custForm.fullName,
         email: custForm.email,
         phoneNumber: custForm.phoneNumber,
-        password: custForm.password
+        password: custForm.password,
+        country: 'India',
+        state: custForm.state || '',
+        district: custForm.district || '',
+        city: custForm.city || '',
+        locality: custForm.locality || '',
+        pincode: custForm.pincode || '',
+        address: custForm.address || ''
       });
     } catch (err) {
       setErrorMsg(err.message || 'Failed to complete customer registration. Please try again.');
@@ -295,11 +709,18 @@ export const AuthPage = ({ prefillData }) => {
         phoneNumber: distForm.phoneNumber,
         password: distForm.password,
         businessName: distForm.businessName,
-        businessAddress: distForm.businessAddress,
+        businessAddress: distForm.businessAddress || distForm.address,
         panVatNumber: distForm.panVatNumber || '',
         contactPerson: distForm.contactPerson || '',
         businessPhone: distForm.businessPhone || distForm.phoneNumber,
-        businessEmail: distForm.businessEmail || distForm.email
+        businessEmail: distForm.businessEmail || distForm.email,
+        country: 'India',
+        state: distForm.state || '',
+        district: distForm.district || '',
+        city: distForm.city || '',
+        locality: distForm.locality || '',
+        pincode: distForm.pincode || '',
+        address: distForm.address || distForm.businessAddress
       });
 
       setStatusAlert({
@@ -312,6 +733,53 @@ export const AuthPage = ({ prefillData }) => {
       setLoginEmail(distForm.email);
     } catch (err) {
       setErrorMsg(err.message || 'Failed to submit distributor registration.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Retailer signup handler
+  const handleRetailerSignup = async (e) => {
+    e.preventDefault();
+    setErrorMsg(null);
+
+    if (retailerForm.password !== retailerForm.confirmPassword) {
+      return setErrorMsg('Passwords do not match. Please re-type your password.');
+    }
+    if (retailerForm.password.length < 6) {
+      return setErrorMsg('Password must be at least 6 characters long.');
+    }
+    if (!retailerForm.state || !retailerForm.district) {
+      return setErrorMsg('Please select your state and district.');
+    }
+
+    setLoading(true);
+    try {
+      await registerRetailer({
+        ownerName: retailerForm.ownerName,
+        shopName: retailerForm.shopName,
+        email: retailerForm.email,
+        phoneNumber: retailerForm.phoneNumber,
+        password: retailerForm.password,
+        country: 'India',
+        state: retailerForm.state,
+        district: retailerForm.district,
+        city: retailerForm.city || retailerForm.locality,
+        locality: retailerForm.locality,
+        pincode: retailerForm.pincode,
+        address: retailerForm.address
+      });
+
+      setStatusAlert({
+        type: 'pending',
+        title: 'Retailer Application Submitted Successfully!',
+        message: 'Your retailer registration request has been submitted with status "Pending". The administrator will review and verify your business credentials. You will be able to log in once approved.'
+      });
+      setAuthMode('login');
+      setLoginRole('Retailer');
+      setLoginEmail(retailerForm.email);
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to submit retailer registration.');
     } finally {
       setLoading(false);
     }
@@ -615,7 +1083,7 @@ export const AuthPage = ({ prefillData }) => {
               <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
                 Select Your Portal Role:
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
                 {/* Customer Login Tab */}
                 <button
                   type="button"
@@ -625,7 +1093,7 @@ export const AuthPage = ({ prefillData }) => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '4px',
-                    padding: '12px 10px',
+                    padding: '10px 6px',
                     borderRadius: 'var(--radius-md)',
                     border: loginRole === 'Customer' ? '2px solid #059669' : '1.5px solid #e5e7eb',
                     background: loginRole === 'Customer' ? '#ecfdf5' : '#f9fafb',
@@ -636,11 +1104,11 @@ export const AuthPage = ({ prefillData }) => {
                     boxShadow: loginRole === 'Customer' ? '0 2px 8px rgba(5, 150, 105, 0.15)' : 'none'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.94rem' }}>
-                    <User size={17} color={loginRole === 'Customer' ? '#059669' : '#6b7280'} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.88rem' }}>
+                    <User size={16} color={loginRole === 'Customer' ? '#059669' : '#6b7280'} />
                     Customer
                   </div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#047857' }}>
+                  <span style={{ fontSize: '0.70rem', fontWeight: 600, color: '#047857' }}>
                     Retail Orders
                   </span>
                 </button>
@@ -654,7 +1122,7 @@ export const AuthPage = ({ prefillData }) => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '4px',
-                    padding: '12px 10px',
+                    padding: '10px 6px',
                     borderRadius: 'var(--radius-md)',
                     border: loginRole === 'Distributor' ? '2px solid #0284c7' : '1.5px solid #e5e7eb',
                     background: loginRole === 'Distributor' ? '#f0f9ff' : '#f9fafb',
@@ -665,12 +1133,41 @@ export const AuthPage = ({ prefillData }) => {
                     boxShadow: loginRole === 'Distributor' ? '0 2px 8px rgba(2, 132, 199, 0.15)' : 'none'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.94rem' }}>
-                    <Building2 size={17} color={loginRole === 'Distributor' ? '#0284c7' : '#6b7280'} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.88rem' }}>
+                    <Building2 size={16} color={loginRole === 'Distributor' ? '#0284c7' : '#6b7280'} />
                     Distributor
                   </div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#0369a1' }}>
-                    Wholesale
+                  <span style={{ fontSize: '0.70rem', fontWeight: 600, color: '#0369a1' }}>
+                    Wholesale B2B
+                  </span>
+                </button>
+
+                {/* Retailer Login Tab */}
+                <button
+                  type="button"
+                  onClick={() => setLoginRole('Retailer')}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '10px 6px',
+                    borderRadius: 'var(--radius-md)',
+                    border: loginRole === 'Retailer' ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
+                    background: loginRole === 'Retailer' ? '#f5f3ff' : '#f9fafb',
+                    color: loginRole === 'Retailer' ? '#6d28d9' : '#4b5563',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    transition: 'all 0.2s',
+                    boxShadow: loginRole === 'Retailer' ? '0 2px 8px rgba(124, 58, 237, 0.15)' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.88rem' }}>
+                    <Store size={16} color={loginRole === 'Retailer' ? '#7c3aed' : '#6b7280'} />
+                    Retailer
+                  </div>
+                  <span style={{ fontSize: '0.70rem', fontWeight: 600, color: '#7c3aed' }}>
+                    Shop Portal
                   </span>
                 </button>
               </div>
@@ -779,13 +1276,15 @@ export const AuthPage = ({ prefillData }) => {
             <button
               type="submit"
               disabled={loading}
-              className={loginRole === 'Distributor' ? 'btn btn-sky' : loginRole === 'Admin' ? 'btn btn-primary' : 'btn btn-emerald'}
+              className={loginRole === 'Distributor' ? 'btn btn-sky' : loginRole === 'Retailer' ? 'btn btn-primary' : loginRole === 'Admin' ? 'btn btn-primary' : 'btn btn-emerald'}
               style={{
                 width: '100%',
                 padding: '14px',
                 fontSize: '1rem',
                 fontWeight: 700,
-                borderRadius: 'var(--radius-md)'
+                borderRadius: 'var(--radius-md)',
+                background: loginRole === 'Retailer' ? '#7c3aed' : undefined,
+                borderColor: loginRole === 'Retailer' ? '#6d28d9' : undefined
               }}
             >
               {loading ? 'Authenticating...' : loginRole === 'Admin' ? 'Sign In to Admin Panel' : `Sign In as ${loginRole}`}
@@ -855,7 +1354,7 @@ export const AuthPage = ({ prefillData }) => {
               <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
                 Select Registration Type:
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
                 {/* Customer Registration Selector */}
                 <button
                   type="button"
@@ -865,7 +1364,7 @@ export const AuthPage = ({ prefillData }) => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '4px',
-                    padding: '14px 10px',
+                    padding: '12px 8px',
                     borderRadius: 'var(--radius-md)',
                     border: signupRole === 'Customer' ? '2px solid #059669' : '1.5px solid #e5e7eb',
                     background: signupRole === 'Customer' ? '#ecfdf5' : '#f9fafb',
@@ -876,12 +1375,12 @@ export const AuthPage = ({ prefillData }) => {
                     boxShadow: signupRole === 'Customer' ? '0 2px 8px rgba(5, 150, 105, 0.15)' : 'none'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.94rem' }}>
-                    <User size={18} color={signupRole === 'Customer' ? '#059669' : '#6b7280'} />
-                    Customer Sign Up
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem' }}>
+                    <User size={16} color={signupRole === 'Customer' ? '#059669' : '#6b7280'} />
+                    Customer
                   </div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#059669' }}>
-                    Instant Active Access
+                  <span style={{ fontSize: '0.70rem', fontWeight: 600, color: '#059669' }}>
+                    Instant Access
                   </span>
                 </button>
 
@@ -894,7 +1393,7 @@ export const AuthPage = ({ prefillData }) => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '4px',
-                    padding: '14px 10px',
+                    padding: '12px 8px',
                     borderRadius: 'var(--radius-md)',
                     border: signupRole === 'Distributor' ? '2px solid #0284c7' : '1.5px solid #e5e7eb',
                     background: signupRole === 'Distributor' ? '#f0f9ff' : '#f9fafb',
@@ -905,12 +1404,41 @@ export const AuthPage = ({ prefillData }) => {
                     boxShadow: signupRole === 'Distributor' ? '0 2px 8px rgba(2, 132, 199, 0.15)' : 'none'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.94rem' }}>
-                    <Building2 size={18} color={signupRole === 'Distributor' ? '#0284c7' : '#6b7280'} />
-                    Distributor Request
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem' }}>
+                    <Building2 size={16} color={signupRole === 'Distributor' ? '#0284c7' : '#6b7280'} />
+                    Distributor
                   </div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#0284c7' }}>
-                    Requires Admin Review
+                  <span style={{ fontSize: '0.70rem', fontWeight: 600, color: '#0284c7' }}>
+                    Admin Review
+                  </span>
+                </button>
+
+                {/* Retailer Registration Selector */}
+                <button
+                  type="button"
+                  onClick={() => { setSignupRole('Retailer'); setErrorMsg(null); }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '12px 8px',
+                    borderRadius: 'var(--radius-md)',
+                    border: signupRole === 'Retailer' ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
+                    background: signupRole === 'Retailer' ? '#f5f3ff' : '#f9fafb',
+                    color: signupRole === 'Retailer' ? '#6d28d9' : '#4b5563',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    transition: 'all 0.2s',
+                    boxShadow: signupRole === 'Retailer' ? '0 2px 8px rgba(124, 58, 237, 0.15)' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem' }}>
+                    <Store size={16} color={signupRole === 'Retailer' ? '#7c3aed' : '#6b7280'} />
+                    Retailer
+                  </div>
+                  <span style={{ fontSize: '0.70rem', fontWeight: 600, color: '#7c3aed' }}>
+                    Admin Review
                   </span>
                 </button>
               </div>
@@ -931,7 +1459,7 @@ export const AuthPage = ({ prefillData }) => {
                 <Clock size={20} color="#1d4ed8" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div style={{ fontSize: '0.86rem' }}>
                   <strong style={{ color: '#1e40af', display: 'block', marginBottom: '2px' }}>
-                    Administrator Approval Required
+                    Distributor Approval Required
                   </strong>
                   <div style={{ color: '#1e3a8a', lineHeight: 1.5 }}>
                     Distributor registration requests are placed in <strong>Pending</strong> status until verified by our administration team. Once approved, you can log in to access exclusive wholesale pricing.
@@ -940,8 +1468,32 @@ export const AuthPage = ({ prefillData }) => {
               </div>
             )}
 
+            {/* Notice for Retailer Applicants */}
+            {signupRole === 'Retailer' && (
+              <div style={{
+                background: '#f5f3ff',
+                border: '1.5px solid #c4b5fd',
+                borderRadius: 'var(--radius-md)',
+                padding: '14px 16px',
+                marginBottom: '20px',
+                display: 'flex',
+                gap: '12px',
+                alignItems: 'flex-start'
+              }}>
+                <Clock size={20} color="#7c3aed" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ fontSize: '0.86rem' }}>
+                  <strong style={{ color: '#5b21b6', display: 'block', marginBottom: '2px' }}>
+                    Retailer Shop Verification Required
+                  </strong>
+                  <div style={{ color: '#4c1d95', lineHeight: 1.5 }}>
+                    Retail store registrations are submitted in <strong>Pending</strong> status. Our administrator will verify your shop location and business details before activating your account.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* --- CUSTOMER SIGN UP FORM --- */}
-            {signupRole === 'Customer' ? (
+            {signupRole === 'Customer' && (
               <form onSubmit={handleCustomerSignup}>
                 <div style={{ marginBottom: '14px' }}>
                   <label style={labelStyle}>
@@ -984,7 +1536,7 @@ export const AuthPage = ({ prefillData }) => {
                     <input
                       type="tel"
                       required
-                      placeholder="+1-555-0199"
+                      placeholder="+91 98765 43210"
                       value={custForm.phoneNumber}
                       onChange={e => setCustForm({ ...custForm, phoneNumber: e.target.value })}
                       style={inputStyle}
@@ -996,7 +1548,7 @@ export const AuthPage = ({ prefillData }) => {
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
                   gap: '14px',
-                  marginBottom: '22px'
+                  marginBottom: '18px'
                 }}>
                   <div>
                     <label style={labelStyle}>
@@ -1027,6 +1579,9 @@ export const AuthPage = ({ prefillData }) => {
                   </div>
                 </div>
 
+                {/* Indian Geographical Location & Address */}
+                <IndianLocationPicker form={custForm} setForm={setCustForm} isBusiness={false} />
+
                 <button
                   type="submit"
                   disabled={loading}
@@ -1042,8 +1597,10 @@ export const AuthPage = ({ prefillData }) => {
                   {loading ? 'Creating Customer Account...' : 'Complete Customer Registration'}
                 </button>
               </form>
-            ) : (
-              /* --- DISTRIBUTOR APPLICATION FORM --- */
+            )}
+
+            {/* --- DISTRIBUTOR APPLICATION FORM --- */}
+            {signupRole === 'Distributor' && (
               <form onSubmit={handleDistributorSignup}>
                 {/* SECTION 1: BUSINESS VERIFICATION */}
                 <div style={{
@@ -1065,7 +1622,7 @@ export const AuthPage = ({ prefillData }) => {
 
                 <div style={{ marginBottom: '14px' }}>
                   <label style={labelStyle}>
-                    Registered Business / Store Name <span style={{ color: '#dc2626' }}>*</span>
+                    Registered Business / Enterprise Name <span style={{ color: '#dc2626' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -1077,18 +1634,38 @@ export const AuthPage = ({ prefillData }) => {
                   />
                 </div>
 
-                <div style={{ marginBottom: '18px' }}>
-                  <label style={labelStyle}>
-                    Full Business / Warehouse Address <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Street address, city, region, postal code"
-                    value={distForm.businessAddress}
-                    onChange={e => setDistForm({ ...distForm, businessAddress: e.target.value })}
-                    style={inputStyle}
-                  />
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '14px',
+                  marginBottom: '14px'
+                }}>
+                  <div>
+                    <label style={labelStyle}>
+                      Owner / Contact Person Name <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Rajesh Kumar"
+                      value={distForm.contactPerson || distForm.fullName}
+                      onChange={e => setDistForm({ ...distForm, contactPerson: e.target.value, fullName: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>
+                      PAN / GSTIN / VAT Registration
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 27AAAAA0000A1Z5 / ABCDE1234F"
+                      value={distForm.panVatNumber}
+                      onChange={e => setDistForm({ ...distForm, panVatNumber: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
                 </div>
 
                 {/* SECTION 2: LOGIN CREDENTIALS */}
@@ -1102,6 +1679,7 @@ export const AuthPage = ({ prefillData }) => {
                   textTransform: 'uppercase',
                   letterSpacing: '0.06em',
                   marginBottom: '12px',
+                  marginTop: '18px',
                   paddingBottom: '6px',
                   borderBottom: '2px solid #e0f2fe'
                 }}>
@@ -1136,7 +1714,7 @@ export const AuthPage = ({ prefillData }) => {
                     <input
                       type="tel"
                       required
-                      placeholder="+1-555-0211"
+                      placeholder="+91 98765 43210"
                       value={distForm.phoneNumber}
                       onChange={e => setDistForm({ ...distForm, phoneNumber: e.target.value })}
                       style={inputStyle}
@@ -1148,7 +1726,7 @@ export const AuthPage = ({ prefillData }) => {
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
                   gap: '14px',
-                  marginBottom: '24px'
+                  marginBottom: '18px'
                 }}>
                   <div>
                     <label style={labelStyle}>
@@ -1179,6 +1757,9 @@ export const AuthPage = ({ prefillData }) => {
                   </div>
                 </div>
 
+                {/* Indian Geographical Location & Address */}
+                <IndianLocationPicker form={distForm} setForm={setDistForm} isBusiness={true} />
+
                 <button
                   type="submit"
                   disabled={loading}
@@ -1192,6 +1773,173 @@ export const AuthPage = ({ prefillData }) => {
                   }}
                 >
                   {loading ? 'Submitting Application...' : 'Submit Distributor Registration Request'}
+                </button>
+              </form>
+            )}
+
+            {/* --- RETAILER APPLICATION FORM --- */}
+            {signupRole === 'Retailer' && (
+              <form onSubmit={handleRetailerSignup}>
+                {/* SECTION 1: SHOP & BUSINESS INFORMATION */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: '#6d28d9',
+                  fontWeight: 800,
+                  fontSize: '0.84rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  marginBottom: '12px',
+                  paddingBottom: '6px',
+                  borderBottom: '2px solid #ede9fe'
+                }}>
+                  <Store size={16} />
+                  1. Retailer Shop & Business Details
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '14px',
+                  marginBottom: '14px'
+                }}>
+                  <div>
+                    <label style={labelStyle}>
+                      Owner / Prop. Full Name <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Suresh Patel"
+                      value={retailerForm.ownerName}
+                      onChange={e => setRetailerForm({ ...retailerForm, ownerName: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>
+                      Retail Shop / Store Name <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Patel Telecom & Mobile Care"
+                      value={retailerForm.shopName}
+                      onChange={e => setRetailerForm({ ...retailerForm, shopName: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+
+                {/* SECTION 2: LOGIN CREDENTIALS */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: '#6d28d9',
+                  fontWeight: 800,
+                  fontSize: '0.84rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  marginBottom: '12px',
+                  marginTop: '18px',
+                  paddingBottom: '6px',
+                  borderBottom: '2px solid #ede9fe'
+                }}>
+                  <User size={16} />
+                  2. Retailer Login Account Credentials
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '14px',
+                  marginBottom: '14px'
+                }}>
+                  <div>
+                    <label style={labelStyle}>
+                      Login Email Address <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. shop@pateltelecom.com"
+                      value={retailerForm.email}
+                      onChange={e => setRetailerForm({ ...retailerForm, email: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>
+                      Mobile Phone Number <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="+91 98765 43210"
+                      value={retailerForm.phoneNumber}
+                      onChange={e => setRetailerForm({ ...retailerForm, phoneNumber: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '14px',
+                  marginBottom: '18px'
+                }}>
+                  <div>
+                    <label style={labelStyle}>
+                      Account Password <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Min 6 characters"
+                      value={retailerForm.password}
+                      onChange={e => setRetailerForm({ ...retailerForm, password: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>
+                      Confirm Password <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Repeat password"
+                      value={retailerForm.confirmPassword}
+                      onChange={e => setRetailerForm({ ...retailerForm, confirmPassword: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+
+                {/* Indian Geographical Location & Address */}
+                <IndianLocationPicker form={retailerForm} setForm={setRetailerForm} isBusiness={true} />
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn btn-primary"
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    fontSize: '1rem',
+                    fontWeight: 700,
+                    borderRadius: 'var(--radius-md)',
+                    background: '#7c3aed',
+                    borderColor: '#6d28d9'
+                  }}
+                >
+                  {loading ? 'Submitting Application...' : 'Submit Retailer Registration Request'}
                 </button>
               </form>
             )}

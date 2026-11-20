@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api, { getMediaUrl, getProductFallbackImage } from '../services/api';
 import {
-  ShieldCheck, Users, User, Building2, Clock, CheckCircle, XCircle,
+  ShieldCheck, Users, User, Building2, Store, Clock, CheckCircle, XCircle,
   Search, Eye, Trash2, Check, X, PauseCircle, PlayCircle, RefreshCw, Layers,
   Film, Image as ImageIcon, Upload, Plus, ExternalLink, Sparkles,
-  LayoutDashboard, Package, Menu, Edit, ArrowLeft, AlertCircle,
+  LayoutDashboard, Package, Menu, Edit, ArrowLeft, AlertCircle, Key, History,
   ShoppingCart, Truck, FileText, QrCode, Calculator, Percent, Tag, EyeOff, Info, ArrowRightLeft, ToggleLeft, ToggleRight,
   FolderTree, Battery, BatteryCharging, Cable, Headphones, Shield, Smartphone, Cpu, Zap, Wallet, Gift, CreditCard
 } from 'lucide-react';
@@ -31,11 +31,12 @@ export const AdminPanel = () => {
   // Metrics state
   const [metrics, setMetrics] = useState({
     customers: { total: 0, active: 0, suspended: 0 },
-    distributors: { total: 0, pending: 0, approved: 0, rejected: 0, suspended: 0 }
+    distributors: { total: 0, pending: 0, approved: 0, rejected: 0, suspended: 0 },
+    retailers: { total: 0, pending: 0, approved: 0, rejected: 0, suspended: 0 }
   });
 
   // Core navigation & view state
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'orders' | 'pending' | 'distributors' | 'customers' | 'all' | 'products' | 'advertisements' | 'stickers'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'orders' | 'pending' | 'distributors' | 'retailers' | 'customers' | 'all' | 'products' | 'advertisements' | 'stickers'
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   // Live Chat unread count state
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
@@ -103,6 +104,12 @@ export const AdminPanel = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [suspendModalUser, setSuspendModalUser] = useState(null);
   const [suspensionReason, setSuspensionReason] = useState('');
+  const [editingUser, setEditingUser] = useState(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState(null);
+  const [newPasswordVal, setNewPasswordVal] = useState('');
+  const [historyUser, setHistoryUser] = useState(null);
+  const [userHistoryOrders, setUserHistoryOrders] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Product management & authority state
   const [allProducts, setAllProducts] = useState([]);
@@ -138,7 +145,13 @@ export const AdminPanel = () => {
     distributorOriginalPrice: 1500,
     distributorDiscount: 25,
     distributorPrice: 1125,
-    targetVisibility: 'Both'
+    // Retailer Portal Pricing & Visibility
+    showOnRetailerPortal: true,
+    retailerPricingMode: 'auto', // 'auto' | 'manual'
+    retailerOriginalPrice: 1600,
+    retailerDiscount: 20,
+    retailerPrice: 1280,
+    targetVisibility: 'All Three'
   });
 
   // Advertisement Board State
@@ -522,12 +535,12 @@ export const AdminPanel = () => {
     }
   }, [activeTab]);
 
-  // Distributor verification actions
-  const handleApprove = async (dist) => {
-    if (!window.confirm(`Approve distributor application for "${dist.businessName || dist.fullName}"?`)) return;
+  // User verification and account actions
+  const handleApprove = async (u) => {
+    if (!window.confirm(`Approve registration application for "${u.businessName || u.shopName || u.fullName}"?`)) return;
     try {
-      const r = await api.admin.approveDistributor(dist.id);
-      notify(r.message);
+      const r = await api.admin.approveUser(u.id);
+      notify(r.message || 'Account approved successfully and activated.');
       loadUserData();
       window.dispatchEvent(new Event('mws_notifications_refresh'));
     } catch (e) {
@@ -536,15 +549,59 @@ export const AdminPanel = () => {
   };
 
   const handleRejectConfirm = async () => {
+    if (!rejectModalUser) return;
     try {
-      const r = await api.admin.rejectDistributor(rejectModalUser.id, rejectionReason);
-      notify(r.message);
+      const r = await api.admin.rejectUser(rejectModalUser.id, rejectionReason);
+      notify(r.message || 'Registration rejected.');
       setRejectModalUser(null);
       setRejectionReason('');
       loadUserData();
       window.dispatchEvent(new Event('mws_notifications_refresh'));
     } catch (e) {
       alert(e.message);
+    }
+  };
+
+  const handleEditUserSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    try {
+      const r = await api.admin.updateUser(editingUser.id, editingUser);
+      notify(r.message || 'User details updated successfully.');
+      setEditingUser(null);
+      loadUserData();
+    } catch (e) {
+      alert(e.message || 'Failed to update user.');
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!resetPasswordUser || !newPasswordVal) return;
+    if (newPasswordVal.length < 6) return alert('Password must be at least 6 characters.');
+    try {
+      const r = await api.admin.resetUserPassword(resetPasswordUser.id, newPasswordVal);
+      notify(r.message || `Password reset successfully for ${resetPasswordUser.fullName}.`);
+      setResetPasswordUser(null);
+      setNewPasswordVal('');
+    } catch (e) {
+      alert(e.message || 'Failed to reset password.');
+    }
+  };
+
+  const handleViewHistory = async (u) => {
+    setHistoryUser(u);
+    setUserHistoryOrders([]);
+    setLoadingHistory(true);
+    try {
+      const r = await api.admin.getUserHistory(u.id);
+      if (r.success && Array.isArray(r.orders)) {
+        setUserHistoryOrders(r.orders);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingHistory(false);
     }
   };
 
@@ -603,13 +660,15 @@ export const AdminPanel = () => {
     return Math.max(0, Math.min(100, Math.round(((o - f) / o) * 1000) / 10));
   };
 
-  // Product CRUD actions (Admin Dual-Portal Authority)
+  // Product CRUD actions (Admin Multi-Portal Authority: Customer, Distributor, Retailer)
   const openNewProductModal = () => {
     setEditingProduct(null);
     const defaultCustOrig = 2000;
     const defaultCustDisc = 10;
     const defaultDistOrig = 1500;
     const defaultDistDisc = 25;
+    const defaultRetOrig = 1750;
+    const defaultRetDisc = 18;
 
     setProductForm({
       name: '',
@@ -634,7 +693,13 @@ export const AdminPanel = () => {
       distributorOriginalPrice: defaultDistOrig,
       distributorDiscount: defaultDistDisc,
       distributorPrice: calcFinalPrice(defaultDistOrig, defaultDistDisc),
-      targetVisibility: 'Both'
+      // Retailer Portal Section
+      showOnRetailerPortal: true,
+      retailerPricingMode: 'auto',
+      retailerOriginalPrice: defaultRetOrig,
+      retailerDiscount: defaultRetDisc,
+      retailerPrice: calcFinalPrice(defaultRetOrig, defaultRetDisc),
+      targetVisibility: 'All Three'
     });
     setProductModalOpen(true);
   };
@@ -658,13 +723,34 @@ export const AdminPanel = () => {
       ? Number(prod.distributorDiscount)
       : calcDiscountPercent(distOrig, distPrice);
 
+    const retOrig = prod.retailerOriginalPrice !== undefined && prod.retailerOriginalPrice !== null && prod.retailerOriginalPrice > 0
+      ? Number(prod.retailerOriginalPrice)
+      : (prod.originalPrice || (prod.retailerPrice ? Math.round(prod.retailerPrice * 1.22) : (custOrig || 1750)));
+    const retPrice = prod.retailerPrice !== undefined ? Number(prod.retailerPrice) : (custPrice > 0 ? Math.round(custPrice * 0.9) : 0);
+    const retDisc = prod.retailerDiscount !== undefined && prod.retailerDiscount !== null
+      ? Number(prod.retailerDiscount)
+      : calcDiscountPercent(retOrig, retPrice);
+
     const showCust = prod.showOnCustomerPortal !== undefined && prod.showOnCustomerPortal !== null
       ? (prod.showOnCustomerPortal === 1 || prod.showOnCustomerPortal === true)
-      : (prod.targetVisibility === 'Customer' || prod.targetVisibility === 'Both');
+      : (prod.targetVisibility === 'Customer' || prod.targetVisibility === 'Customer Only' || prod.targetVisibility === 'Both' || prod.targetVisibility === 'Customer + Distributor' || prod.targetVisibility === 'Customer + Retailer' || prod.targetVisibility === 'All Three');
 
     const showDist = prod.showOnDistributorPortal !== undefined && prod.showOnDistributorPortal !== null
       ? (prod.showOnDistributorPortal === 1 || prod.showOnDistributorPortal === true)
-      : (prod.targetVisibility === 'Distributor' || prod.targetVisibility === 'Both');
+      : (prod.targetVisibility === 'Distributor' || prod.targetVisibility === 'Distributor Only' || prod.targetVisibility === 'Both' || prod.targetVisibility === 'Customer + Distributor' || prod.targetVisibility === 'Distributor + Retailer' || prod.targetVisibility === 'All Three');
+
+    const showRet = prod.showOnRetailerPortal !== undefined && prod.showOnRetailerPortal !== null
+      ? (prod.showOnRetailerPortal === 1 || prod.showOnRetailerPortal === true)
+      : (prod.targetVisibility === 'Retailer' || prod.targetVisibility === 'Retailer Only' || prod.targetVisibility === 'Customer + Retailer' || prod.targetVisibility === 'Distributor + Retailer' || prod.targetVisibility === 'All Three');
+
+    let targetVis = 'None';
+    if (showCust && showDist && showRet) targetVis = 'All Three';
+    else if (showCust && showDist) targetVis = 'Customer + Distributor';
+    else if (showCust && showRet) targetVis = 'Customer + Retailer';
+    else if (showDist && showRet) targetVis = 'Distributor + Retailer';
+    else if (showCust) targetVis = 'Customer Only';
+    else if (showDist) targetVis = 'Distributor Only';
+    else if (showRet) targetVis = 'Retailer Only';
 
     setProductForm({
       name: prod.name || '',
@@ -689,7 +775,13 @@ export const AdminPanel = () => {
       distributorOriginalPrice: distOrig,
       distributorDiscount: distDisc,
       distributorPrice: distPrice,
-      targetVisibility: (showCust && showDist) ? 'Both' : (showCust ? 'Customer' : (showDist ? 'Distributor' : 'None'))
+      // Retailer Portal Section
+      showOnRetailerPortal: showRet,
+      retailerPricingMode: prod.retailerPricingMode || 'auto',
+      retailerOriginalPrice: retOrig,
+      retailerDiscount: retDisc,
+      retailerPrice: retPrice,
+      targetVisibility: targetVis
     });
     setProductModalOpen(true);
   };
@@ -763,6 +855,21 @@ export const AdminPanel = () => {
       return alert('Distributor Final Price cannot be negative.');
     }
 
+    // 4. Validate Retailer Pricing
+    const retOrig = Math.max(0, parseFloat(productForm.retailerOriginalPrice) || 0);
+    const retDisc = parseFloat(productForm.retailerDiscount) || 0;
+    const retFinal = parseFloat(productForm.retailerPrice) || 0;
+
+    if (retOrig < 0) {
+      return alert('Retailer Original Price cannot be negative.');
+    }
+    if (retDisc < 0 || retDisc > 100) {
+      return alert('Retailer Discount must be between 0% and 100%.');
+    }
+    if (retFinal < 0) {
+      return alert('Retailer Final Price cannot be negative.');
+    }
+
     // Calculate final prices based on active pricing mode
     const finalCustPrice = productForm.customerPricingMode === 'auto'
       ? calcFinalPrice(custOrig, custDisc)
@@ -771,6 +878,23 @@ export const AdminPanel = () => {
     const finalDistPrice = productForm.distributorPricingMode === 'auto'
       ? calcFinalPrice(distOrig, distDisc)
       : distFinal;
+
+    const finalRetPrice = productForm.retailerPricingMode === 'auto'
+      ? calcFinalPrice(retOrig, retDisc)
+      : retFinal;
+
+    const isCust = Boolean(productForm.showOnCustomerPortal);
+    const isDist = Boolean(productForm.showOnDistributorPortal);
+    const isRet = Boolean(productForm.showOnRetailerPortal);
+
+    let targetVis = 'None';
+    if (isCust && isDist && isRet) targetVis = 'All Three';
+    else if (isCust && isDist) targetVis = 'Customer + Distributor';
+    else if (isCust && isRet) targetVis = 'Customer + Retailer';
+    else if (isDist && isRet) targetVis = 'Distributor + Retailer';
+    else if (isCust) targetVis = 'Customer Only';
+    else if (isDist) targetVis = 'Distributor Only';
+    else if (isRet) targetVis = 'Retailer Only';
 
     const payload = {
       ...productForm,
@@ -784,11 +908,14 @@ export const AdminPanel = () => {
       distributorOriginalPrice: distOrig,
       distributorDiscount: distDisc,
       distributorPrice: finalDistPrice,
-      showOnCustomerPortal: Boolean(productForm.showOnCustomerPortal),
-      showOnDistributorPortal: Boolean(productForm.showOnDistributorPortal),
-      targetVisibility: (productForm.showOnCustomerPortal && productForm.showOnDistributorPortal)
-        ? 'Both'
-        : (productForm.showOnCustomerPortal ? 'Customer' : (productForm.showOnDistributorPortal ? 'Distributor' : 'None'))
+      retailerOriginalPrice: retOrig,
+      retailerDiscount: retDisc,
+      retailerPrice: finalRetPrice,
+      retailerPricingMode: productForm.retailerPricingMode || 'auto',
+      showOnCustomerPortal: isCust,
+      showOnDistributorPortal: isDist,
+      showOnRetailerPortal: isRet,
+      targetVisibility: targetVis
     };
 
     setSavingProduct(true);
@@ -805,7 +932,7 @@ export const AdminPanel = () => {
       } else {
         const res = await api.products.create(payload);
         if (res.success) {
-          notify(`Product "${payload.name}" created! Portals: Customer (${payload.showOnCustomerPortal ? 'Active' : 'Hidden'}), Distributor (${payload.showOnDistributorPortal ? 'Active' : 'Hidden'})`);
+          notify(`Product "${payload.name}" created! Portals: Customer (${isCust ? 'Active' : 'Hidden'}), Distributor (${isDist ? 'Active' : 'Hidden'}), Retailer (${isRet ? 'Active' : 'Hidden'})`);
           setProductModalOpen(false);
           localStorage.setItem('mws_products_last_update', Date.now().toString());
           window.dispatchEvent(new Event('mws_products_updated'));
@@ -819,12 +946,16 @@ export const AdminPanel = () => {
     }
   };
 
-  // Fast 1-Click Visibility Toggle for Customer or Distributor Portal
+  // Fast 1-Click Visibility Toggle for Customer, Distributor, or Retailer Portal
   const handleTogglePortalVisibility = async (prod, portalType) => {
     const isCustomer = portalType === 'customer';
+    const isRetailer = portalType === 'retailer';
+    const isDistributor = portalType === 'distributor';
     const currentVal = isCustomer
       ? (prod.showOnCustomerPortal === 1 || prod.showOnCustomerPortal === true)
-      : (prod.showOnDistributorPortal === 1 || prod.showOnDistributorPortal === true);
+      : isRetailer
+        ? (prod.showOnRetailerPortal === 1 || prod.showOnRetailerPortal === true)
+        : (prod.showOnDistributorPortal === 1 || prod.showOnDistributorPortal === true);
     const newVal = !currentVal;
 
     // Optimistic UI update
@@ -833,18 +964,22 @@ export const AdminPanel = () => {
         return {
           ...p,
           showOnCustomerPortal: isCustomer ? (newVal ? 1 : 0) : p.showOnCustomerPortal,
-          showOnDistributorPortal: !isCustomer ? (newVal ? 1 : 0) : p.showOnDistributorPortal
+          showOnDistributorPortal: isDistributor ? (newVal ? 1 : 0) : p.showOnDistributorPortal,
+          showOnRetailerPortal: isRetailer ? (newVal ? 1 : 0) : p.showOnRetailerPortal
         };
       }
       return p;
     }));
 
-    notify(`${isCustomer ? 'Customer Portal' : 'Distributor Portal'} visibility toggled to: ${newVal ? 'ON' : 'OFF'}`);
+    const portalName = isCustomer ? 'Customer Portal' : isRetailer ? 'Retailer Portal' : 'Distributor Portal';
+    notify(`${portalName} visibility toggled to: ${newVal ? 'ON' : 'OFF'}`);
 
     try {
       const payload = isCustomer
         ? { showOnCustomerPortal: newVal }
-        : { showOnDistributorPortal: newVal };
+        : isRetailer
+          ? { showOnRetailerPortal: newVal }
+          : { showOnDistributorPortal: newVal };
       const res = await api.products.toggleVisibility(prod.id, payload);
       if (res.success) {
         localStorage.setItem('mws_products_last_update', Date.now().toString());
@@ -1012,9 +1147,11 @@ export const AdminPanel = () => {
   const safeUsers = Array.isArray(users) ? users : [];
   let displayUsers = safeUsers;
   if (activeTab === 'pending') {
-    displayUsers = safeUsers.filter(u => u && u.userType === 'Distributor' && u.accountStatus === 'Pending');
+    displayUsers = safeUsers.filter(u => u && (u.userType === 'Distributor' || u.userType === 'Retailer') && u.accountStatus === 'Pending');
   } else if (activeTab === 'distributors') {
     displayUsers = safeUsers.filter(u => u && u.userType === 'Distributor');
+  } else if (activeTab === 'retailers') {
+    displayUsers = safeUsers.filter(u => u && u.userType === 'Retailer');
   } else if (activeTab === 'customers') {
     displayUsers = safeUsers.filter(u => u && u.userType === 'Customer');
   }
@@ -1024,15 +1161,19 @@ export const AdminPanel = () => {
   const filteredProducts = safeProducts.filter(p => {
     if (!p) return false;
     // Visibility filter
-    const isCustomer = p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true || p.targetVisibility === 'Customer' || p.targetVisibility === 'Both';
-    const isDistributor = p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true || p.targetVisibility === 'Distributor' || p.targetVisibility === 'Both';
+    const isCustomer = p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true || p.targetVisibility === 'Customer' || p.targetVisibility === 'Both' || p.targetVisibility === 'Customer Only' || p.targetVisibility === 'Customer + Distributor' || p.targetVisibility === 'Customer + Retailer' || p.targetVisibility === 'All Three';
+    const isDistributor = p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true || p.targetVisibility === 'Distributor' || p.targetVisibility === 'Both' || p.targetVisibility === 'Distributor Only' || p.targetVisibility === 'Customer + Distributor' || p.targetVisibility === 'Distributor + Retailer' || p.targetVisibility === 'All Three';
+    const isRetailer = p.showOnRetailerPortal === 1 || p.showOnRetailerPortal === true || p.targetVisibility === 'Retailer' || p.targetVisibility === 'Retailer Only' || p.targetVisibility === 'Customer + Retailer' || p.targetVisibility === 'Distributor + Retailer' || p.targetVisibility === 'All Three';
 
+    if (productFilterVisibility === 'AllThree' && (!isCustomer || !isDistributor || !isRetailer)) return false;
     if (productFilterVisibility === 'Both' && (!isCustomer || !isDistributor)) return false;
     if (productFilterVisibility === 'Customer' && !isCustomer) return false;
     if (productFilterVisibility === 'Distributor' && !isDistributor) return false;
-    if (productFilterVisibility === 'CustomerOnly' && (!isCustomer || isDistributor)) return false;
-    if (productFilterVisibility === 'DistributorOnly' && (!isDistributor || isCustomer)) return false;
-    if (productFilterVisibility === 'Hidden' && (isCustomer || isDistributor)) return false;
+    if (productFilterVisibility === 'Retailer' && !isRetailer) return false;
+    if (productFilterVisibility === 'CustomerOnly' && (!isCustomer || isDistributor || isRetailer)) return false;
+    if (productFilterVisibility === 'DistributorOnly' && (!isDistributor || isCustomer || isRetailer)) return false;
+    if (productFilterVisibility === 'RetailerOnly' && (!isRetailer || isCustomer || isDistributor)) return false;
+    if (productFilterVisibility === 'Hidden' && (isCustomer || isDistributor || isRetailer)) return false;
 
     // Category filter
     if (productCategoryFilter !== 'All' && p.category !== productCategoryFilter) return false;
@@ -1117,7 +1258,7 @@ export const AdminPanel = () => {
         { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard, badge: null, color: 'var(--primary)' },
         { id: 'orders', label: 'Orders', icon: ShoppingCart, badge: orders?.length ?? 0, color: '#2563eb' },
         { id: 'messages', label: 'Live Messages', icon: MessageSquare, badge: chatUnreadCount > 0 ? chatUnreadCount : null, color: '#0284c7' },
-        { id: 'pending', label: 'Pending Approvals', icon: Clock, badge: metrics?.distributors?.pending ?? 0, color: 'var(--status-pending)' }
+        { id: 'pending', label: 'Pending Approvals', icon: Clock, badge: ((metrics?.distributors?.pending ?? 0) + (metrics?.retailers?.pending ?? 0)), color: 'var(--status-pending)' }
       ]
     },
     {
@@ -1137,8 +1278,9 @@ export const AdminPanel = () => {
     {
       title: 'Partners & Accounts',
       items: [
-        { id: 'distributors', label: 'Distributors', icon: Building2, badge: metrics?.distributors?.approved ?? 0, color: 'var(--distributor-accent)' },
-        { id: 'customers', label: 'Customers', icon: Users, badge: metrics?.customers?.active ?? 0, color: 'var(--customer-accent)' },
+        { id: 'distributors', label: 'Distributor Management', icon: Building2, badge: metrics?.distributors?.approved ?? 0, color: 'var(--distributor-accent)' },
+        { id: 'retailers', label: 'Retailer Management', icon: Store, badge: metrics?.retailers?.approved ?? 0, color: '#8b5cf6' },
+        { id: 'customers', label: 'Customer Management', icon: Users, badge: metrics?.customers?.active ?? 0, color: 'var(--customer-accent)' },
         { id: 'all', label: 'All User Accounts', icon: Search, badge: users?.length ?? 0, color: '#6366f1' }
       ]
     },
@@ -1261,8 +1403,9 @@ export const AdminPanel = () => {
                       onClick={() => {
                         setActiveTab(item.id);
                         setMobileSidebarOpen(false);
-                        if (item.id === 'pending') { setStatusFilter('Pending'); setTypeFilter('Distributor'); }
+                        if (item.id === 'pending') { setStatusFilter('Pending'); setTypeFilter('All'); }
                         else if (item.id === 'distributors') { setStatusFilter('All'); setTypeFilter('Distributor'); }
+                        else if (item.id === 'retailers') { setStatusFilter('All'); setTypeFilter('Retailer'); }
                         else if (item.id === 'customers') { setStatusFilter('All'); setTypeFilter('Customer'); }
                         else if (item.id === 'all') { setStatusFilter('All'); setTypeFilter('All'); }
                       }}
@@ -1435,8 +1578,9 @@ export const AdminPanel = () => {
                           onClick={() => {
                             setActiveTab(item.id);
                             setMobileSidebarOpen(false);
-                            if (item.id === 'pending') { setStatusFilter('Pending'); setTypeFilter('Distributor'); }
+                            if (item.id === 'pending') { setStatusFilter('Pending'); setTypeFilter('All'); }
                             else if (item.id === 'distributors') { setStatusFilter('All'); setTypeFilter('Distributor'); }
+                            else if (item.id === 'retailers') { setStatusFilter('All'); setTypeFilter('Retailer'); }
                             else if (item.id === 'customers') { setStatusFilter('All'); setTypeFilter('Customer'); }
                             else if (item.id === 'all') { setStatusFilter('All'); setTypeFilter('All'); }
                           }}
@@ -2351,12 +2495,14 @@ export const AdminPanel = () => {
                 </span>
                 {[
                   { id: 'All', label: `All (${allProducts.length})` },
-                  { id: 'Both', label: `Both Portals (${allProducts.filter(p => (p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true) && (p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true)).length})`, color: '#4f46e5' },
-                  { id: 'Customer', label: `Customer Portal Active (${allProducts.filter(p => p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true || p.targetVisibility === 'Customer' || p.targetVisibility === 'Both').length})`, color: '#059669' },
-                  { id: 'Distributor', label: `Distributor Portal Active (${allProducts.filter(p => p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true || p.targetVisibility === 'Distributor' || p.targetVisibility === 'Both').length})`, color: '#0284c7' },
-                  { id: 'CustomerOnly', label: `Customer Only (${allProducts.filter(p => (p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true) && (p.showOnDistributorPortal === 0 || p.showOnDistributorPortal === false)).length})`, color: '#059669' },
-                  { id: 'DistributorOnly', label: `Distributor Only (${allProducts.filter(p => (p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true) && (p.showOnCustomerPortal === 0 || p.showOnCustomerPortal === false)).length})`, color: '#0284c7' },
-                  { id: 'Hidden', label: `Hidden from Both (${allProducts.filter(p => (p.showOnCustomerPortal === 0 || p.showOnCustomerPortal === false) && (p.showOnDistributorPortal === 0 || p.showOnDistributorPortal === false)).length})`, color: '#dc2626' }
+                  { id: 'AllThree', label: `All Three (${allProducts.filter(p => (p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true) && (p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true) && (p.showOnRetailerPortal === 1 || p.showOnRetailerPortal === true)).length})`, color: '#7c3aed' },
+                  { id: 'Customer', label: `Customer Active (${allProducts.filter(p => p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true).length})`, color: '#059669' },
+                  { id: 'Distributor', label: `Distributor Active (${allProducts.filter(p => p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true).length})`, color: '#0284c7' },
+                  { id: 'Retailer', label: `Retailer Active (${allProducts.filter(p => p.showOnRetailerPortal === 1 || p.showOnRetailerPortal === true).length})`, color: '#9333ea' },
+                  { id: 'CustomerOnly', label: `Customer Only (${allProducts.filter(p => (p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true) && (p.showOnDistributorPortal === 0 || !p.showOnDistributorPortal) && (p.showOnRetailerPortal === 0 || !p.showOnRetailerPortal)).length})`, color: '#059669' },
+                  { id: 'DistributorOnly', label: `Distributor Only (${allProducts.filter(p => (p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true) && (p.showOnCustomerPortal === 0 || !p.showOnCustomerPortal) && (p.showOnRetailerPortal === 0 || !p.showOnRetailerPortal)).length})`, color: '#0284c7' },
+                  { id: 'RetailerOnly', label: `Retailer Only (${allProducts.filter(p => (p.showOnRetailerPortal === 1 || p.showOnRetailerPortal === true) && (p.showOnCustomerPortal === 0 || !p.showOnCustomerPortal) && (p.showOnDistributorPortal === 0 || !p.showOnDistributorPortal)).length})`, color: '#9333ea' },
+                  { id: 'Hidden', label: `Hidden (${allProducts.filter(p => (p.showOnCustomerPortal === 0 || !p.showOnCustomerPortal) && (p.showOnDistributorPortal === 0 || !p.showOnDistributorPortal) && (p.showOnRetailerPortal === 0 || !p.showOnRetailerPortal)).length})`, color: '#dc2626' }
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -2388,17 +2534,19 @@ export const AdminPanel = () => {
               boxShadow: 'var(--shadow-card)'
             }}>
               <div className="responsive-table-container">
-                <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.86rem' }}>
+                <table style={{ width: '100%', minWidth: '880px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.86rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid var(--border-subtle)', background: 'var(--bg-app-2)', color: 'var(--text-body)' }}>
                       <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PRODUCT & CODE</th>
                       <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(16, 185, 129, 0.04)', color: '#047857' }}>
-                        CUSTOMER PORTAL (RETAIL)
+                        CUSTOMER PORTAL
                       </th>
                       <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(2, 132, 199, 0.04)', color: '#0284c7' }}>
-                        DISTRIBUTOR PORTAL (B2B)
+                        DISTRIBUTOR PORTAL
                       </th>
-                      <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>B2B MARGIN GAP</th>
+                      <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(124, 58, 237, 0.04)', color: '#7c3aed' }}>
+                        RETAILER PORTAL
+                      </th>
                       <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>STOCK</th>
                       <th style={{ padding: '12px 14px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ACTIONS</th>
                     </tr>
@@ -2409,16 +2557,21 @@ export const AdminPanel = () => {
                     ) : filteredProducts.length === 0 ? (
                       <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No products found matching current filters.</td></tr>
                     ) : filteredProducts.map(p => {
-                      const showCust = p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true || p.targetVisibility === 'Customer' || p.targetVisibility === 'Both';
-                      const showDist = p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true || p.targetVisibility === 'Distributor' || p.targetVisibility === 'Both';
+                      const showCust = p.showOnCustomerPortal === 1 || p.showOnCustomerPortal === true || p.targetVisibility === 'Customer' || p.targetVisibility === 'Both' || p.targetVisibility === 'Customer Only' || p.targetVisibility === 'Customer + Distributor' || p.targetVisibility === 'Customer + Retailer' || p.targetVisibility === 'All Three';
+                      const showDist = p.showOnDistributorPortal === 1 || p.showOnDistributorPortal === true || p.targetVisibility === 'Distributor' || p.targetVisibility === 'Both' || p.targetVisibility === 'Distributor Only' || p.targetVisibility === 'Customer + Distributor' || p.targetVisibility === 'Distributor + Retailer' || p.targetVisibility === 'All Three';
+                      const showRet = p.showOnRetailerPortal === 1 || p.showOnRetailerPortal === true || p.targetVisibility === 'Retailer' || p.targetVisibility === 'Retailer Only' || p.targetVisibility === 'Customer + Retailer' || p.targetVisibility === 'Distributor + Retailer' || p.targetVisibility === 'All Three';
+
                       const custPrice = Number(p.customerPrice || 0);
                       const custOrig = Number(p.customerOriginalPrice || p.originalPrice || custPrice);
                       const custDisc = Number(p.customerDiscount || 0);
+
                       const distPrice = Number(p.distributorPrice || 0);
                       const distOrig = Number(p.distributorOriginalPrice || p.originalPrice || distPrice);
                       const distDisc = Number(p.distributorDiscount || 0);
-                      const priceGap = Math.max(0, custPrice - distPrice);
-                      const priceGapPercent = custPrice > 0 ? Math.round((priceGap / custPrice) * 100) : 0;
+
+                      const retPrice = Number(p.retailerPrice || (custPrice > 0 ? Math.round(custPrice * 0.9) : 0));
+                      const retOrig = Number(p.retailerOriginalPrice || p.originalPrice || (retPrice ? Math.round(retPrice * 1.2) : 0));
+                      const retDisc = Number(p.retailerDiscount || 0);
 
                       return (
                         <tr
@@ -2578,13 +2731,52 @@ export const AdminPanel = () => {
                             </div>
                           </td>
 
-                          {/* B2B Margin Gap Column */}
-                          <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                            <div style={{ fontWeight: 700, color: '#4338ca', fontSize: '0.86rem' }}>
-                              ₹{priceGap.toLocaleString()}
-                            </div>
-                            <div style={{ fontSize: '0.70rem', color: '#6366f1', fontWeight: 600 }}>
-                              {priceGapPercent}% Wholesale Margin
+                          {/* Retailer Portal Column */}
+                          <td style={{ padding: '12px 14px', background: 'rgba(124, 58, 237, 0.02)' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {/* 1-Click Visibility Toggle */}
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePortalVisibility(p, 'retailer')}
+                                title="Click to toggle visibility on Retailer Portal"
+                                style={{
+                                  alignSelf: 'flex-start',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '2px 8px',
+                                  borderRadius: 'var(--radius-full)',
+                                  border: showRet ? '1px solid #7c3aed' : '1px solid #cbd5e1',
+                                  background: showRet ? '#faf5ff' : '#f8fafc',
+                                  color: showRet ? '#6b21a8' : '#64748b',
+                                  fontSize: '0.70rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: showRet ? '#7c3aed' : '#94a3b8' }} />
+                                {showRet ? 'Live on Retailer' : 'Hidden from Retailer'}
+                              </button>
+
+                              {/* Price Details */}
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '2px' }}>
+                                <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#7c3aed' }}>
+                                  ₹{retPrice.toLocaleString()}
+                                </span>
+                                {retOrig > retPrice && (
+                                  <span style={{ fontSize: '0.78rem', color: '#94a3b8', textDecoration: 'line-through' }}>
+                                    ₹{retOrig.toLocaleString()}
+                                  </span>
+                                )}
+                                {retDisc > 0 && (
+                                  <span style={{ fontSize: '0.70rem', fontWeight: 700, color: '#7c3aed', background: '#f3e8ff', padding: '1px 4px', borderRadius: '3px' }}>
+                                    -{retDisc}% Store
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: '0.68rem', color: '#64748b', fontStyle: 'italic' }}>
+                                Mode: {p.retailerPricingMode === 'manual' ? 'Manual Set Price' : 'Auto Discount'}
+                              </span>
                             </div>
                           </td>
 
@@ -3418,20 +3610,22 @@ export const AdminPanel = () => {
         {/* ======================================================== */}
         {/* =========== VIEWS 4-7: USER MANAGEMENT TABLES ========== */}
         {/* ======================================================== */}
-        {(activeTab === 'pending' || activeTab === 'distributors' || activeTab === 'customers' || activeTab === 'all') && (
+        {(activeTab === 'pending' || activeTab === 'distributors' || activeTab === 'retailers' || activeTab === 'customers' || activeTab === 'all') && (
           <div>
             <div style={{ marginBottom: '20px' }}>
               <h1 style={{ fontSize: 'clamp(1.4rem, 3.5vw, 1.85rem)', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 6px 0' }}>
-                {activeTab === 'pending' && 'Pending Distributor Applications'}
-                {activeTab === 'distributors' && 'Wholesale Distributors'}
-                {activeTab === 'customers' && 'Retail Customers'}
-                {activeTab === 'all' && 'All Registered User Accounts'}
+                {activeTab === 'pending' && 'Pending Registration Approvals'}
+                {activeTab === 'distributors' && 'Distributor Management'}
+                {activeTab === 'retailers' && 'Retailer Management'}
+                {activeTab === 'customers' && 'Customer Management'}
+                {activeTab === 'all' && 'All Registered Accounts & User Directory'}
               </h1>
               <p style={{ color: 'var(--text-body)', fontSize: '0.88rem', margin: 0 }}>
-                {activeTab === 'pending' && 'Review business licenses, VAT/PAN documents, and approve or reject distributor requests.'}
-                {activeTab === 'distributors' && 'Manage approved wholesale accounts, view VAT/PAN numbers, and update account statuses.'}
-                {activeTab === 'customers' && 'View customer accounts and monitor retail activity.'}
-                {activeTab === 'all' && 'Search and filter the complete user directory across all role tiers.'}
+                {activeTab === 'pending' && 'Review shop registrations, business details, territory selections, and approve or reject applications.'}
+                {activeTab === 'distributors' && 'Manage approved wholesale distributor accounts, assigned territories, and track B2B performance.'}
+                {activeTab === 'retailers' && 'Manage retail stores, shop locations, owner contacts, and monitor retail-level orders.'}
+                {activeTab === 'customers' && 'View registered customer accounts, delivery addresses, and monitor direct orders.'}
+                {activeTab === 'all' && 'Search and filter the complete account directory across Distributors, Retailers, and Customers.'}
               </p>
             </div>
 
@@ -3440,7 +3634,7 @@ export const AdminPanel = () => {
               <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
                 <input
                   type="text"
-                  placeholder="Search by name, email, company, PAN/VAT, user ID..."
+                  placeholder="Search by name, shop, email, phone, state, district, PIN..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   style={{ ...inputStyle, paddingLeft: '40px' }}
@@ -3453,6 +3647,7 @@ export const AdminPanel = () => {
                   <option value="All">All Roles</option>
                   <option value="Customer">Customers</option>
                   <option value="Distributor">Distributors</option>
+                  <option value="Retailer">Retailers</option>
                   <option value="Admin">Admin</option>
                 </select>
               )}
@@ -3475,10 +3670,10 @@ export const AdminPanel = () => {
               boxShadow: 'var(--shadow-card)'
             }}>
               <div className="responsive-table-container">
-                <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+                <table style={{ width: '100%', minWidth: '880px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid var(--border-subtle)', background: 'var(--bg-app-2)', color: 'var(--text-body)' }}>
-                      {['USER & ACCOUNT', 'ROLE', 'STATUS', 'BUSINESS & TAX REGISTRATION', 'REGISTERED', 'ACTIONS'].map(h => (
+                      {['USER & ACCOUNT', 'ROLE', 'STATUS', 'BUSINESS / SHOP & LOCATION', 'REGISTERED', 'ACTIONS'].map(h => (
                         <th key={h} style={{ padding: '12px 16px', fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                           {h}
                         </th>
@@ -3499,19 +3694,26 @@ export const AdminPanel = () => {
                       >
                         {/* User */}
                         <td style={{ padding: '13px 16px' }}>
-                          <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{u.fullName}</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{u.fullName || u.ownerName || 'User'}</div>
                           <div style={{ fontSize: '0.76rem', color: 'var(--text-body)' }}>{u.email}</div>
+                          {u.phoneNumber && <div style={{ fontSize: '0.74rem', color: '#0369a1' }}>📞 {u.phoneNumber}</div>}
                           <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>{u.userId}</div>
                         </td>
 
                         {/* Role */}
                         <td style={{ padding: '13px 16px' }}>
-                          <span className={`badge badge-${(u.userType || 'customer').toLowerCase()}`}>
-                            {u.userType === 'Customer' && <User size={10} />}
-                            {u.userType === 'Distributor' && <Building2 size={10} />}
-                            {u.userType === 'Admin' && <ShieldCheck size={10} />}
-                            {u.userType}
-                          </span>
+                          {u.userType === 'Retailer' ? (
+                            <span className="badge" style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #c4b5fd', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Store size={11} /> Retailer
+                            </span>
+                          ) : (
+                            <span className={`badge badge-${(u.userType || 'customer').toLowerCase()}`}>
+                              {u.userType === 'Customer' && <User size={10} />}
+                              {u.userType === 'Distributor' && <Building2 size={10} />}
+                              {u.userType === 'Admin' && <ShieldCheck size={10} />}
+                              {u.userType}
+                            </span>
+                          )}
                         </td>
 
                         {/* Status */}
@@ -3519,18 +3721,35 @@ export const AdminPanel = () => {
                           <span className={`badge badge-${(u.accountStatus || 'active').toLowerCase()}`}>{u.accountStatus || 'Active'}</span>
                         </td>
 
-                        {/* Business */}
-                        <td style={{ padding: '13px 16px', maxWidth: '220px' }}>
-                          {u.businessName ? (
+                        {/* Business / Shop & Location */}
+                        <td style={{ padding: '13px 16px', maxWidth: '260px' }}>
+                          {(u.businessName || u.shopName) ? (
                             <div>
-                              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.84rem' }}>{u.businessName}</div>
+                              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.84rem' }}>
+                                {u.shopName || u.businessName}
+                              </div>
+                              {u.ownerName && u.ownerName !== u.fullName && (
+                                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Owner: {u.ownerName}</div>
+                              )}
                               {u.panVatNumber && (
-                                <div style={{ fontSize: '0.74rem', color: '#0369a1', fontFamily: 'var(--font-mono)' }}>
+                                <div style={{ fontSize: '0.72rem', color: '#0369a1', fontFamily: 'var(--font-mono)' }}>
                                   PAN/VAT: {u.panVatNumber}
                                 </div>
                               )}
                             </div>
-                          ) : <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>— (Retail Customer)</span>}
+                          ) : null}
+
+                          {(u.city || u.district || u.state || u.pincode) ? (
+                            <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <MapPin size={11} color="#0d9488" style={{ flexShrink: 0 }} />
+                              <span>
+                                {[u.city || u.locality, u.district, u.state].filter(Boolean).join(', ')}
+                                {u.pincode ? ` - ${u.pincode}` : ''}
+                              </span>
+                            </div>
+                          ) : (
+                            (!u.businessName && !u.shopName) && <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>— (Retail Customer)</span>
+                          )}
                         </td>
 
                         {/* Registered */}
@@ -3540,22 +3759,40 @@ export const AdminPanel = () => {
 
                         {/* Actions */}
                         <td style={{ padding: '13px 16px', whiteSpace: 'nowrap' }}>
-                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            <button onClick={() => setSelectedUser(u)} title="View profile" className="btn btn-secondary btn-sm" style={{ padding: '5px 8px' }}>
+                          <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                            {/* View Profile */}
+                            <button onClick={() => setSelectedUser(u)} title="View complete profile" className="btn btn-secondary btn-sm" style={{ padding: '5px 8px' }}>
                               <Eye size={13} />
                             </button>
 
-                            {u.userType === 'Distributor' && u.accountStatus === 'Pending' && (
+                            {/* Pending Approvals: Approve / Reject */}
+                            {(u.userType === 'Distributor' || u.userType === 'Retailer') && u.accountStatus === 'Pending' && (
                               <>
-                                <button onClick={() => handleApprove(u)} title="Approve Distributor" className="btn btn-emerald btn-sm" style={{ padding: '5px 8px' }}>
+                                <button onClick={() => handleApprove(u)} title={`Approve ${u.userType}`} className="btn btn-emerald btn-sm" style={{ padding: '5px 8px', gap: '4px' }}>
                                   <Check size={13} /> Approve
                                 </button>
-                                <button onClick={() => setRejectModalUser(u)} title="Reject Distributor" className="btn btn-danger btn-sm" style={{ padding: '5px 8px' }}>
+                                <button onClick={() => setRejectModalUser(u)} title={`Reject ${u.userType}`} className="btn btn-danger btn-sm" style={{ padding: '5px 8px' }}>
                                   <X size={13} />
                                 </button>
                               </>
                             )}
 
+                            {/* Edit Account */}
+                            <button onClick={() => setEditingUser({ ...u })} title="Edit Account Details" className="btn btn-secondary btn-sm" style={{ padding: '5px 8px', color: '#4f46e5' }}>
+                              <Edit size={13} />
+                            </button>
+
+                            {/* Reset Password */}
+                            <button onClick={() => { setResetPasswordUser(u); setNewPasswordVal(''); }} title="Reset Password" className="btn btn-secondary btn-sm" style={{ padding: '5px 8px', color: '#d97706' }}>
+                              <Key size={13} />
+                            </button>
+
+                            {/* View History */}
+                            <button onClick={() => handleViewHistory(u)} title="View Account Order History" className="btn btn-secondary btn-sm" style={{ padding: '5px 8px', color: '#0284c7' }}>
+                              <History size={13} />
+                            </button>
+
+                            {/* Suspend / Activate */}
                             {u.accountStatus === 'Active' && u.userType !== 'Admin' && (
                               <button onClick={() => setSuspendModalUser(u)} title="Suspend user" className="btn btn-secondary btn-sm" style={{ padding: '5px 8px', color: 'var(--status-suspended)' }}>
                                 <PauseCircle size={13} />
@@ -3568,6 +3805,7 @@ export const AdminPanel = () => {
                               </button>
                             )}
 
+                            {/* Delete User */}
                             {u.userType !== 'Admin' && (
                               <button
                                 onClick={() => handleDeleteUser(u)}
@@ -3962,6 +4200,147 @@ export const AdminPanel = () => {
                       <option value="Archived">Archived</option>
                     </select>
                   </div>
+                </div>
+              </div>
+
+              {/* ======================================================== */}
+              {/* TARGET PORTAL VISIBILITY SELECTOR (7 CHOICES) */}
+              {/* ======================================================== */}
+              <div style={{
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                border: '1.5px solid #cbd5e1',
+                borderRadius: '14px',
+                padding: '18px 20px',
+                marginBottom: '20px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Eye size={18} color="#4f46e5" />
+                    <span style={{ fontSize: '0.98rem', fontWeight: 800, color: '#1e293b' }}>
+                      Target Portal Visibility Mode
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.74rem', background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: '12px', fontWeight: 700 }}>
+                    Controls storefront presence
+                  </span>
+                </div>
+
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: '#334155' }}>
+                    Select Visibility Distribution:
+                  </label>
+                  <select
+                    value={
+                      productForm.showOnCustomerPortal && productForm.showOnDistributorPortal && productForm.showOnRetailerPortal
+                        ? 'All Three'
+                        : productForm.showOnCustomerPortal && productForm.showOnDistributorPortal
+                          ? 'Customer + Distributor'
+                          : productForm.showOnCustomerPortal && productForm.showOnRetailerPortal
+                            ? 'Customer + Retailer'
+                            : productForm.showOnDistributorPortal && productForm.showOnRetailerPortal
+                              ? 'Distributor + Retailer'
+                              : productForm.showOnCustomerPortal
+                                ? 'Customer Only'
+                                : productForm.showOnDistributorPortal
+                                  ? 'Distributor Only'
+                                  : productForm.showOnRetailerPortal
+                                    ? 'Retailer Only'
+                                    : 'None'
+                    }
+                    onChange={e => {
+                      const v = e.target.value;
+                      if (v === 'All Three') {
+                        setProductForm(prev => ({ ...prev, targetVisibility: v, showOnCustomerPortal: true, showOnDistributorPortal: true, showOnRetailerPortal: true }));
+                      } else if (v === 'Customer + Distributor') {
+                        setProductForm(prev => ({ ...prev, targetVisibility: v, showOnCustomerPortal: true, showOnDistributorPortal: true, showOnRetailerPortal: false }));
+                      } else if (v === 'Customer + Retailer') {
+                        setProductForm(prev => ({ ...prev, targetVisibility: v, showOnCustomerPortal: true, showOnDistributorPortal: false, showOnRetailerPortal: true }));
+                      } else if (v === 'Distributor + Retailer') {
+                        setProductForm(prev => ({ ...prev, targetVisibility: v, showOnCustomerPortal: false, showOnDistributorPortal: true, showOnRetailerPortal: true }));
+                      } else if (v === 'Customer Only') {
+                        setProductForm(prev => ({ ...prev, targetVisibility: v, showOnCustomerPortal: true, showOnDistributorPortal: false, showOnRetailerPortal: false }));
+                      } else if (v === 'Distributor Only') {
+                        setProductForm(prev => ({ ...prev, targetVisibility: v, showOnCustomerPortal: false, showOnDistributorPortal: true, showOnRetailerPortal: false }));
+                      } else if (v === 'Retailer Only') {
+                        setProductForm(prev => ({ ...prev, targetVisibility: v, showOnCustomerPortal: false, showOnDistributorPortal: false, showOnRetailerPortal: true }));
+                      }
+                    }}
+                    style={{ ...inputStyle, fontWeight: 700, borderColor: '#6366f1' }}
+                  >
+                    <option value="All Three">🌟 All Three (Customer + Distributor + Retailer)</option>
+                    <option value="Customer + Distributor">Customer + Distributor</option>
+                    <option value="Customer + Retailer">Customer + Retailer</option>
+                    <option value="Distributor + Retailer">Distributor + Retailer</option>
+                    <option value="Customer Only">Customer Only</option>
+                    <option value="Distributor Only">Distributor Only</option>
+                    <option value="Retailer Only">Retailer Only</option>
+                  </select>
+                </div>
+
+                {/* Individual Checkbox Badges */}
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <label style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    background: productForm.showOnCustomerPortal ? '#dcfce7' : '#f1f5f9',
+                    border: productForm.showOnCustomerPortal ? '1.5px solid #16a34a' : '1.5px solid #cbd5e1',
+                    color: productForm.showOnCustomerPortal ? '#15803d' : '#64748b',
+                    fontSize: '0.80rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(productForm.showOnCustomerPortal)}
+                      onChange={e => setProductForm(prev => ({ ...prev, showOnCustomerPortal: e.target.checked }))}
+                    />
+                    Customer Portal
+                  </label>
+
+                  <label style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    background: productForm.showOnDistributorPortal ? '#e0f2fe' : '#f1f5f9',
+                    border: productForm.showOnDistributorPortal ? '1.5px solid #0284c7' : '1.5px solid #cbd5e1',
+                    color: productForm.showOnDistributorPortal ? '#0369a1' : '#64748b',
+                    fontSize: '0.80rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(productForm.showOnDistributorPortal)}
+                      onChange={e => setProductForm(prev => ({ ...prev, showOnDistributorPortal: e.target.checked }))}
+                    />
+                    Distributor Portal
+                  </label>
+
+                  <label style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    background: productForm.showOnRetailerPortal ? '#f3e8ff' : '#f1f5f9',
+                    border: productForm.showOnRetailerPortal ? '1.5px solid #9333ea' : '1.5px solid #cbd5e1',
+                    color: productForm.showOnRetailerPortal ? '#7e22ce' : '#64748b',
+                    fontSize: '0.80rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(productForm.showOnRetailerPortal)}
+                      onChange={e => setProductForm(prev => ({ ...prev, showOnRetailerPortal: e.target.checked }))}
+                    />
+                    Retailer Portal
+                  </label>
                 </div>
               </div>
 
@@ -4436,7 +4815,240 @@ export const AdminPanel = () => {
               </div>
 
               {/* ======================================================== */}
-              {/* SECTION 4: STRICT SEPARATION & COMPARISON REASSURANCE */}
+              {/* SECTION 4: RETAILER PORTAL PRICING & VISIBILITY */}
+              {/* ======================================================== */}
+              <div style={{
+                background: '#faf5ff',
+                border: '2px solid #d8b4fe',
+                borderRadius: '14px',
+                padding: '20px',
+                marginBottom: '20px',
+                boxShadow: '0 2px 6px rgba(124, 58, 237, 0.06)'
+              }}>
+                {/* Header & Toggle */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px', paddingBottom: '12px', borderBottom: '1px solid #e9d5ff' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#7c3aed', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Store size={15} />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '1rem', fontWeight: 800, color: '#581c87' }}>
+                        4. Retailer Portal Pricing (Retail Shop)
+                      </span>
+                      <div style={{ fontSize: '0.74rem', color: '#6b21a8' }}>
+                        Independent retail store pricing and visibility
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Show on Retailer Portal Toggle Switch */}
+                  <label style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 14px',
+                    borderRadius: 'var(--radius-full)',
+                    background: productForm.showOnRetailerPortal ? '#7c3aed' : '#e2e8f0',
+                    color: productForm.showOnRetailerPortal ? '#ffffff' : '#64748b',
+                    fontSize: '0.80rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    transition: 'all 0.2s'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(productForm.showOnRetailerPortal)}
+                      onChange={e => setProductForm({ ...productForm, showOnRetailerPortal: e.target.checked })}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    Show on Retailer Portal
+                  </label>
+                </div>
+
+                {/* Retailer Pricing Mode Switcher */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#581c87', marginBottom: '8px' }}>
+                    Retailer Pricing Mode:
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const orig = parseFloat(productForm.retailerOriginalPrice) || 0;
+                        const disc = parseFloat(productForm.retailerDiscount) || 0;
+                        setProductForm({
+                          ...productForm,
+                          retailerPricingMode: 'auto',
+                          retailerPrice: calcFinalPrice(orig, disc)
+                        });
+                      }}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 'var(--radius-md)',
+                        border: productForm.retailerPricingMode === 'auto' ? '2px solid #7c3aed' : '1.5px solid #d8b4fe',
+                        background: productForm.retailerPricingMode === 'auto' ? '#f3e8ff' : '#ffffff',
+                        color: productForm.retailerPricingMode === 'auto' ? '#6b21a8' : '#64748b',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Calculator size={14} color="#7c3aed" /> Auto-Calculate from Discount
+                      </div>
+                      <div style={{ fontSize: '0.70rem', color: '#6b21a8', marginTop: '2px', fontWeight: 500 }}>
+                        Final Price = Original - Discount %
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setProductForm({ ...productForm, retailerPricingMode: 'manual' })}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 'var(--radius-md)',
+                        border: productForm.retailerPricingMode === 'manual' ? '2px solid #7c3aed' : '1.5px solid #d8b4fe',
+                        background: productForm.retailerPricingMode === 'manual' ? '#f3e8ff' : '#ffffff',
+                        color: productForm.retailerPricingMode === 'manual' ? '#6b21a8' : '#64748b',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Tag size={14} color="#7c3aed" /> Manual Set Price
+                      </div>
+                      <div style={{ fontSize: '0.70rem', color: '#6b21a8', marginTop: '2px', fontWeight: 500 }}>
+                        Discount % = computed from Price
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Retailer Price Inputs */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                  gap: '12px',
+                  marginBottom: '14px'
+                }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 700, marginBottom: '6px', color: '#581c87' }}>
+                      Retailer Original Price (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      required
+                      placeholder="e.g. 1800"
+                      value={productForm.retailerOriginalPrice || ''}
+                      onChange={e => {
+                        const newOrig = parseFloat(e.target.value) || 0;
+                        if (productForm.retailerPricingMode === 'auto') {
+                          const newPrice = calcFinalPrice(newOrig, productForm.retailerDiscount);
+                          setProductForm({ ...productForm, retailerOriginalPrice: e.target.value, retailerPrice: newPrice });
+                        } else {
+                          const newDisc = calcDiscountPercent(newOrig, productForm.retailerPrice);
+                          setProductForm({ ...productForm, retailerOriginalPrice: e.target.value, retailerDiscount: newDisc });
+                        }
+                      }}
+                      style={{ ...inputStyle, borderColor: '#d8b4fe' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 700, marginBottom: '6px', color: '#581c87' }}>
+                      Retailer Discount (%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      max="100"
+                      readOnly={productForm.retailerPricingMode === 'manual'}
+                      placeholder="e.g. 20"
+                      value={productForm.retailerDiscount || ''}
+                      onChange={e => {
+                        const newDisc = parseFloat(e.target.value) || 0;
+                        const newPrice = calcFinalPrice(productForm.retailerOriginalPrice, newDisc);
+                        setProductForm({ ...productForm, retailerDiscount: e.target.value, retailerPrice: newPrice });
+                      }}
+                      style={{
+                        ...inputStyle,
+                        borderColor: '#d8b4fe',
+                        background: productForm.retailerPricingMode === 'manual' ? '#faf5ff' : '#ffffff'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.80rem', fontWeight: 700, marginBottom: '6px', color: '#581c87' }}>
+                      Retailer Final Price (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      required
+                      readOnly={productForm.retailerPricingMode === 'auto'}
+                      placeholder="e.g. 1440"
+                      value={productForm.retailerPrice || ''}
+                      onChange={e => {
+                        const newPrice = parseFloat(e.target.value) || 0;
+                        const newDisc = calcDiscountPercent(productForm.retailerOriginalPrice, newPrice);
+                        setProductForm({ ...productForm, retailerPrice: e.target.value, retailerDiscount: newDisc });
+                      }}
+                      style={{
+                        ...inputStyle,
+                        borderColor: '#d8b4fe',
+                        background: productForm.retailerPricingMode === 'auto' ? '#faf5ff' : '#ffffff',
+                        fontWeight: 800,
+                        color: '#7c3aed'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Live Retailer Portal Preview Badge */}
+                <div style={{
+                  background: '#ffffff',
+                  border: '1px solid #e9d5ff',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '8px'
+                }}>
+                  <div style={{ fontSize: '0.78rem', color: '#581c87', fontWeight: 600 }}>
+                    <strong>Retail Shop will see:</strong>{' '}
+                    <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#7c3aed', marginLeft: '6px' }}>
+                      ₹{Number(productForm.retailerPrice || 0).toLocaleString()}
+                    </span>
+                    {Number(productForm.retailerOriginalPrice) > Number(productForm.retailerPrice) && (
+                      <span style={{ fontSize: '0.82rem', color: '#94a3b8', textDecoration: 'line-through', marginLeft: '6px' }}>
+                        ₹{Number(productForm.retailerOriginalPrice).toLocaleString()}
+                      </span>
+                    )}
+                    {Number(productForm.retailerDiscount) > 0 && (
+                      <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', padding: '1px 6px', borderRadius: '4px', marginLeft: '6px' }}>
+                        {productForm.retailerDiscount}% OFF
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: productForm.showOnRetailerPortal ? '#7c3aed' : '#dc2626' }}>
+                    {productForm.showOnRetailerPortal ? '● Visible on Retailer Portal' : '○ Hidden from Retailer Portal'}
+                  </span>
+                </div>
+              </div>
+
+              {/* ======================================================== */}
+              {/* SECTION 5: STRICT SEPARATION & COMPARISON REASSURANCE */}
               {/* ======================================================== */}
               <div style={{
                 background: '#f8fafc',
@@ -4448,13 +5060,13 @@ export const AdminPanel = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                   <ShieldCheck size={18} color="#4f46e5" />
                   <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#1e293b' }}>
-                    Role-Based Separation & Margin Contrast
+                    Three-Tier Pricing & Portal Margin Comparison
                   </span>
                 </div>
 
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
                   gap: '12px',
                   background: '#ffffff',
                   padding: '12px',
@@ -4463,32 +5075,42 @@ export const AdminPanel = () => {
                   fontSize: '0.80rem'
                 }}>
                   <div>
-                    <div style={{ color: '#047857', fontWeight: 700 }}>Customer Portal Price</div>
+                    <div style={{ color: '#047857', fontWeight: 700 }}>Customer Portal</div>
                     <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
                       ₹{Number(productForm.customerPrice || 0).toLocaleString()}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                      Discount: {productForm.customerDiscount}% | Status: {productForm.showOnCustomerPortal ? 'Published' : 'Hidden'}
+                      Disc: {productForm.customerDiscount}% | {productForm.showOnCustomerPortal ? '● Active' : '○ Hidden'}
                     </div>
                   </div>
 
                   <div>
-                    <div style={{ color: '#0369a1', fontWeight: 700 }}>Distributor Portal Price</div>
+                    <div style={{ color: '#0369a1', fontWeight: 700 }}>Distributor (B2B)</div>
                     <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0284c7', marginTop: '2px' }}>
                       ₹{Number(productForm.distributorPrice || 0).toLocaleString()}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                      Discount: {productForm.distributorDiscount}% | Status: {productForm.showOnDistributorPortal ? 'Published' : 'Hidden'}
+                      Disc: {productForm.distributorDiscount}% | {productForm.showOnDistributorPortal ? '● Active' : '○ Hidden'}
                     </div>
                   </div>
 
                   <div>
-                    <div style={{ color: '#4338ca', fontWeight: 700 }}>Wholesale Price Delta</div>
+                    <div style={{ color: '#6d28d9', fontWeight: 700 }}>Retailer Portal</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#7c3aed', marginTop: '2px' }}>
+                      ₹{Number(productForm.retailerPrice || 0).toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      Disc: {productForm.retailerDiscount}% | {productForm.showOnRetailerPortal ? '● Active' : '○ Hidden'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ color: '#4338ca', fontWeight: 700 }}>Retail vs Wholesale Delta</div>
                     <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#4f46e5', marginTop: '2px' }}>
                       ₹{Math.max(0, Number(productForm.customerPrice || 0) - Number(productForm.distributorPrice || 0)).toLocaleString()}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                      B2B margin over retail
+                      Wholesale Margin
                     </div>
                   </div>
                 </div>
@@ -4717,63 +5339,487 @@ export const AdminPanel = () => {
       {/* ======================================================== */}
       {selectedUser && (
         <div style={modalOverlay}>
-          <div style={{ background: '#ffffff', borderRadius: 'var(--radius-xl)', maxWidth: '500px', width: '100%', padding: '28px', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border-subtle)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: 'var(--radius-xl)',
+            maxWidth: '560px',
+            width: '100%',
+            padding: '24px 28px',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--border-subtle)',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' }}>
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>{selectedUser.fullName}</h3>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-dim)', marginTop: '2px' }}>{selectedUser.userId}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                    {selectedUser.fullName || selectedUser.ownerName || 'User Account'}
+                  </h3>
+                  <span className={`badge badge-${(selectedUser.accountStatus || 'active').toLowerCase()}`}>
+                    {selectedUser.accountStatus || 'Active'}
+                  </span>
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                  User ID: {selectedUser.userId}
+                </div>
               </div>
-              <button onClick={() => setSelectedUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <button onClick={() => setSelectedUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
                 <X size={18} />
               </button>
             </div>
 
-            <div style={{ background: 'var(--bg-app-2)', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '14px', fontSize: '0.86rem', lineHeight: '1.8', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ color: 'var(--text-body)' }}><strong>Email:</strong> {selectedUser.email}</div>
-              <div style={{ color: 'var(--text-body)' }}><strong>Phone:</strong> {selectedUser.phoneNumber}</div>
-              <div style={{ color: 'var(--text-body)' }}><strong>Role:</strong> {selectedUser.userType}</div>
-              <div style={{ color: 'var(--text-body)' }}><strong>Registered:</strong> {new Date(selectedUser.createdDate).toLocaleString()}</div>
-              <div style={{ color: 'var(--text-body)' }}><strong>Last Login:</strong> {selectedUser.lastLogin ? new Date(selectedUser.lastLogin).toLocaleString() : 'Never'}</div>
-              {selectedUser.statusRemark && <div style={{ color: 'var(--status-rejected)' }}><strong>Remark:</strong> {selectedUser.statusRemark}</div>}
+            {/* Basic Info Box */}
+            <div style={{ background: 'var(--bg-app-2)', borderRadius: 'var(--radius-md)', padding: '14px 16px', marginBottom: '14px', fontSize: '0.86rem', lineHeight: '1.7', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                <div><strong>Email:</strong> <span style={{ color: 'var(--text-body)' }}>{selectedUser.email}</span></div>
+                <div><strong>Phone:</strong> <span style={{ color: 'var(--text-body)' }}>{selectedUser.phoneNumber || 'N/A'}</span></div>
+                <div><strong>Account Role:</strong> <span style={{ color: selectedUser.userType === 'Retailer' ? '#7c3aed' : selectedUser.userType === 'Distributor' ? '#0284c7' : '#059669', fontWeight: 700 }}>{selectedUser.userType}</span></div>
+                <div><strong>Registered:</strong> <span style={{ color: 'var(--text-body)' }}>{selectedUser.createdDate ? new Date(selectedUser.createdDate).toLocaleDateString() : 'N/A'}</span></div>
+                <div><strong>Last Login:</strong> <span style={{ color: 'var(--text-body)' }}>{selectedUser.lastLogin ? new Date(selectedUser.lastLogin).toLocaleString() : 'Never'}</span></div>
+              </div>
+              {selectedUser.statusRemark && (
+                <div style={{ marginTop: '8px', padding: '6px 10px', background: '#fee2e2', borderRadius: '6px', color: '#991b1b', fontSize: '0.82rem' }}>
+                  <strong>Status Remark:</strong> {selectedUser.statusRemark}
+                </div>
+              )}
             </div>
 
-            {selectedUser.userType === 'Distributor' && (
-              <div style={{ border: '1.5px solid rgba(2,132,199,0.3)', background: 'var(--distributor-light)', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '18px', fontSize: '0.86rem', lineHeight: '1.8' }}>
-                <div style={{ fontWeight: 800, color: 'var(--distributor-accent)', marginBottom: '6px' }}>Distributor Business Profile</div>
-                <div style={{ color: 'var(--text-body)' }}><strong>Company:</strong> {selectedUser.businessName || 'N/A'}</div>
-                <div style={{ color: 'var(--text-body)' }}><strong>PAN/VAT:</strong> <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{selectedUser.panVatNumber || 'N/A'}</span></div>
-                <div style={{ color: 'var(--text-body)' }}><strong>Address:</strong> {selectedUser.businessAddress || 'N/A'}</div>
-                <div style={{ color: 'var(--text-body)' }}><strong>Contact:</strong> {selectedUser.contactPerson || 'N/A'}</div>
+            {/* Business / Shop Profile */}
+            {(selectedUser.businessName || selectedUser.shopName || selectedUser.ownerName) && (
+              <div style={{
+                border: selectedUser.userType === 'Retailer' ? '1.5px solid #c4b5fd' : '1.5px solid rgba(2,132,199,0.3)',
+                background: selectedUser.userType === 'Retailer' ? '#f5f3ff' : 'var(--distributor-light)',
+                borderRadius: 'var(--radius-md)',
+                padding: '14px 16px',
+                marginBottom: '14px',
+                fontSize: '0.86rem',
+                lineHeight: '1.7'
+              }}>
+                <div style={{ fontWeight: 800, color: selectedUser.userType === 'Retailer' ? '#6d28d9' : 'var(--distributor-accent)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {selectedUser.userType === 'Retailer' ? <Store size={15} /> : <Building2 size={15} />}
+                  {selectedUser.userType === 'Retailer' ? 'Retail Shop Profile' : 'Distributor Business Profile'}
+                </div>
+                <div style={{ color: 'var(--text-body)' }}><strong>Shop / Firm Name:</strong> {selectedUser.shopName || selectedUser.businessName || 'N/A'}</div>
+                {selectedUser.ownerName && <div style={{ color: 'var(--text-body)' }}><strong>Owner / Prop:</strong> {selectedUser.ownerName}</div>}
+                {selectedUser.panVatNumber && (
+                  <div style={{ color: 'var(--text-body)' }}><strong>PAN / GSTIN / VAT:</strong> <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{selectedUser.panVatNumber}</span></div>
+                )}
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              {selectedUser.accountStatus === 'Pending' && selectedUser.userType === 'Distributor' && (
-                <button onClick={() => { handleApprove(selectedUser); setSelectedUser(null); }} className="btn btn-emerald">
-                  <Check size={15} /> Approve Distributor
+            {/* Geographical Location & Complete Address */}
+            <div style={{
+              background: '#f8fafc',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: 'var(--radius-md)',
+              padding: '14px 16px',
+              marginBottom: '18px',
+              fontSize: '0.86rem',
+              lineHeight: '1.7'
+            }}>
+              <div style={{ fontWeight: 800, color: '#0f766e', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <MapPin size={15} /> Geographical Location & Registered Address
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '6px' }}>
+                <div><strong>Country:</strong> {selectedUser.country || 'India 🇮🇳'}</div>
+                <div><strong>State:</strong> {selectedUser.state || 'N/A'}</div>
+                <div><strong>District:</strong> {selectedUser.district || 'N/A'}</div>
+                <div><strong>City / Area:</strong> {selectedUser.city || 'N/A'}</div>
+                <div><strong>Locality / Village:</strong> {selectedUser.locality || 'N/A'}</div>
+                <div><strong>PIN Code:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{selectedUser.pincode || 'N/A'}</span></div>
+              </div>
+              <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px solid #e2e8f0' }}>
+                <strong>Full Address:</strong> {selectedUser.address || selectedUser.businessAddress || 'N/A'}
+              </div>
+            </div>
+
+            {/* Action Buttons in Modal Footer */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => {
+                    setEditingUser({ ...selectedUser });
+                    setSelectedUser(null);
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  style={{ gap: '4px' }}
+                >
+                  <Edit size={13} /> Edit Account
                 </button>
-              )}
-              <button onClick={() => setSelectedUser(null)} className="btn btn-secondary">Close</button>
+                <button
+                  onClick={() => {
+                    setResetPasswordUser(selectedUser);
+                    setNewPasswordVal('');
+                    setSelectedUser(null);
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  style={{ gap: '4px', color: '#d97706' }}
+                >
+                  <Key size={13} /> Reset Password
+                </button>
+                <button
+                  onClick={() => {
+                    handleViewHistory(selectedUser);
+                    setSelectedUser(null);
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  style={{ gap: '4px', color: '#0284c7' }}
+                >
+                  <History size={13} /> History
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {selectedUser.accountStatus === 'Pending' && (selectedUser.userType === 'Distributor' || selectedUser.userType === 'Retailer') && (
+                  <>
+                    <button
+                      onClick={() => {
+                        handleApprove(selectedUser);
+                        setSelectedUser(null);
+                      }}
+                      className="btn btn-emerald btn-sm"
+                      style={{ gap: '4px' }}
+                    >
+                      <Check size={14} /> Approve Account
+                    </button>
+                    <button
+                      onClick={() => {
+                        setRejectModalUser(selectedUser);
+                        setSelectedUser(null);
+                      }}
+                      className="btn btn-danger btn-sm"
+                      style={{ gap: '4px' }}
+                    >
+                      <X size={14} /> Reject
+                    </button>
+                  </>
+                )}
+                <button onClick={() => setSelectedUser(null)} className="btn btn-secondary btn-sm">Close</button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* ======================================================== */}
-      {/* ================ MODAL: REJECT DISTRIBUTOR ============= */}
+      {/* ================ MODAL: EDIT USER ACCOUNT ============== */}
+      {/* ======================================================== */}
+      {editingUser && (
+        <div style={modalOverlay}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: 'var(--radius-xl)',
+            maxWidth: '560px',
+            width: '100%',
+            padding: '24px 28px',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--border-subtle)',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Edit size={16} color="var(--primary)" /> Edit Account: {editingUser.fullName || editingUser.shopName}
+              </h3>
+              <button onClick={() => setEditingUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditUserSubmit}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '4px', color: '#374151' }}>Full Name / Contact</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingUser.fullName || ''}
+                    onChange={e => setEditingUser({ ...editingUser, fullName: e.target.value })}
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '4px', color: '#374151' }}>Owner Name (Prop.)</label>
+                  <input
+                    type="text"
+                    value={editingUser.ownerName || ''}
+                    onChange={e => setEditingUser({ ...editingUser, ownerName: e.target.value })}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '4px', color: '#374151' }}>Shop / Business Name</label>
+                  <input
+                    type="text"
+                    value={editingUser.shopName || editingUser.businessName || ''}
+                    onChange={e => setEditingUser({ ...editingUser, shopName: e.target.value, businessName: e.target.value })}
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '4px', color: '#374151' }}>Account Status</label>
+                  <select
+                    value={editingUser.accountStatus || 'Active'}
+                    onChange={e => setEditingUser({ ...editingUser, accountStatus: e.target.value })}
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Suspended">Suspended</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '4px', color: '#374151' }}>Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={editingUser.email || ''}
+                    onChange={e => setEditingUser({ ...editingUser, email: e.target.value })}
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '4px', color: '#374151' }}>Mobile Phone Number</label>
+                  <input
+                    type="tel"
+                    value={editingUser.phoneNumber || ''}
+                    onChange={e => setEditingUser({ ...editingUser, phoneNumber: e.target.value })}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              {/* Location Fields */}
+              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f766e', marginBottom: '10px' }}>Geographical Details:</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '3px' }}>State</label>
+                    <input
+                      type="text"
+                      value={editingUser.state || ''}
+                      onChange={e => setEditingUser({ ...editingUser, state: e.target.value })}
+                      style={{ ...inputStyle, padding: '8px 10px', fontSize: '0.82rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '3px' }}>District</label>
+                    <input
+                      type="text"
+                      value={editingUser.district || ''}
+                      onChange={e => setEditingUser({ ...editingUser, district: e.target.value })}
+                      style={{ ...inputStyle, padding: '8px 10px', fontSize: '0.82rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '3px' }}>City / Area</label>
+                    <input
+                      type="text"
+                      value={editingUser.city || ''}
+                      onChange={e => setEditingUser({ ...editingUser, city: e.target.value })}
+                      style={{ ...inputStyle, padding: '8px 10px', fontSize: '0.82rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '3px' }}>PIN Code</label>
+                    <input
+                      type="text"
+                      value={editingUser.pincode || ''}
+                      onChange={e => setEditingUser({ ...editingUser, pincode: e.target.value })}
+                      style={{ ...inputStyle, padding: '8px 10px', fontSize: '0.82rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '3px' }}>Complete Address</label>
+                  <input
+                    type="text"
+                    value={editingUser.address || editingUser.businessAddress || ''}
+                    onChange={e => setEditingUser({ ...editingUser, address: e.target.value, businessAddress: e.target.value })}
+                    style={{ ...inputStyle, padding: '8px 10px', fontSize: '0.82rem' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" onClick={() => setEditingUser(null)} className="btn btn-secondary">Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* ================ MODAL: RESET PASSWORD ================= */}
+      {/* ======================================================== */}
+      {resetPasswordUser && (
+        <div style={modalOverlay}>
+          <div style={{ background: '#ffffff', borderRadius: 'var(--radius-xl)', maxWidth: '440px', width: '100%', padding: '24px', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#d97706', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Key size={18} /> Reset Account Password
+              </h3>
+              <button onClick={() => setResetPasswordUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.86rem', color: '#4b5563', lineHeight: 1.5, marginBottom: '16px' }}>
+              Set a new secure temporary password for <strong>{resetPasswordUser.fullName}</strong> ({resetPasswordUser.email}).
+            </p>
+
+            <form onSubmit={handleResetPasswordSubmit}>
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#374151' }}>New Password</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const gen = 'MWS#' + Math.random().toString(36).slice(-6) + '!';
+                      setNewPasswordVal(gen);
+                    }}
+                    style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Generate Strong Password
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  required
+                  placeholder="Minimum 6 characters"
+                  value={newPasswordVal}
+                  onChange={e => setNewPasswordVal(e.target.value)}
+                  style={{ ...inputStyle, fontFamily: 'monospace', fontWeight: 700 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" onClick={() => setResetPasswordUser(null)} className="btn btn-secondary">Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ background: '#d97706', borderColor: '#b45309' }}>
+                  Update Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* ================ MODAL: USER ORDER HISTORY ============= */}
+      {/* ======================================================== */}
+      {historyUser && (
+        <div style={modalOverlay}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: 'var(--radius-xl)',
+            maxWidth: '680px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--border-subtle)',
+            maxHeight: '85vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <History size={18} color="#0284c7" /> Order History: {historyUser.fullName}
+                </h3>
+                <div style={{ fontSize: '0.76rem', color: '#64748b' }}>{historyUser.email} • {historyUser.userType}</div>
+              </div>
+              <button onClick={() => setHistoryUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {loadingHistory ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>Loading user order history...</div>
+              ) : userHistoryOrders.length === 0 ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>No orders found for this user.</div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', color: '#475569' }}>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>ORDER #</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>DATE</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>TOTAL</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>ORDER STATUS</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left' }}>PAYMENT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {userHistoryOrders.map(ord => (
+                      <tr key={ord.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontWeight: 700, color: '#2563eb' }}>
+                          {ord.orderNumber || `#${ord.id}`}
+                        </td>
+                        <td style={{ padding: '8px 10px', color: '#64748b' }}>
+                          {ord.createdDate ? new Date(ord.createdDate).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td style={{ padding: '8px 10px', fontWeight: 800, color: '#0f172a' }}>
+                          ₹{Number(ord.totalAmount || 0).toLocaleString()}
+                        </td>
+                        <td style={{ padding: '8px 10px' }}>
+                          <span className={`badge badge-${(ord.orderStatus || 'pending').toLowerCase()}`}>
+                            {ord.orderStatus}
+                          </span>
+                        </td>
+                        <td style={{ padding: '8px 10px' }}>
+                          <span style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            background: ord.paymentStatus === 'Verified & Approved' ? '#dcfce7' : ord.paymentStatus === 'Pending Verification' ? '#fef9c3' : '#f1f5f9',
+                            color: ord.paymentStatus === 'Verified & Approved' ? '#166534' : ord.paymentStatus === 'Pending Verification' ? '#854d0e' : '#475569'
+                          }}>
+                            {ord.paymentStatus}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '14px', borderTop: '1px solid #f1f5f9', marginTop: '10px' }}>
+              <button onClick={() => setHistoryUser(null)} className="btn btn-secondary">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* ================ MODAL: REJECT APPLICATION ============= */}
       {/* ======================================================== */}
       {rejectModalUser && (
         <div style={modalOverlay}>
           <div style={{ background: '#ffffff', borderRadius: 'var(--radius-xl)', maxWidth: '450px', width: '100%', padding: '24px', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border-subtle)' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '8px', color: 'var(--status-rejected)' }}>Reject Distributor Application</h3>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '8px', color: 'var(--status-rejected)' }}>Reject {rejectModalUser.userType} Registration</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.86rem', marginBottom: '16px' }}>
-              Are you sure you want to reject <strong>{rejectModalUser.businessName || rejectModalUser.fullName}</strong>?
+              Are you sure you want to reject the application for <strong>{rejectModalUser.shopName || rejectModalUser.businessName || rejectModalUser.fullName}</strong>?
             </p>
             <div style={{ marginBottom: '18px' }}>
               <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-body)' }}>Rejection Reason:</label>
               <textarea
                 rows="3"
-                placeholder="e.g. Invalid PAN/VAT registration documents..."
+                placeholder="e.g. Incomplete address verification or shop document mismatch..."
                 value={rejectionReason}
                 onChange={e => setRejectionReason(e.target.value)}
                 style={textareaStyle}

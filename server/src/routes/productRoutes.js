@@ -179,7 +179,7 @@ router.get('/', async (req, res) => {
           customerPricingMode,
           showOnCustomerPortal
         FROM products 
-        WHERE (showOnCustomerPortal = 1 OR (showOnCustomerPortal IS NULL AND targetVisibility IN ('Customer', 'Both')))
+        WHERE (showOnCustomerPortal = 1 OR (showOnCustomerPortal IS NULL AND targetVisibility IN ('Customer', 'Customer Only', 'Both', 'Customer + Distributor', 'Customer + Retailer', 'All Three')))
           AND COALESCE(productStatus, 'Active') = 'Active'
           ${whereCategory}
         ORDER BY id DESC
@@ -207,13 +207,41 @@ router.get('/', async (req, res) => {
           distributorPricingMode,
           showOnDistributorPortal
         FROM products 
-        WHERE (showOnDistributorPortal = 1 OR (showOnDistributorPortal IS NULL AND targetVisibility IN ('Distributor', 'Both')))
+        WHERE (showOnDistributorPortal = 1 OR (showOnDistributorPortal IS NULL AND targetVisibility IN ('Distributor', 'Distributor Only', 'Both', 'Customer + Distributor', 'Distributor + Retailer', 'All Three')))
+          AND COALESCE(productStatus, 'Active') = 'Active'
+          ${whereCategory}
+        ORDER BY id DESC
+      `;
+    } else if (userType === 'Retailer') {
+      // RETAILER ROLE: Shows products configured for the Retailer portal
+      sql = `
+        SELECT 
+          id, 
+          name, 
+          category, 
+          COALESCE(brand, 'MWS Eagle') as brand,
+          sku, 
+          description, 
+          specifications,
+          imageUrl, 
+          inStock, 
+          badge, 
+          COALESCE(rating, 5.0) as rating, 
+          COALESCE(reviewCount, 0) as reviewCount,
+          COALESCE(productStatus, 'Active') as productStatus,
+          COALESCE(retailerPrice, distributorPrice, customerPrice) as price, 
+          COALESCE(retailerOriginalPrice, distributorOriginalPrice, originalPrice, customerPrice) as originalPrice,
+          COALESCE(retailerDiscount, distributorDiscount, 0) as discount,
+          COALESCE(retailerPricingMode, 'auto') as retailerPricingMode,
+          COALESCE(showOnRetailerPortal, 1) as showOnRetailerPortal
+        FROM products 
+        WHERE (COALESCE(showOnRetailerPortal, 1) = 1 OR targetVisibility IN ('Retailer', 'Retailer Only', 'Customer + Retailer', 'Distributor + Retailer', 'All Three', 'Both'))
           AND COALESCE(productStatus, 'Active') = 'Active'
           ${whereCategory}
         ORDER BY id DESC
       `;
     } else if (userType === 'Admin') {
-      // ADMIN ROLE: Complete view of both portal sections
+      // ADMIN ROLE: Complete view of all three portal sections
       sql = `
         SELECT 
           id, 
@@ -240,6 +268,11 @@ router.get('/', async (req, res) => {
           COALESCE(distributorDiscount, 0) as distributorDiscount,
           COALESCE(distributorPricingMode, 'auto') as distributorPricingMode,
           COALESCE(showOnDistributorPortal, 1) as showOnDistributorPortal,
+          COALESCE(retailerPrice, distributorPrice, 0) as retailerPrice,
+          COALESCE(retailerOriginalPrice, distributorOriginalPrice, 0) as retailerOriginalPrice,
+          COALESCE(retailerDiscount, distributorDiscount, 0) as retailerDiscount,
+          COALESCE(retailerPricingMode, 'auto') as retailerPricingMode,
+          COALESCE(showOnRetailerPortal, 1) as showOnRetailerPortal,
           customerPrice as price,
           COALESCE(customerOriginalPrice, originalPrice, customerPrice) as originalPrice
         FROM products 
@@ -269,7 +302,7 @@ router.get('/', async (req, res) => {
           customerPricingMode,
           showOnCustomerPortal
         FROM products 
-        WHERE (showOnCustomerPortal = 1 OR (showOnCustomerPortal IS NULL AND targetVisibility IN ('Customer', 'Both')))
+        WHERE (showOnCustomerPortal = 1 OR (showOnCustomerPortal IS NULL AND targetVisibility IN ('Customer', 'Customer Only', 'Both', 'Customer + Distributor', 'Customer + Retailer', 'All Three')))
           AND COALESCE(productStatus, 'Active') = 'Active'
           ${whereCategory}
         ORDER BY id DESC
@@ -318,7 +351,14 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
       distributorPricingMode = 'auto',
       distributorOriginalPrice = 0,
       distributorDiscount = 0,
-      distributorPrice = 0
+      distributorPrice = 0,
+      // Retailer Portal Section
+      showOnRetailerPortal = true,
+      retailerPricingMode = 'auto',
+      retailerOriginalPrice = 0,
+      retailerDiscount = 0,
+      retailerPrice = 0,
+      targetVisibility: explicitVisibility
     } = req.body;
 
     // 1. Common Validation
@@ -349,7 +389,6 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
     if (customerPricingMode === 'auto') {
       finalCustPrice = calculateFinalPrice(custOrig, custDisc);
     } else {
-      // Manual mode: admin entered final price directly
       if (finalCustPrice < 0) {
         return res.status(400).json({ success: false, message: 'Customer Final Price cannot be negative.' });
       }
@@ -363,16 +402,56 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
     if (distributorPricingMode === 'auto') {
       finalDistPrice = calculateFinalPrice(distOrig, distDisc);
     } else {
-      // Manual mode: admin entered distributor price directly
       if (finalDistPrice < 0) {
         return res.status(400).json({ success: false, message: 'Distributor Final Price cannot be negative.' });
       }
     }
 
-    // 4. Portal Visibility Determination
-    const showCust = showOnCustomerPortal === true || showOnCustomerPortal === 1 || showOnCustomerPortal === '1' ? 1 : 0;
-    const showDist = showOnDistributorPortal === true || showOnDistributorPortal === 1 || showOnDistributorPortal === '1' ? 1 : 0;
-    const targetVisibility = (showCust && showDist) ? 'Both' : (showCust ? 'Customer' : (showDist ? 'Distributor' : 'None'));
+    // 3b. Pricing Validation & Calculations for Retailer Portal
+    const retOrig = Math.max(0, Number(retailerOriginalPrice) || Number(distributorOriginalPrice) || custOrig);
+    const retDisc = Math.max(0, Math.min(100, Number(retailerDiscount) || Number(distributorDiscount) || 0));
+    let finalRetPrice = Math.max(0, Number(retailerPrice) || finalDistPrice || finalCustPrice);
+
+    if (retailerPricingMode === 'auto') {
+      finalRetPrice = calculateFinalPrice(retOrig, retDisc);
+    } else {
+      if (finalRetPrice < 0) {
+        return res.status(400).json({ success: false, message: 'Retailer Final Price cannot be negative.' });
+      }
+    }
+
+    // 4. Portal Visibility Determination (Customer, Distributor, Retailer)
+    let showCust = showOnCustomerPortal === true || showOnCustomerPortal === 1 || showOnCustomerPortal === '1' ? 1 : 0;
+    let showDist = showOnDistributorPortal === true || showOnDistributorPortal === 1 || showOnDistributorPortal === '1' ? 1 : 0;
+    let showRet = showOnRetailerPortal === true || showOnRetailerPortal === 1 || showOnRetailerPortal === '1' ? 1 : 0;
+
+    if (explicitVisibility) {
+      if (explicitVisibility === 'Customer Only' || explicitVisibility === 'Customer') {
+        showCust = 1; showDist = 0; showRet = 0;
+      } else if (explicitVisibility === 'Distributor Only' || explicitVisibility === 'Distributor') {
+        showCust = 0; showDist = 1; showRet = 0;
+      } else if (explicitVisibility === 'Retailer Only' || explicitVisibility === 'Retailer') {
+        showCust = 0; showDist = 0; showRet = 1;
+      } else if (explicitVisibility === 'Customer + Distributor' || explicitVisibility === 'Both') {
+        showCust = 1; showDist = 1; showRet = 0;
+      } else if (explicitVisibility === 'Customer + Retailer') {
+        showCust = 1; showDist = 0; showRet = 1;
+      } else if (explicitVisibility === 'Distributor + Retailer') {
+        showCust = 0; showDist = 1; showRet = 1;
+      } else if (explicitVisibility === 'All Three') {
+        showCust = 1; showDist = 1; showRet = 1;
+      }
+    }
+
+    let targetVisibility = 'All Three';
+    if (showCust && showDist && showRet) targetVisibility = 'All Three';
+    else if (showCust && showDist) targetVisibility = 'Customer + Distributor';
+    else if (showCust && showRet) targetVisibility = 'Customer + Retailer';
+    else if (showDist && showRet) targetVisibility = 'Distributor + Retailer';
+    else if (showCust) targetVisibility = 'Customer Only';
+    else if (showDist) targetVisibility = 'Distributor Only';
+    else if (showRet) targetVisibility = 'Retailer Only';
+    else targetVisibility = 'Hidden';
 
     const stockStatus = inStock === false || inStock === 0 || inStock === '0' ? 0 : 1;
 
@@ -381,8 +460,9 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
         name, category, brand, sku, description, specifications, imageUrl, inStock, badge, productStatus,
         showOnCustomerPortal, customerPricingMode, customerOriginalPrice, customerDiscount, customerPrice,
         showOnDistributorPortal, distributorPricingMode, distributorOriginalPrice, distributorDiscount, distributorPrice,
+        showOnRetailerPortal, retailerPricingMode, retailerOriginalPrice, retailerDiscount, retailerPrice,
         targetVisibility, originalPrice
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name.trim(),
         category.trim(),
@@ -404,6 +484,11 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
         distOrig,
         distDisc,
         finalDistPrice,
+        showRet,
+        retailerPricingMode || 'auto',
+        retOrig,
+        retDisc,
+        finalRetPrice,
         targetVisibility,
         custOrig || distOrig
       ]
@@ -420,7 +505,7 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: `Product "${name.trim()}" created successfully! Portal status: Customer (${showCust ? 'Active' : 'Hidden'}), Distributor (${showDist ? 'Active' : 'Hidden'}).`,
+      message: `Product "${name.trim()}" created successfully! Visibility: ${targetVisibility}.`,
       product: newProduct
     });
   } catch (error) {
@@ -433,7 +518,7 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
 });
 
 /**
- * 3. Admin Endpoint: Update Existing Single Product (Common Info & Dual Pricing)
+ * 3. Admin Endpoint: Update Existing Single Product (Common Info, Pricing & 3-Way Visibility)
  */
 router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -465,7 +550,14 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
       distributorPricingMode,
       distributorOriginalPrice,
       distributorDiscount,
-      distributorPrice
+      distributorPrice,
+      // Retailer Portal Section
+      showOnRetailerPortal,
+      retailerPricingMode,
+      retailerOriginalPrice,
+      retailerDiscount,
+      retailerPrice,
+      targetVisibility: explicitVisibility
     } = req.body;
 
     // Check SKU collision if SKU changed
@@ -480,35 +572,75 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
     }
 
     // Customer Pricing Calculation
-    const custMode = customerPricingMode !== undefined ? customerPricingMode : existing.customerPricingMode;
-    const custOrig = customerOriginalPrice !== undefined ? Math.max(0, Number(customerOriginalPrice)) : existing.customerOriginalPrice;
-    const custDisc = customerDiscount !== undefined ? Math.max(0, Math.min(100, Number(customerDiscount))) : existing.customerDiscount;
-    let finalCustPrice = customerPrice !== undefined ? Math.max(0, Number(customerPrice)) : existing.customerPrice;
+    const custMode = customerPricingMode !== undefined ? customerPricingMode : (existing.customerPricingMode || 'auto');
+    const custOrig = customerOriginalPrice !== undefined ? Math.max(0, Number(customerOriginalPrice)) : (existing.customerOriginalPrice || 0);
+    const custDisc = customerDiscount !== undefined ? Math.max(0, Math.min(100, Number(customerDiscount))) : (existing.customerDiscount || 0);
+    let finalCustPrice = customerPrice !== undefined ? Math.max(0, Number(customerPrice)) : (existing.customerPrice || 0);
 
     if (custMode === 'auto') {
       finalCustPrice = calculateFinalPrice(custOrig, custDisc);
     }
 
     // Distributor Pricing Calculation
-    const distMode = distributorPricingMode !== undefined ? distributorPricingMode : existing.distributorPricingMode;
-    const distOrig = distributorOriginalPrice !== undefined ? Math.max(0, Number(distributorOriginalPrice)) : existing.distributorOriginalPrice;
-    const distDisc = distributorDiscount !== undefined ? Math.max(0, Math.min(100, Number(distributorDiscount))) : existing.distributorDiscount;
-    let finalDistPrice = distributorPrice !== undefined ? Math.max(0, Number(distributorPrice)) : existing.distributorPrice;
+    const distMode = distributorPricingMode !== undefined ? distributorPricingMode : (existing.distributorPricingMode || 'auto');
+    const distOrig = distributorOriginalPrice !== undefined ? Math.max(0, Number(distributorOriginalPrice)) : (existing.distributorOriginalPrice || 0);
+    const distDisc = distributorDiscount !== undefined ? Math.max(0, Math.min(100, Number(distributorDiscount))) : (existing.distributorDiscount || 0);
+    let finalDistPrice = distributorPrice !== undefined ? Math.max(0, Number(distributorPrice)) : (existing.distributorPrice || 0);
 
     if (distMode === 'auto') {
       finalDistPrice = calculateFinalPrice(distOrig, distDisc);
     }
 
-    // Visibility toggles
-    const showCust = showOnCustomerPortal !== undefined 
+    // Retailer Pricing Calculation
+    const retMode = retailerPricingMode !== undefined ? retailerPricingMode : (existing.retailerPricingMode || 'auto');
+    const retOrig = retailerOriginalPrice !== undefined ? Math.max(0, Number(retailerOriginalPrice)) : (existing.retailerOriginalPrice || distOrig);
+    const retDisc = retailerDiscount !== undefined ? Math.max(0, Math.min(100, Number(retailerDiscount))) : (existing.retailerDiscount || distDisc);
+    let finalRetPrice = retailerPrice !== undefined ? Math.max(0, Number(retailerPrice)) : (existing.retailerPrice || finalDistPrice);
+
+    if (retMode === 'auto') {
+      finalRetPrice = calculateFinalPrice(retOrig, retDisc);
+    }
+
+    // 3-Way Portal Visibility toggles
+    let showCust = showOnCustomerPortal !== undefined 
       ? (showOnCustomerPortal === true || showOnCustomerPortal === 1 || showOnCustomerPortal === '1' ? 1 : 0)
-      : existing.showOnCustomerPortal;
+      : (existing.showOnCustomerPortal ?? 1);
 
-    const showDist = showOnDistributorPortal !== undefined 
+    let showDist = showOnDistributorPortal !== undefined 
       ? (showOnDistributorPortal === true || showOnDistributorPortal === 1 || showOnDistributorPortal === '1' ? 1 : 0)
-      : existing.showOnDistributorPortal;
+      : (existing.showOnDistributorPortal ?? 1);
 
-    const targetVisibility = (showCust && showDist) ? 'Both' : (showCust ? 'Customer' : (showDist ? 'Distributor' : 'None'));
+    let showRet = showOnRetailerPortal !== undefined 
+      ? (showOnRetailerPortal === true || showOnRetailerPortal === 1 || showOnRetailerPortal === '1' ? 1 : 0)
+      : (existing.showOnRetailerPortal ?? 1);
+
+    if (explicitVisibility) {
+      if (explicitVisibility === 'Customer Only' || explicitVisibility === 'Customer') {
+        showCust = 1; showDist = 0; showRet = 0;
+      } else if (explicitVisibility === 'Distributor Only' || explicitVisibility === 'Distributor') {
+        showCust = 0; showDist = 1; showRet = 0;
+      } else if (explicitVisibility === 'Retailer Only' || explicitVisibility === 'Retailer') {
+        showCust = 0; showDist = 0; showRet = 1;
+      } else if (explicitVisibility === 'Customer + Distributor' || explicitVisibility === 'Both') {
+        showCust = 1; showDist = 1; showRet = 0;
+      } else if (explicitVisibility === 'Customer + Retailer') {
+        showCust = 1; showDist = 0; showRet = 1;
+      } else if (explicitVisibility === 'Distributor + Retailer') {
+        showCust = 0; showDist = 1; showRet = 1;
+      } else if (explicitVisibility === 'All Three') {
+        showCust = 1; showDist = 1; showRet = 1;
+      }
+    }
+
+    let targetVisibility = 'All Three';
+    if (showCust && showDist && showRet) targetVisibility = 'All Three';
+    else if (showCust && showDist) targetVisibility = 'Customer + Distributor';
+    else if (showCust && showRet) targetVisibility = 'Customer + Retailer';
+    else if (showDist && showRet) targetVisibility = 'Distributor + Retailer';
+    else if (showCust) targetVisibility = 'Customer Only';
+    else if (showDist) targetVisibility = 'Distributor Only';
+    else if (showRet) targetVisibility = 'Retailer Only';
+    else targetVisibility = 'Hidden';
 
     await queryRun(
       `UPDATE products SET
@@ -532,6 +664,11 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
         distributorOriginalPrice = ?,
         distributorDiscount = ?,
         distributorPrice = ?,
+        showOnRetailerPortal = ?,
+        retailerPricingMode = ?,
+        retailerOriginalPrice = ?,
+        retailerDiscount = ?,
+        retailerPrice = ?,
         targetVisibility = ?,
         originalPrice = ?
        WHERE id = ?`,
@@ -556,6 +693,11 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
         distOrig,
         distDisc,
         finalDistPrice,
+        showRet,
+        retMode,
+        retOrig,
+        retDisc,
+        finalRetPrice,
         targetVisibility,
         custOrig || distOrig,
         id

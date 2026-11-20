@@ -121,9 +121,25 @@ export const initDb = async () => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
-  // Ensure users table has googleId and avatarUrl columns
+  // Ensure users table has googleId, avatarUrl and India geographic location columns
   try { await queryRun('ALTER TABLE users ADD COLUMN googleId VARCHAR(255) DEFAULT NULL'); } catch (e) {}
   try { await queryRun('ALTER TABLE users ADD COLUMN avatarUrl TEXT DEFAULT NULL'); } catch (e) {}
+  try { await queryRun("ALTER TABLE users ADD COLUMN country VARCHAR(100) DEFAULT 'India'"); } catch (e) {}
+  try { await queryRun('ALTER TABLE users ADD COLUMN state VARCHAR(150) DEFAULT NULL'); } catch (e) {}
+  try { await queryRun('ALTER TABLE users ADD COLUMN district VARCHAR(150) DEFAULT NULL'); } catch (e) {}
+  try { await queryRun('ALTER TABLE users ADD COLUMN city VARCHAR(150) DEFAULT NULL'); } catch (e) {}
+  try { await queryRun('ALTER TABLE users ADD COLUMN locality VARCHAR(255) DEFAULT NULL'); } catch (e) {}
+  try { await queryRun('ALTER TABLE users ADD COLUMN pincode VARCHAR(20) DEFAULT NULL'); } catch (e) {}
+  try { await queryRun('ALTER TABLE users ADD COLUMN address TEXT DEFAULT NULL'); } catch (e) {}
+  try { await queryRun('ALTER TABLE users ADD COLUMN ownerName VARCHAR(150) DEFAULT NULL'); } catch (e) {}
+  try { await queryRun('ALTER TABLE users ADD COLUMN shopName VARCHAR(150) DEFAULT NULL'); } catch (e) {}
+
+  // Ensure products table has Retailer Portal visibility & pricing columns
+  try { await queryRun('ALTER TABLE products ADD COLUMN showOnRetailerPortal INT DEFAULT 1'); } catch (e) {}
+  try { await queryRun('ALTER TABLE products ADD COLUMN retailerPrice DOUBLE DEFAULT 0'); } catch (e) {}
+  try { await queryRun('ALTER TABLE products ADD COLUMN retailerOriginalPrice DOUBLE DEFAULT 0'); } catch (e) {}
+  try { await queryRun('ALTER TABLE products ADD COLUMN retailerDiscount DOUBLE DEFAULT 0'); } catch (e) {}
+  try { await queryRun("ALTER TABLE products ADD COLUMN retailerPricingMode VARCHAR(50) DEFAULT 'auto'"); } catch (e) {}
 
   // User persistent sessions table (HTTP-only refresh tokens & Remember Me)
   await queryRun(`
