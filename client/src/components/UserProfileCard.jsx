@@ -1,11 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getMediaUrl } from '../services/api';
-import { Camera, CheckCircle, CreditCard, User, ShieldCheck } from 'lucide-react';
+import { Camera, CheckCircle, CreditCard, User, ShieldCheck, X, Check, Upload, AlertCircle } from 'lucide-react';
 
 export const UserProfileCard = ({ onOpenProfile, onCreditClick, creditAmount = null }) => {
   const { user, uploadProfilePhoto } = useAuth();
   const [uploading, setUploading] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState(null); // { file, url, sizeKb }
+  const [uploadMsg, setUploadMsg] = useState(null); // { type: 'success' | 'error', text }
   const fileInputRef = useRef(null);
 
   if (!user) return null;
@@ -23,25 +25,64 @@ export const UserProfileCard = ({ onOpenProfile, onCreditClick, creditAmount = n
 
   const avatarSrc = user.avatarUrl ? getMediaUrl(user.avatarUrl) : null;
 
-  const handlePhotoUpload = async (e) => {
+  const handlePhotoSelect = (e) => {
     e.stopPropagation();
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
       alert('Photo must be smaller than 5 MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type.toLowerCase())) {
+      alert('Only JPG, JPEG, PNG, and WEBP formats are supported.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewPhoto({
+      file,
+      url: objectUrl,
+      sizeKb: (file.size / 1024).toFixed(0)
+    });
+    setUploadMsg(null);
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!previewPhoto?.file) return;
+
     setUploading(true);
+    setUploadMsg(null);
     try {
-      await uploadProfilePhoto(file);
+      const res = await uploadProfilePhoto(previewPhoto.file);
+      if (res && res.success) {
+        setUploadMsg({ type: 'success', text: 'Profile photo uploaded to AWS S3 successfully!' });
+        setTimeout(() => {
+          setPreviewPhoto(null);
+          setUploadMsg(null);
+        }, 1200);
+      } else {
+        throw new Error(res?.message || 'Upload failed.');
+      }
     } catch (err) {
-      alert(err.message || 'Failed to upload profile photo.');
+      setUploadMsg({ type: 'error', text: err.message || 'Failed to upload photo to S3.' });
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleCancelPreview = () => {
+    if (previewPhoto?.url) {
+      URL.revokeObjectURL(previewPhoto.url);
+    }
+    setPreviewPhoto(null);
+    setUploadMsg(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -156,9 +197,8 @@ export const UserProfileCard = ({ onOpenProfile, onCreditClick, creditAmount = n
             ref={fileInputRef}
             type="file"
             accept="image/jpeg,image/jpg,image/png,image/webp"
-            capture="user"
             disabled={uploading}
-            onChange={handlePhotoUpload}
+            onChange={handlePhotoSelect}
             style={{ display: 'none' }}
           />
         </div>
@@ -246,6 +286,163 @@ export const UserProfileCard = ({ onOpenProfile, onCreditClick, creditAmount = n
           </div>
         </div>
       </div>
+
+      {/* ======================================================== */}
+      {/* ======= MODAL: PREVIEW PHOTO BEFORE UPLOAD (S3) ======== */}
+      {/* ======================================================== */}
+      {previewPhoto && (
+        <div
+          onClick={handleCancelPreview}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.70)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '16px'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#ffffff',
+              borderRadius: '20px',
+              maxWidth: '420px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              textAlign: 'center',
+              position: 'relative'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                Preview Profile Photo
+              </div>
+              <button
+                onClick={handleCancelPreview}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Circular Preview */}
+            <div
+              style={{
+                width: '140px',
+                height: '140px',
+                borderRadius: '50%',
+                border: '4px solid #0284c7',
+                margin: '0 auto 14px auto',
+                overflow: 'hidden',
+                background: '#f1f5f9',
+                boxShadow: '0 4px 14px rgba(2, 132, 199, 0.25)'
+              }}
+            >
+              <img
+                src={previewPhoto.url}
+                alt="Selected Preview"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+
+            <div style={{ fontSize: '0.84rem', color: '#334155', fontWeight: 700, marginBottom: '4px' }}>
+              {previewPhoto.file.name}
+            </div>
+            <div style={{ fontSize: '0.74rem', color: '#64748b', marginBottom: '14px' }}>
+              Size: {previewPhoto.sizeKb} KB • Target: 512×512 (AWS S3)
+            </div>
+
+            <div
+              style={{
+                fontSize: '0.76rem',
+                color: '#0284c7',
+                background: '#f0f9ff',
+                border: '1px solid #bae6fd',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                marginBottom: '16px',
+                lineHeight: 1.4
+              }}
+            >
+              🔒 <strong>AWS S3 Secure Processing:</strong> Photo will be auto-resized to 512×512, stripped of EXIF metadata, and saved privately to AWS S3.
+            </div>
+
+            {uploadMsg && (
+              <div
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  marginBottom: '14px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  background: uploadMsg.type === 'success' ? '#dcfce7' : '#fee2e2',
+                  color: uploadMsg.type === 'success' ? '#166534' : '#991b1b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                {uploadMsg.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
+                {uploadMsg.text}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={handleCancelPreview}
+                disabled={uploading}
+                className="btn btn-secondary"
+                style={{ flex: 1, padding: '10px 14px', fontSize: '0.86rem' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmUpload}
+                disabled={uploading}
+                className="btn btn-primary"
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  fontSize: '0.86rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                {uploading ? (
+                  <>
+                    <div
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        border: '2px solid #ffffff',
+                        borderTopColor: 'transparent',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }}
+                    />
+                    <span>Uploading to S3...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload size={14} />
+                    <span>Confirm & Upload</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

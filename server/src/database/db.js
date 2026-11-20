@@ -841,6 +841,39 @@ export const initDb = async () => {
     console.error('[DISTRIBUTION DB ERROR] Failed to initialize distribution tables:', distErr.message);
   }
 
+  // User Profile Photos table for AWS S3 image storage tracking
+  try {
+    await queryRun(`
+      CREATE TABLE IF NOT EXISTS user_profile_photos (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        userId VARCHAR(100) NOT NULL,
+        userRecordId INT NOT NULL,
+        accountType VARCHAR(50) NOT NULL,
+        s3Key VARCHAR(255) NOT NULL,
+        originalName VARCHAR(255) DEFAULT NULL,
+        mimeType VARCHAR(100) DEFAULT 'image/jpeg',
+        fileSize INT DEFAULT NULL,
+        isCurrent TINYINT(1) DEFAULT 1,
+        uploadedBy VARCHAR(100) DEFAULT NULL,
+        createdDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedDate DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_upp_user (userId),
+        INDEX idx_upp_rec (userRecordId),
+        INDEX idx_upp_current (isCurrent)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+  } catch (photoErr) {
+    console.warn('[MySQL Init] user_profile_photos table notice:', photoErr.message);
+  }
+
+  // Ensure users table has avatarS3Key column
+  try {
+    const [avatarS3Cols] = await pool.query('SHOW COLUMNS FROM users LIKE "avatarS3Key"');
+    if (avatarS3Cols.length === 0) {
+      await pool.query('ALTER TABLE users ADD COLUMN avatarS3Key VARCHAR(255) DEFAULT NULL AFTER avatarUrl');
+    }
+  } catch (e) {}
+
   console.log('MySQL database tables verified and ready.');
 };
 

@@ -270,8 +270,8 @@ export const AuthProvider = ({ children }) => {
     formData.append('photo', file);
     const res = await api.auth.uploadProfilePhoto(formData);
     if (res.success && res.avatarUrl) {
-      setUser(prev => prev ? { ...prev, avatarUrl: res.avatarUrl } : prev);
-      window.dispatchEvent(new CustomEvent('mws_profile_updated', { detail: { avatarUrl: res.avatarUrl } }));
+      setUser(prev => prev ? { ...prev, avatarUrl: res.avatarUrl, avatarS3Key: res.avatarS3Key || prev.avatarS3Key } : prev);
+      window.dispatchEvent(new CustomEvent('mws_profile_updated', { detail: { avatarUrl: res.avatarUrl, avatarS3Key: res.avatarS3Key } }));
     }
     return res;
   };

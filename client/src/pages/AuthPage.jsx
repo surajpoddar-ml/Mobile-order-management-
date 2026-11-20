@@ -18,7 +18,10 @@ import {
   Phone,
   FileText,
   MapPin,
-  Briefcase
+  Briefcase,
+  Camera,
+  Upload,
+  X
 } from 'lucide-react';
 
 // List of 28 States and 8 Union Territories of India
@@ -655,6 +658,49 @@ export const AuthPage = ({ prefillData }) => {
     }
   };
 
+  const [regPhoto, setRegPhoto] = useState(null); // { file, previewUrl, uploading, avatarUrl, avatarS3Key }
+
+  const handleRegPhotoSelect = async (e, role) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMsg('Profile photo must be smaller than 5 MB.');
+      return;
+    }
+
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type.toLowerCase())) {
+      setErrorMsg('Only JPG, JPEG, PNG, and WEBP formats are supported for profile photos.');
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setRegPhoto({ file, previewUrl, uploading: true, avatarUrl: null, avatarS3Key: null });
+
+    try {
+      const formData = new FormData();
+      formData.append('photo', file);
+      formData.append('accountType', role);
+      const res = await api.auth.uploadRegistrationPhoto(formData);
+      if (res && res.success) {
+        setRegPhoto({
+          file,
+          previewUrl,
+          uploading: false,
+          avatarUrl: res.avatarUrl,
+          avatarS3Key: res.avatarS3Key
+        });
+      } else {
+        throw new Error(res?.message || 'Failed to upload photo to S3.');
+      }
+    } catch (err) {
+      console.warn('Registration photo upload error:', err);
+      setRegPhoto({ file, previewUrl, uploading: false, avatarUrl: null, avatarS3Key: null });
+      setErrorMsg(err.message || 'Could not upload photo to AWS S3. You can still register and add your photo later.');
+    }
+  };
+
   // Customer signup handler
   const handleCustomerSignup = async (e) => {
     e.preventDefault();
@@ -680,7 +726,9 @@ export const AuthPage = ({ prefillData }) => {
         city: custForm.city || '',
         locality: custForm.locality || '',
         pincode: custForm.pincode || '',
-        address: custForm.address || ''
+        address: custForm.address || '',
+        avatarUrl: regPhoto?.avatarUrl || null,
+        avatarS3Key: regPhoto?.avatarS3Key || null
       });
     } catch (err) {
       setErrorMsg(err.message || 'Failed to complete customer registration. Please try again.');
@@ -720,7 +768,9 @@ export const AuthPage = ({ prefillData }) => {
         city: distForm.city || '',
         locality: distForm.locality || '',
         pincode: distForm.pincode || '',
-        address: distForm.address || distForm.businessAddress
+        address: distForm.address || distForm.businessAddress,
+        avatarUrl: regPhoto?.avatarUrl || null,
+        avatarS3Key: regPhoto?.avatarS3Key || null
       });
 
       setStatusAlert({
@@ -765,9 +815,11 @@ export const AuthPage = ({ prefillData }) => {
         state: retailerForm.state,
         district: retailerForm.district,
         city: retailerForm.city || retailerForm.locality,
-        locality: retailerForm.locality,
-        pincode: retailerForm.pincode,
-        address: retailerForm.address
+        locality: retailerForm.locality || '',
+        pincode: retailerForm.pincode || '',
+        address: retailerForm.address || '',
+        avatarUrl: regPhoto?.avatarUrl || null,
+        avatarS3Key: regPhoto?.avatarS3Key || null
       });
 
       setStatusAlert({
@@ -784,6 +836,101 @@ export const AuthPage = ({ prefillData }) => {
       setLoading(false);
     }
   };
+
+  const renderPhotoUploadWidget = (role) => (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+      padding: '12px 14px',
+      background: '#f8fafc',
+      borderRadius: '12px',
+      border: '1.5px dashed #cbd5e1',
+      marginBottom: '16px'
+    }}>
+      <div style={{ position: 'relative', width: '64px', height: '64px', flexShrink: 0 }}>
+        <div style={{
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          border: '2.5px solid #0284c7',
+          background: '#e0f2fe',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 2px 6px rgba(2, 132, 199, 0.2)'
+        }}>
+          {regPhoto?.previewUrl ? (
+            <img src={regPhoto.previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <User size={30} color="#0284c7" />
+          )}
+        </div>
+        <label
+          htmlFor={`reg-photo-${role}`}
+          style={{
+            position: 'absolute',
+            bottom: '-2px',
+            right: '-2px',
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            background: '#0284c7',
+            color: '#ffffff',
+            border: '2px solid #ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: regPhoto?.uploading ? 'wait' : 'pointer',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.2)'
+          }}
+          title="Upload Profile Photo"
+        >
+          <Camera size={12} />
+        </label>
+        <input
+          id={`reg-photo-${role}`}
+          type="file"
+          accept="image/jpeg,image/jpg,image/png,image/webp"
+          style={{ display: 'none' }}
+          disabled={regPhoto?.uploading}
+          onChange={(e) => handleRegPhotoSelect(e, role)}
+        />
+      </div>
+
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
+          Profile Photograph <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 500 }}>(Optional)</span>
+        </div>
+        <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
+          {regPhoto?.uploading
+            ? '⏳ Resizing to 512×512 & uploading to AWS S3...'
+            : regPhoto?.avatarS3Key
+              ? '✅ Uploaded to AWS S3 & ready for registration!'
+              : 'Select photo from gallery or camera (Max 5 MB • JPG, PNG, WEBP)'}
+        </div>
+        {regPhoto?.previewUrl && !regPhoto?.uploading && (
+          <button
+            type="button"
+            onClick={() => setRegPhoto(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#dc2626',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              padding: 0,
+              marginTop: '4px'
+            }}
+          >
+            Remove Photo
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   // Shared high-readability form styling
   const inputStyle = {
@@ -1495,6 +1642,8 @@ export const AuthPage = ({ prefillData }) => {
             {/* --- CUSTOMER SIGN UP FORM --- */}
             {signupRole === 'Customer' && (
               <form onSubmit={handleCustomerSignup}>
+                {renderPhotoUploadWidget('Customer')}
+
                 <div style={{ marginBottom: '14px' }}>
                   <label style={labelStyle}>
                     Full Name <span style={{ color: '#dc2626' }}>*</span>
@@ -1602,6 +1751,8 @@ export const AuthPage = ({ prefillData }) => {
             {/* --- DISTRIBUTOR APPLICATION FORM --- */}
             {signupRole === 'Distributor' && (
               <form onSubmit={handleDistributorSignup}>
+                {renderPhotoUploadWidget('Distributor')}
+
                 {/* SECTION 1: BUSINESS VERIFICATION */}
                 <div style={{
                   display: 'flex',
@@ -1780,6 +1931,8 @@ export const AuthPage = ({ prefillData }) => {
             {/* --- RETAILER APPLICATION FORM --- */}
             {signupRole === 'Retailer' && (
               <form onSubmit={handleRetailerSignup}>
+                {renderPhotoUploadWidget('Retailer')}
+
                 {/* SECTION 1: SHOP & BUSINESS INFORMATION */}
                 <div style={{
                   display: 'flex',

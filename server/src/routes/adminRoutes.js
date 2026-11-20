@@ -9,7 +9,7 @@ import { queryAll, queryGet, queryRun } from '../database/db.js';
 import { verifyToken, requireRole } from '../middleware/auth.js';
 import { createNotification } from '../services/notificationService.js';
 import { recordAuditLog, getAuditLogs } from '../services/auditService.js';
-import { uploadFileToS3 } from '../services/s3Service.js';
+import { uploadFileToS3, processAndUploadProfilePhoto, deleteOldProfilePhoto } from '../services/s3Service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,7 +52,7 @@ const adminProfileFilter = (req, file, cb) => {
 };
 
 const adminProfileUpload = multer({
-  storage: adminProfileStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: adminProfileFilter
 });
@@ -581,6 +581,8 @@ router.put('/users/:id', async (req, res) => {
 
 /**
  * 5b. Admin Upload / Update User Profile Photo
+ * Securely resizes to ~512x512, removes EXIF metadata, uploads to AWS S3,
+ * records in user_profile_photos, and deletes previous S3 photo safely.
  */
 router.post('/users/:id/photo', adminProfileUpload.single('photo'), async (req, res) => {
   try {
@@ -594,23 +596,52 @@ router.post('/users/:id/photo', adminProfileUpload.single('photo'), async (req, 
       return res.status(400).json({ success: false, message: 'Please select an image file to upload.' });
     }
 
-    let finalUrl = `/uploads/profiles/${req.file.filename}`;
-    try {
-      const s3Result = await uploadFileToS3({
-        filePath: req.file.path,
-        originalName: req.file.originalname,
-        mimeType: req.file.mimetype,
-        folder: 'profiles'
-      });
-      if (s3Result && s3Result.url) {
-        finalUrl = s3Result.url;
-      }
-    } catch (s3Err) {
-      console.warn('[ADMIN S3 UPLOAD] Falling back to local storage URL:', s3Err.message);
-    }
+    const previousS3Key = targetUser.avatarS3Key;
+
+    const uploadResult = await processAndUploadProfilePhoto({
+      buffer: req.file.buffer,
+      filePath: req.file.path,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      accountType: targetUser.userType
+    });
 
     const now = new Date().toISOString();
-    await queryRun('UPDATE users SET avatarUrl = ?, updatedDate = ? WHERE id = ?', [finalUrl, now, id]);
+    await queryRun(
+      'UPDATE users SET avatarUrl = ?, avatarS3Key = ?, updatedDate = ? WHERE id = ?',
+      [uploadResult.displayUrl, uploadResult.s3Key, now, id]
+    );
+
+    try {
+      await queryRun('UPDATE user_profile_photos SET isCurrent = 0 WHERE userRecordId = ?', [id]);
+      await queryRun(
+        `INSERT INTO user_profile_photos (
+          userId, userRecordId, accountType, s3Key, originalName, mimeType, fileSize, isCurrent, uploadedBy
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+        [
+          targetUser.userId,
+          id,
+          targetUser.userType,
+          uploadResult.s3Key,
+          req.file.originalname || uploadResult.filename,
+          uploadResult.mimeType,
+          uploadResult.fileSize,
+          req.user.email || req.user.fullName || 'Admin'
+        ]
+      );
+    } catch (dbErr) {
+      console.warn('[ADMIN PROFILE DB] Notice recording user_profile_photos:', dbErr.message);
+    }
+
+    // Safely delete previous S3 photo only after confirming database updated
+    if (previousS3Key && previousS3Key !== uploadResult.s3Key) {
+      try {
+        await deleteOldProfilePhoto(previousS3Key);
+      } catch (delErr) {
+        console.warn('[AWS S3] Notice cleaning old profile photo:', delErr.message);
+      }
+    }
+
     const updated = await queryGet('SELECT * FROM users WHERE id = ?', [id]);
 
     try {
@@ -621,21 +652,53 @@ router.post('/users/:id/photo', adminProfileUpload.single('photo'), async (req, 
         targetUserId: targetUser.userId,
         performedBy: req.user.fullName || req.user.email,
         userRole: 'Admin',
-        remarks: `Admin updated profile photo for ${targetUser.fullName}`,
-        updatedValues: { avatarUrl: finalUrl },
+        remarks: `Admin updated profile photo for ${targetUser.fullName} (AWS S3 512x512 stripped EXIF)`,
+        updatedValues: { avatarS3Key: uploadResult.s3Key, avatarUrl: uploadResult.displayUrl },
         ipAddress: req.ip
       });
     } catch (e) {}
 
     return res.status(200).json({
       success: true,
-      message: `Profile photo for ${targetUser.fullName} updated successfully!`,
-      avatarUrl: finalUrl,
+      message: `Profile photo for ${targetUser.fullName} updated successfully in AWS S3!`,
+      avatarUrl: uploadResult.displayUrl,
+      avatarS3Key: uploadResult.s3Key,
+      presignedUrl: uploadResult.presignedUrl,
       user: updated
     });
   } catch (error) {
     console.error('Admin profile photo upload error:', error);
     return res.status(500).json({ success: false, message: error.message || 'Failed to upload photo.' });
+  }
+});
+
+/**
+ * 5c. Admin Retrieve User Profile Photo Upload History
+ */
+router.get('/users/:id/photo-history', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const targetUser = await queryGet('SELECT id, userId, fullName, userType FROM users WHERE id = ?', [id]);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    const photos = await queryAll(
+      `SELECT * FROM user_profile_photos 
+       WHERE userRecordId = ? OR userId = ? 
+       ORDER BY id DESC LIMIT 50`,
+      [id, targetUser.userId]
+    );
+
+    return res.status(200).json({
+      success: true,
+      userId: targetUser.userId,
+      fullName: targetUser.fullName,
+      photos
+    });
+  } catch (err) {
+    console.error('Photo history error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch photo history.' });
   }
 });
 

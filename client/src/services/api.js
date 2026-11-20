@@ -39,7 +39,11 @@ export const getMediaUrl = (url) => {
 
   // Route any AWS S3 URLs through backend proxy so private S3 assets stream reliably with 200 OK without 403 or 301 errors
   if (normalized.includes('amazonaws.com')) {
-    const match = normalized.match(/(products|categories|advertisements|stickers|payments)\/([^/?#]+)/);
+    const keyMatch = normalized.match(/amazonaws\.com\/(.+)$/);
+    if (keyMatch && keyMatch[1]) {
+      return `${API_ORIGIN}/api/s3/${keyMatch[1]}`;
+    }
+    const match = normalized.match(/(products|categories|advertisements|stickers|payments|profiles|profile-images)\/([^/?#]+)/);
     if (match) {
       return `${API_ORIGIN}/api/s3/${match[1]}/${match[2]}`;
     }
@@ -47,7 +51,7 @@ export const getMediaUrl = (url) => {
 
   // Route /uploads/... through backend proxy
   if (normalized.startsWith('/uploads/') || normalized.startsWith('uploads/')) {
-    const match = normalized.match(/uploads\/(products|categories|advertisements|stickers|payments)\/([^/?#]+)/);
+    const match = normalized.match(/uploads\/(products|categories|advertisements|stickers|payments|profiles|profile-images)\/([^/?#]+)/);
     if (match) {
       return `${API_ORIGIN}/api/s3/${match[1]}/${match[2]}`;
     }
@@ -187,11 +191,26 @@ export const api = {
       request('/auth/profile/photo', {
         method: 'POST',
         body: formData
+      }),
+
+    uploadRegistrationPhoto: (formData) =>
+      request('/auth/profile/upload-unregistered', {
+        method: 'POST',
+        body: formData
+      }),
+
+    getProfilePhotoUrl: () =>
+      request('/auth/profile/photo-url', {
+        method: 'GET'
       })
   },
 
   // Admin Management Endpoints
   admin: {
+    getUserPhotoHistory: (id) =>
+      request(`/admin/users/${id}/photo-history`, {
+        method: 'GET'
+      }),
     getMetrics: () =>
       request('/admin/metrics', {
         method: 'GET'

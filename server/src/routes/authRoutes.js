@@ -9,7 +9,13 @@ import { fileURLToPath } from 'url';
 import { queryGet, queryRun } from '../database/db.js';
 import { verifyToken } from '../middleware/auth.js';
 import { createNotification } from '../services/notificationService.js';
-import { uploadFileToS3 } from '../services/s3Service.js';
+import {
+  uploadFileToS3,
+  processAndUploadProfilePhoto,
+  deleteOldProfilePhoto,
+  getPresignedProfileGetUrl,
+  getPresignedProfileUploadUrl
+} from '../services/s3Service.js';
 import { recordAuditLog } from '../services/auditService.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -53,7 +59,7 @@ const profileFileFilter = (req, file, cb) => {
 };
 
 const profileUpload = multer({
-  storage: profileStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
   fileFilter: profileFileFilter
 });
@@ -245,14 +251,17 @@ router.post('/register/customer', async (req, res) => {
     const resolvedCity = city || area || null;
     const resolvedLocality = locality || townVillage || null;
     const resolvedAddress = address || null;
+    const resolvedAvatarUrl = req.body.avatarUrl || null;
+    const resolvedAvatarS3Key = req.body.avatarS3Key || null;
 
     const result = await queryRun(
       `INSERT INTO users (
         userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
         profileInfo, createdDate, updatedDate, lastLogin,
         country, state, district, city, locality, pincode, address,
-        assignedStateId, assignedDistrictId, assignedAreaId
-      ) VALUES (?, ?, ?, ?, ?, 'Customer', 'Active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        assignedStateId, assignedDistrictId, assignedAreaId,
+        avatarUrl, avatarS3Key
+      ) VALUES (?, ?, ?, ?, ?, 'Customer', 'Active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         fullName.trim(),
@@ -272,9 +281,22 @@ router.post('/register/customer', async (req, res) => {
         resolvedAddress,
         assignedStateId || null,
         assignedDistrictId || null,
-        assignedAreaId || null
+        assignedAreaId || null,
+        resolvedAvatarUrl,
+        resolvedAvatarS3Key
       ]
     );
+
+    if (resolvedAvatarS3Key) {
+      try {
+        await queryRun(
+          `INSERT INTO user_profile_photos (
+            userId, userRecordId, accountType, s3Key, originalName, mimeType, isCurrent, uploadedBy
+          ) VALUES (?, ?, 'Customer', ?, 'registration_avatar.jpg', 'image/jpeg', 1, ?)`,
+          [userId, result.lastID, resolvedAvatarS3Key, email.trim().toLowerCase()]
+        );
+      } catch (e) {}
+    }
 
     const newUser = await queryGet('SELECT * FROM users WHERE id = ?', [result.lastID]);
     const { passwordHash: _, ...safeUser } = newUser;
@@ -416,16 +438,19 @@ router.post('/register/distributor', async (req, res) => {
     const resolvedAddress = (businessAddress || address || '').trim();
     const resolvedCity = city || area || null;
     const resolvedLocality = locality || townVillage || null;
+    const resolvedAvatarUrl = req.body.avatarUrl || null;
+    const resolvedAvatarS3Key = req.body.avatarS3Key || null;
 
     // Status is strictly 'Pending' awaiting admin approval
-    await queryRun(
+    const distResult = await queryRun(
       `INSERT INTO users (
         userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
         profileInfo, createdDate, updatedDate,
         businessName, businessAddress, panVatNumber, contactPerson, businessPhone, businessEmail,
         country, state, district, city, locality, pincode, address,
-        assignedStateId, assignedDistrictId, assignedAreaId, distributorLevel
-      ) VALUES (?, ?, ?, ?, ?, 'Distributor', 'Pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'StateDistributor')`,
+        assignedStateId, assignedDistrictId, assignedAreaId, distributorLevel,
+        avatarUrl, avatarS3Key
+      ) VALUES (?, ?, ?, ?, ?, 'Distributor', 'Pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'StateDistributor', ?, ?)`,
       [
         userId,
         effectiveFullName,
@@ -450,9 +475,22 @@ router.post('/register/distributor', async (req, res) => {
         resolvedAddress,
         assignedStateId || null,
         assignedDistrictId || null,
-        assignedAreaId || null
+        assignedAreaId || null,
+        resolvedAvatarUrl,
+        resolvedAvatarS3Key
       ]
     );
+
+    if (resolvedAvatarS3Key) {
+      try {
+        await queryRun(
+          `INSERT INTO user_profile_photos (
+            userId, userRecordId, accountType, s3Key, originalName, mimeType, isCurrent, uploadedBy
+          ) VALUES (?, ?, 'Distributor', ?, 'registration_avatar.jpg', 'image/jpeg', 1, ?)`,
+          [userId, distResult.lastID, resolvedAvatarS3Key, email.trim().toLowerCase()]
+        );
+      } catch (e) {}
+    }
 
     // 1. Notify Admin of new distributor registration pending review
     const displayPan = effectivePanVat ? ` (PAN/VAT: ${effectivePanVat})` : '';
@@ -595,17 +633,20 @@ router.post('/register/retailer', async (req, res) => {
     const resolvedAddress = (businessAddress || address || '').trim();
     const resolvedCity = city || area || null;
     const resolvedLocality = locality || townVillage || null;
+    const resolvedAvatarUrl = req.body.avatarUrl || null;
+    const resolvedAvatarS3Key = req.body.avatarS3Key || null;
 
     // Status is strictly 'Pending' awaiting admin review
-    await queryRun(
+    const retResult = await queryRun(
       `INSERT INTO users (
         userId, fullName, email, phoneNumber, passwordHash, userType, accountStatus,
         profileInfo, createdDate, updatedDate,
         businessName, businessAddress, contactPerson, businessPhone, businessEmail,
         country, state, district, city, locality, pincode, address,
         ownerName, shopName,
-        assignedStateId, assignedDistrictId, assignedAreaId, distributorLevel
-      ) VALUES (?, ?, ?, ?, ?, 'Retailer', 'Pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Retailer')`,
+        assignedStateId, assignedDistrictId, assignedAreaId, distributorLevel,
+        avatarUrl, avatarS3Key
+      ) VALUES (?, ?, ?, ?, ?, 'Retailer', 'Pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Retailer', ?, ?)`,
       [
         userId,
         resolvedOwner,
@@ -631,9 +672,22 @@ router.post('/register/retailer', async (req, res) => {
         resolvedShop,
         assignedStateId || null,
         assignedDistrictId || null,
-        assignedAreaId || null
+        assignedAreaId || null,
+        resolvedAvatarUrl,
+        resolvedAvatarS3Key
       ]
     );
+
+    if (resolvedAvatarS3Key) {
+      try {
+        await queryRun(
+          `INSERT INTO user_profile_photos (
+            userId, userRecordId, accountType, s3Key, originalName, mimeType, isCurrent, uploadedBy
+          ) VALUES (?, ?, 'Retailer', ?, 'registration_avatar.jpg', 'image/jpeg', 1, ?)`,
+          [userId, retResult.lastID, resolvedAvatarS3Key, email.trim().toLowerCase()]
+        );
+      } catch (e) {}
+    }
 
     // 1. Notify Admin of new retailer registration
     await createNotification({
@@ -1123,7 +1177,8 @@ router.get('/me', verifyToken, async (req, res) => {
 
 /**
  * 8. Profile Photo Upload / Change for Current User
- * Supports JPG, JPEG, PNG, WEBP, camera capture or gallery
+ * Securely resizes to ~512x512, strips EXIF metadata, uploads to AWS S3,
+ * updates MySQL (users and user_profile_photos), and deletes previous S3 asset.
  */
 router.post('/profile/photo', verifyToken, profileUpload.single('photo'), async (req, res) => {
   try {
@@ -1131,26 +1186,60 @@ router.post('/profile/photo', verifyToken, profileUpload.single('photo'), async 
       return res.status(400).json({ success: false, message: 'Please select an image file to upload.' });
     }
 
-    let finalUrl = `/uploads/profiles/${req.file.filename}`;
-    try {
-      const s3Result = await uploadFileToS3({
-        filePath: req.file.path,
-        originalName: req.file.originalname,
-        mimeType: req.file.mimetype,
-        folder: 'profiles'
-      });
-      if (s3Result && s3Result.url) {
-        finalUrl = s3Result.url;
-      }
-    } catch (s3Err) {
-      console.warn('[PROFILE S3 UPLOAD] Falling back to local storage URL:', s3Err.message);
+    // 1. Fetch current user to inspect existing photo
+    const currentUser = await queryGet('SELECT * FROM users WHERE id = ?', [req.user.id]);
+    if (!currentUser) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
+    const previousS3Key = currentUser.avatarS3Key;
+
+    // 2. Validate, resize (512x512), remove EXIF, and upload to S3 under profile-images/role/
+    const uploadResult = await processAndUploadProfilePhoto({
+      buffer: req.file.buffer,
+      filePath: req.file.path,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      accountType: currentUser.userType
+    });
+
     const now = new Date().toISOString();
+
+    // 3. Update database: users and user_profile_photos
     await queryRun(
-      'UPDATE users SET avatarUrl = ?, updatedDate = ? WHERE id = ?',
-      [finalUrl, now, req.user.id]
+      'UPDATE users SET avatarUrl = ?, avatarS3Key = ?, updatedDate = ? WHERE id = ?',
+      [uploadResult.displayUrl, uploadResult.s3Key, now, currentUser.id]
     );
+
+    try {
+      await queryRun('UPDATE user_profile_photos SET isCurrent = 0 WHERE userRecordId = ?', [currentUser.id]);
+      await queryRun(
+        `INSERT INTO user_profile_photos (
+          userId, userRecordId, accountType, s3Key, originalName, mimeType, fileSize, isCurrent, uploadedBy
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+        [
+          currentUser.userId,
+          currentUser.id,
+          currentUser.userType,
+          uploadResult.s3Key,
+          req.file.originalname || uploadResult.filename,
+          uploadResult.mimeType,
+          uploadResult.fileSize,
+          currentUser.email || currentUser.fullName
+        ]
+      );
+    } catch (dbErr) {
+      console.warn('[PROFILE DB LOG] Notice recording user_profile_photos:', dbErr.message);
+    }
+
+    // 4. Safely delete previous S3 photo ONLY AFTER database update has succeeded
+    if (previousS3Key && previousS3Key !== uploadResult.s3Key) {
+      try {
+        await deleteOldProfilePhoto(previousS3Key);
+      } catch (delErr) {
+        console.warn('[AWS S3] Notice cleaning old profile photo:', delErr.message);
+      }
+    }
 
     const updatedUser = await queryGet('SELECT * FROM users WHERE id = ?', [req.user.id]);
     const { passwordHash: _, ...safeUser } = updatedUser;
@@ -1159,16 +1248,21 @@ router.post('/profile/photo', verifyToken, profileUpload.single('photo'), async 
       await recordAuditLog({
         actionType: 'UPDATE_PROFILE_PHOTO',
         entityType: req.user.userType ? req.user.userType.toUpperCase() : 'USER',
-        performedBy: req.user.fullName || req.user.email,
+        targetAccount: req.user.userId,
         targetUserId: req.user.userId,
-        remarks: 'User updated profile photo'
+        performedBy: req.user.fullName || req.user.email,
+        remarks: 'User updated profile photo using AWS S3 (512x512 stripped EXIF)',
+        updatedValues: { avatarS3Key: uploadResult.s3Key, avatarUrl: uploadResult.displayUrl },
+        ipAddress: req.ip
       });
     } catch (e) {}
 
     return res.status(200).json({
       success: true,
-      message: 'Profile photo updated successfully!',
-      avatarUrl: finalUrl,
+      message: 'Profile photo updated successfully in AWS S3!',
+      avatarUrl: uploadResult.displayUrl,
+      avatarS3Key: uploadResult.s3Key,
+      presignedUrl: uploadResult.presignedUrl,
       user: safeUser
     });
   } catch (error) {
@@ -1177,6 +1271,97 @@ router.post('/profile/photo', verifyToken, profileUpload.single('photo'), async 
       success: false,
       message: error.message || 'Failed to update profile photo.'
     });
+  }
+});
+
+/**
+ * 8b. Secure Profile Photo Upload during Registration (Pre-Signup)
+ * Allows applicants to select and preview photo during Customer/Distributor/Retailer signup.
+ */
+router.post('/profile/upload-unregistered', profileUpload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please select an image file to upload.' });
+    }
+
+    const accountType = req.body.accountType || 'Customer';
+
+    const uploadResult = await processAndUploadProfilePhoto({
+      buffer: req.file.buffer,
+      filePath: req.file.path,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      accountType
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Registration photo uploaded to AWS S3 successfully!',
+      avatarUrl: uploadResult.displayUrl,
+      avatarS3Key: uploadResult.s3Key,
+      presignedUrl: uploadResult.presignedUrl
+    });
+  } catch (error) {
+    console.error('Pre-registration photo upload error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to upload photo.'
+    });
+  }
+});
+
+/**
+ * 8c. Generate Short-Lived Presigned GET URL for Private S3 Profile Image
+ */
+router.get('/profile/photo-url', verifyToken, async (req, res) => {
+  try {
+    const user = await queryGet('SELECT avatarUrl, avatarS3Key FROM users WHERE id = ?', [req.user.id]);
+    if (!user || (!user.avatarUrl && !user.avatarS3Key)) {
+      return res.status(200).json({ success: true, photoUrl: null });
+    }
+
+    if (user.avatarS3Key) {
+      const presigned = await getPresignedProfileGetUrl(user.avatarS3Key, 86400);
+      return res.status(200).json({
+        success: true,
+        photoUrl: presigned || user.avatarUrl,
+        avatarS3Key: user.avatarS3Key
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      photoUrl: user.avatarUrl
+    });
+  } catch (err) {
+    console.error('Get profile photo URL error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to generate photo URL.' });
+  }
+});
+
+/**
+ * 8d. Generate Short-Lived Presigned PUT URL for Direct S3 Upload
+ */
+router.post('/profile/presigned-upload', verifyToken, async (req, res) => {
+  try {
+    const { originalName, mimeType } = req.body;
+    const result = await getPresignedProfileUploadUrl({
+      accountType: req.user.userType,
+      originalName: originalName || 'profile.jpg',
+      mimeType: mimeType || 'image/jpeg',
+      expiresIn: 900
+    });
+
+    if (!result) {
+      return res.status(500).json({ success: false, message: 'Could not generate presigned upload URL.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      ...result
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 

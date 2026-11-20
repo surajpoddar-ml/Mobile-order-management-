@@ -25,11 +25,12 @@ export const UserProfileModal = ({ isOpen, onClose, onCreditClick }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
+  const [previewPhoto, setPreviewPhoto] = useState(null); // { file, url, sizeKb }
   const fileInputRef = useRef(null);
 
   if (!isOpen || !user) return null;
 
-  const handlePhotoSelect = async (e) => {
+  const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -37,6 +38,7 @@ export const UserProfileModal = ({ isOpen, onClose, onCreditClick }) => {
     if (file.size > 5 * 1024 * 1024) {
       setUploadError('Image size exceeds 5 MB limit. Please select a smaller photo.');
       setTimeout(() => setUploadError(''), 4000);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
@@ -45,18 +47,35 @@ export const UserProfileModal = ({ isOpen, onClose, onCreditClick }) => {
     if (!allowed.includes(file.type.toLowerCase())) {
       setUploadError('Invalid format. Please upload JPG, PNG, or WEBP photos.');
       setTimeout(() => setUploadError(''), 4000);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
+
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewPhoto({
+      file,
+      url: objectUrl,
+      sizeKb: (file.size / 1024).toFixed(0)
+    });
+    setUploadError('');
+    setUploadSuccess('');
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!previewPhoto?.file) return;
 
     setUploading(true);
     setUploadError('');
     setUploadSuccess('');
 
     try {
-      const res = await uploadProfilePhoto(file);
+      const res = await uploadProfilePhoto(previewPhoto.file);
       if (res && res.success) {
-        setUploadSuccess('Profile picture updated successfully!');
-        setTimeout(() => setUploadSuccess(''), 3500);
+        setUploadSuccess('Profile picture updated successfully in AWS S3!');
+        setTimeout(() => {
+          setPreviewPhoto(null);
+          setUploadSuccess('');
+        }, 1500);
       } else {
         setUploadError(res?.message || 'Failed to upload photo.');
       }
@@ -66,6 +85,15 @@ export const UserProfileModal = ({ isOpen, onClose, onCreditClick }) => {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleCancelPreview = () => {
+    if (previewPhoto?.url) {
+      URL.revokeObjectURL(previewPhoto.url);
+    }
+    setPreviewPhoto(null);
+    setUploadError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const isDistributor = user.userType === 'Distributor' || Boolean(user.distributorLevel);
@@ -581,6 +609,131 @@ export const UserProfileModal = ({ isOpen, onClose, onCreditClick }) => {
             Close
           </button>
         </div>
+
+        {/* Modal: Preview Photo Before Upload */}
+        {previewPhoto && (
+          <div
+            onClick={handleCancelPreview}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.75)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 100000,
+              padding: '16px'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#ffffff',
+                borderRadius: '20px',
+                maxWidth: '400px',
+                width: '100%',
+                padding: '24px',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+                textAlign: 'center'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                  Preview Profile Photo
+                </div>
+                <button
+                  onClick={handleCancelPreview}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div
+                style={{
+                  width: '130px',
+                  height: '130px',
+                  borderRadius: '50%',
+                  border: '4px solid #0284c7',
+                  margin: '0 auto 12px auto',
+                  overflow: 'hidden',
+                  background: '#f1f5f9',
+                  boxShadow: '0 4px 14px rgba(2, 132, 199, 0.25)'
+                }}
+              >
+                <img
+                  src={previewPhoto.url}
+                  alt="Preview"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+
+              <div style={{ fontSize: '0.84rem', color: '#334155', fontWeight: 700, marginBottom: '4px' }}>
+                {previewPhoto.file.name}
+              </div>
+              <div style={{ fontSize: '0.74rem', color: '#64748b', marginBottom: '12px' }}>
+                Size: {previewPhoto.sizeKb} KB • Resized to 512×512 (AWS S3)
+              </div>
+
+              {uploadError && (
+                <div style={{ padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', background: '#fee2e2', color: '#991b1b', fontSize: '0.80rem', fontWeight: 700 }}>
+                  {uploadError}
+                </div>
+              )}
+              {uploadSuccess && (
+                <div style={{ padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', background: '#dcfce7', color: '#166534', fontSize: '0.80rem', fontWeight: 700 }}>
+                  {uploadSuccess}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  onClick={handleCancelPreview}
+                  disabled={uploading}
+                  className="btn btn-secondary"
+                  style={{ flex: 1, padding: '9px 12px', fontSize: '0.84rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmUpload}
+                  disabled={uploading}
+                  className="btn btn-primary"
+                  style={{
+                    flex: 1,
+                    padding: '9px 12px',
+                    fontSize: '0.84rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  {uploading ? (
+                    <>
+                      <div
+                        style={{
+                          width: '12px',
+                          height: '12px',
+                          border: '2px solid #ffffff',
+                          borderTopColor: 'transparent',
+                          borderRadius: '50%',
+                          animation: 'spin 1s linear infinite'
+                        }}
+                      />
+                      <span>Saving to S3...</span>
+                    </>
+                  ) : (
+                    <span>Confirm & Upload</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
