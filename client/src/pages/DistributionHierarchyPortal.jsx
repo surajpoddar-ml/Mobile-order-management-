@@ -8,8 +8,17 @@ import api from '../services/api';
 import ForcePasswordChangeModal from '../components/distribution/ForcePasswordChangeModal';
 import UserProfileCard from '../components/UserProfileCard';
 import UserProfileModal from '../components/UserProfileModal';
+import { DistributorPortal } from './DistributorPortal';
 
 export default function DistributionHierarchyPortal({ user, onLogout }) {
+  // Fail-safe protection: Retailers and regular distributors belong to the eCommerce store portal, never the territory hierarchy view
+  const isRetailerAccount = user?.userType === 'Retailer' || user?.role === 'Retailer' || user?.distributorLevel === 'Retailer';
+  const isTerritorialAdmin = ['StateDistributor', 'DistrictDistributor', 'AreaDistributor'].includes(user?.distributorLevel);
+
+  if (isRetailerAccount || !isTerritorialAdmin) {
+    return <DistributorPortal />;
+  }
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
