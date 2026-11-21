@@ -18,14 +18,14 @@ export const MobileBottomNav = () => {
 
   const path = currentRoute ? currentRoute.split('?')[0] : '/';
   const isHome = path === '/' || path === '/home';
-  const isAccount = path === '/login' || path === '/customer' || path === '/portal/customer' || path === '/distributor' || path === '/portal/distributor';
+  const isAccount = path === '/login' || path === '/customer' || path === '/portal/customer' || path === '/distributor' || path === '/portal/distributor' || path === '/retailer' || path === '/portal/retailer';
 
   const handleHomeClick = () => {
     if (isHome) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       if (user?.role === 'Customer' || user?.userType === 'Customer') navigate('/customer');
-      else if (user?.role === 'Distributor' || user?.userType === 'Distributor') navigate('/distributor');
+      else if (user?.role === 'Distributor' || user?.userType === 'Distributor' || user?.userType === 'Retailer') navigate('/distributor');
       else navigate('/');
     }
   };
@@ -43,7 +43,7 @@ export const MobileBottomNav = () => {
     if (user) {
       const role = user.role || user.userType;
       if (role === 'Customer') navigate('/portal/customer');
-      else if (role === 'Distributor') navigate('/portal/distributor');
+      else if (role === 'Distributor' || role === 'Retailer') navigate('/portal/distributor');
       else if (role === 'Admin') navigate('/admin');
       else navigate('/login');
     } else {

@@ -92,7 +92,7 @@ export const ShopModals = () => {
     city: '',
     state: '',
     postalCode: '',
-    paymentMethod: user?.userType === 'Distributor' ? 'Purchase with Available Credit' : 'Cash on Delivery',
+    paymentMethod: (user?.userType === 'Distributor' || user?.userType === 'Retailer') ? 'Purchase with Available Credit' : 'Cash on Delivery',
     transactionId: '',
     paymentScreenshot: null,
     notes: ''
@@ -135,10 +135,10 @@ export const ShopModals = () => {
   const [distributorCredit, setDistributorCredit] = useState(null);
   const [creditLoading, setCreditLoading] = useState(false);
 
-  // Fetch distributor available credit balance whenever cart or user is active
+  // Fetch distributor or retailer available credit balance whenever cart or user is active
   useEffect(() => {
     let isMounted = true;
-    if (user?.userType === 'Distributor') {
+    if (user?.userType === 'Distributor' || user?.userType === 'Retailer') {
       setCreditLoading(true);
       api.credits.getMyCredit()
         .then(res => {
@@ -220,7 +220,7 @@ export const ShopModals = () => {
         customerEmail: user.email || prev.customerEmail,
         customerPhone: user.phoneNumber || prev.customerPhone,
         shippingAddress: user.businessAddress || prev.shippingAddress,
-        paymentMethod: user.userType === 'Distributor' ? 'Purchase with Available Credit' : 'Cash on Delivery'
+        paymentMethod: (user.userType === 'Distributor' || user.userType === 'Retailer') ? 'Purchase with Available Credit' : 'Cash on Delivery'
       }));
     }
   }, [user]);
@@ -1066,7 +1066,7 @@ export const ShopModals = () => {
                         {[
                           { id: 'Cash on Delivery', label: 'Cash on Delivery (COD)', desc: 'Pay when products arrive' },
                           { id: 'UPI / QR Payment', label: 'UPI / QR Code', desc: 'Instant Google Pay / PhonePe / Paytm' },
-                          ...(user?.userType === 'Distributor' ? [{
+                          ...((user?.userType === 'Distributor' || user?.userType === 'Retailer') ? [{
                             id: 'Purchase with Available Credit',
                             label: 'Purchase with Available Credit',
                             desc: `Available Credit: ₹${(distributorCredit?.availableCredit ?? 0).toLocaleString('en-IN')}`,
@@ -1994,7 +1994,7 @@ export const ShopModals = () => {
                   onClick={() => {
                     setIsContactOpen(false);
                     if (user?.userType === 'Customer') navigate('/portal/customer?tab=messages');
-                    else if (user?.userType === 'Distributor') navigate('/portal/distributor?tab=messages');
+                    else if (user?.userType === 'Distributor' || user?.userType === 'Retailer') navigate('/portal/distributor?tab=messages');
                     else if (user?.userType === 'Admin') navigate('/admin?tab=messages');
                     else navigate('/login?returnUrl=/portal/customer?tab=messages');
                   }}
@@ -2027,7 +2027,7 @@ export const ShopModals = () => {
                   onClick={() => {
                     setIsContactOpen(false);
                     if (user?.userType === 'Customer') navigate('/portal/customer?tab=messages');
-                    else if (user?.userType === 'Distributor') navigate('/portal/distributor?tab=messages');
+                    else if (user?.userType === 'Distributor' || user?.userType === 'Retailer') navigate('/portal/distributor?tab=messages');
                     else if (user?.userType === 'Admin') navigate('/admin?tab=messages');
                     else navigate('/login?returnUrl=/portal/customer?tab=messages');
                   }}

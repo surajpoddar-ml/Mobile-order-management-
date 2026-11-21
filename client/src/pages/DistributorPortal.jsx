@@ -146,10 +146,11 @@ export const DistributorPortal = () => {
 
   const filterTabs = ['All', ...categoriesList.map(c => c.name)];
 
-  // Fetch Distributor Wholesale Products
+  // Fetch Distributor or Retailer Products with respective pricing
   const fetchProducts = () => {
     setLoadingProducts(true);
-    api.products.getVisibleProducts('Distributor', selectedCategory)
+    const targetRole = user?.userType === 'Retailer' ? 'Retailer' : 'Distributor';
+    api.products.getVisibleProducts(targetRole, selectedCategory)
       .then(res => {
         if (res.success && res.products) {
           setProducts(res.products);
@@ -158,7 +159,7 @@ export const DistributorPortal = () => {
         }
       })
       .catch(err => {
-        console.error('Failed to load distributor products:', err);
+        console.error('Failed to load products:', err);
         setProducts([]);
       })
       .finally(() => {
@@ -168,7 +169,7 @@ export const DistributorPortal = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, [selectedCategory]);
+  }, [selectedCategory, user?.userType]);
 
   // Real-time synchronization when Admin modifies products or stock
   useEffect(() => {
@@ -637,10 +638,10 @@ export const DistributorPortal = () => {
               }}>
                 <div>
                   <h2 style={{ fontSize: 'clamp(1.35rem, 3.5vw, 2.2rem)', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
-                    Wholesale B2B Catalog
+                    {user?.userType === 'Retailer' ? 'Retailer Product Catalog' : 'Wholesale B2B Catalog'}
                   </h2>
                   <div style={{ fontSize: '0.82rem', color: '#0284c7', fontWeight: 600, marginTop: '2px' }}>
-                    Showing Factory Tier Wholesale Rates & Bulk Lot Packages
+                    {user?.userType === 'Retailer' ? 'Showing Exclusive Authorized Retailer Rates & Bulk Packages' : 'Showing Factory Tier Wholesale Rates & Bulk Lot Packages'}
                   </div>
                 </div>
 
@@ -1311,10 +1312,12 @@ export const DistributorPortal = () => {
           }}>
             <div>
               <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
-                Distributor Credit Balance
+                {user?.userType === 'Retailer' ? 'Retailer Credit Balance' : 'Distributor Credit Balance'}
               </h2>
               <p style={{ margin: '4px 0 0 0', fontSize: '0.84rem', color: '#64748b' }}>
-                Your admin-approved wholesale credit line, available balance, and complete purchase audit history.
+                {user?.userType === 'Retailer'
+                  ? 'Your admin-approved retailer credit line, available balance, and complete purchase audit history.'
+                  : 'Your admin-approved wholesale credit line, available balance, and complete purchase audit history.'}
               </p>
             </div>
 

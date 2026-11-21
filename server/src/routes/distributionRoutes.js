@@ -525,9 +525,10 @@ router.get('/dashboard/retailer', verifyToken, async (req, res) => {
     );
 
     // Fetch personal orders
+    const retailerUser = await queryGet('SELECT id, userId, email FROM users WHERE id = ? OR userId = ?', [retailerId, retailerId]);
     const orders = await queryAll(
-      `SELECT * FROM orders WHERE customerId = ? ORDER BY createdDate DESC LIMIT 20`,
-      [retailerId]
+      `SELECT * FROM orders WHERE userId = ? OR customerEmail = ? ORDER BY id DESC LIMIT 20`,
+      [retailerUser?.userId || retailerId, retailerUser?.email || '']
     );
 
     // Score details

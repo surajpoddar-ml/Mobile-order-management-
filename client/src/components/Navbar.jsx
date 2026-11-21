@@ -959,7 +959,7 @@ export const Navbar = () => {
                   onClick={() => {
                     setMobileMenuOpen(false);
                     if (user?.userType === 'Customer') navigate('/portal/customer?tab=messages');
-                    else if (user?.userType === 'Distributor') navigate('/portal/distributor?tab=messages');
+                    else if (user?.userType === 'Distributor' || user?.userType === 'Retailer') navigate('/portal/distributor?tab=messages');
                     else if (user?.userType === 'Admin') navigate('/admin?tab=messages');
                     else navigate('/login?returnUrl=/portal/customer?tab=messages');
                   }}
