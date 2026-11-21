@@ -142,10 +142,10 @@ router.post('/', verifyToken, async (req, res) => {
     const isOnlinePayment = paymentMethod.includes('Online') || paymentMethod.includes('QR') || paymentMethod.includes('UPI');
     let paymentStatus = isOnlinePayment ? 'Pending Verification' : 'Pending (Cash on Delivery)';
     if (paymentMethod === 'Purchase with Available Credit') {
-      if (userType !== 'Distributor') {
+      if (userType !== 'Distributor' && userType !== 'Retailer') {
         return res.status(403).json({
           success: false,
-          message: 'Purchase with Available Credit is exclusively available for wholesale distributors.'
+          message: 'Purchase with Available Credit is exclusively available for wholesale distributors and approved retailers.'
         });
       }
 

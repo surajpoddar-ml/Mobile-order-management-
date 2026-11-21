@@ -1322,7 +1322,7 @@ export const AdminPanel = () => {
         { id: 'reliability-scores', label: 'Payment Reliability', icon: Award, badge: null, color: '#7c3aed' },
         { id: 'distribution-reports', label: 'Territory Reports', icon: FileText, badge: null, color: '#0284c7' },
         { id: 'distribution-audit', label: 'Distribution Audit Trail', icon: ShieldCheck, badge: null, color: '#475569' },
-        { id: 'distributor-credit', label: 'Distributor Credit System', icon: CreditCard, badge: null, color: '#0284c7' }
+        { id: 'distributor-credit', label: 'Credit System (Distributors & Retailers)', icon: CreditCard, badge: null, color: '#0284c7' }
       ]
     },
     {

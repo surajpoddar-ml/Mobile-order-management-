@@ -64,14 +64,14 @@ export const ensureDistributorCreditRecord = async (distributorUser) => {
 };
 
 // =========================================================================
-// 1. DISTRIBUTOR: GET OWN CREDIT BALANCE, INTEREST DETAILS & HISTORY
+// 1. DISTRIBUTOR & RETAILER: GET OWN CREDIT BALANCE, INTEREST DETAILS & HISTORY
 // =========================================================================
 router.get('/my-credit', verifyToken, async (req, res) => {
   try {
-    if (req.user.userType !== 'Distributor') {
+    if (req.user.userType !== 'Distributor' && req.user.userType !== 'Retailer') {
       return res.status(403).json({
         success: false,
-        message: 'Credit payment system is exclusively for wholesale distributors.'
+        message: 'Credit payment system is exclusively for wholesale distributors and approved retailers.'
       });
     }
 
@@ -179,8 +179,10 @@ router.get('/my-credit', verifyToken, async (req, res) => {
 // =========================================================================
 router.get('/admin/distributors', verifyToken, requireAdmin, async (req, res) => {
   try {
-    const { query } = req.query;
+    const { query, role, accountType } = req.query;
     const interestSettings = await getInterestSettings();
+
+    const selectedRole = (role || accountType || 'ALL').trim().toUpperCase();
 
     let sql = `
       SELECT
@@ -190,6 +192,7 @@ router.get('/admin/distributors', verifyToken, requireAdmin, async (req, res) =>
         u.businessName,
         u.phoneNumber,
         u.email,
+        u.userType,
         u.accountStatus,
         COALESCE(dc.total_credit, 0.00) AS totalCredit,
         COALESCE(dc.used_credit, 0.00) AS usedCredit,
@@ -207,10 +210,17 @@ router.get('/admin/distributors', verifyToken, requireAdmin, async (req, res) =>
         dc.updated_at AS lastUpdated
       FROM users u
       LEFT JOIN distributor_credits dc ON (dc.distributor_id = u.userId OR dc.user_id = u.id)
-      WHERE u.userType = 'Distributor'
     `;
 
     const params = [];
+    if (selectedRole === 'DISTRIBUTOR') {
+      sql += " WHERE u.userType = 'Distributor'";
+    } else if (selectedRole === 'RETAILER') {
+      sql += " WHERE u.userType = 'Retailer'";
+    } else {
+      sql += " WHERE u.userType IN ('Distributor', 'Retailer')";
+    }
+
     if (query && query.trim()) {
       const q = `%${query.trim()}%`;
       sql += ` AND (u.userId LIKE ? OR u.fullName LIKE ? OR u.businessName LIKE ? OR u.phoneNumber LIKE ? OR u.email LIKE ?)`;
@@ -221,6 +231,8 @@ router.get('/admin/distributors', verifyToken, requireAdmin, async (req, res) =>
 
     const distributors = await queryAll(sql, params);
 
+    let totalDistributorCount = 0;
+    let totalRetailerCount = 0;
     let totalAssigned = 0;
     let totalUsed = 0;
     let totalPaid = 0;
@@ -231,6 +243,11 @@ router.get('/admin/distributors', verifyToken, requireAdmin, async (req, res) =>
     let totalDailyInterestAll = 0;
 
     distributors.forEach((d) => {
+      if (d.userType === 'Retailer') {
+        totalRetailerCount += 1;
+      } else {
+        totalDistributorCount += 1;
+      }
       d.totalCredit = Number(d.totalCredit || 0);
       d.usedCredit = Number(d.usedCredit || 0);
       d.totalPaid = Number(d.totalPaid || 0);
@@ -282,7 +299,9 @@ router.get('/admin/distributors', verifyToken, requireAdmin, async (req, res) =>
       success: true,
       interestSettings,
       stats: {
-        totalDistributors: distributors.length,
+        totalAccounts: distributors.length,
+        totalDistributors: totalDistributorCount,
+        totalRetailers: totalRetailerCount,
         totalAssigned,
         totalUsed,
         totalPaid,
@@ -367,14 +386,14 @@ router.put('/admin/distributor-interest/:distributorId', verifyToken, requireAdm
     const { interestEnabled, customMonthlyRate, interestStartDate } = req.body;
 
     const distributorUser = await queryGet(
-      "SELECT id, userId, fullName, businessName FROM users WHERE (userId = ? OR id = ?) AND userType = 'Distributor'",
+      "SELECT id, userId, fullName, businessName, userType FROM users WHERE (userId = ? OR id = ?) AND userType IN ('Distributor', 'Retailer')",
       [distributorId, distributorId]
     );
 
     if (!distributorUser) {
       return res.status(404).json({
         success: false,
-        message: 'Distributor not found.'
+        message: 'Distributor or Retailer not found.'
       });
     }
 
@@ -464,14 +483,14 @@ router.get('/admin/interest-history/:distributorId', verifyToken, requireAdmin, 
     const { distributorId } = req.params;
 
     const distributorUser = await queryGet(
-      "SELECT id, userId, fullName, businessName, email, phoneNumber, accountStatus FROM users WHERE (userId = ? OR id = ?) AND userType = 'Distributor'",
+      "SELECT id, userId, fullName, businessName, email, phoneNumber, userType, accountStatus FROM users WHERE (userId = ? OR id = ?) AND userType IN ('Distributor', 'Retailer')",
       [distributorId, distributorId]
     );
 
     if (!distributorUser) {
       return res.status(404).json({
         success: false,
-        message: 'Distributor not found.'
+        message: 'Account not found.'
       });
     }
 
@@ -517,7 +536,8 @@ router.get('/admin/interest-history/:distributorId', verifyToken, requireAdmin, 
         fullName: distributorUser.fullName,
         businessName: distributorUser.businessName,
         email: distributorUser.email,
-        phoneNumber: distributorUser.phoneNumber
+        phoneNumber: distributorUser.phoneNumber,
+        userType: distributorUser.userType
       },
       summary: {
         outstandingPrincipal: outstandingBalance,
@@ -562,14 +582,14 @@ router.get('/admin/ledger/:distributorId', verifyToken, requireAdmin, async (req
     } = req.query;
 
     const distributorUser = await queryGet(
-      "SELECT id, userId, fullName, businessName, email, phoneNumber, accountStatus FROM users WHERE (userId = ? OR id = ?) AND userType = 'Distributor'",
+      "SELECT id, userId, fullName, businessName, email, phoneNumber, userType, accountStatus FROM users WHERE (userId = ? OR id = ?) AND userType IN ('Distributor', 'Retailer')",
       [distributorId, distributorId]
     );
 
     if (!distributorUser) {
       return res.status(404).json({
         success: false,
-        message: 'Distributor not found.'
+        message: 'Account not found.'
       });
     }
 
@@ -721,6 +741,7 @@ router.get('/admin/ledger/:distributorId', verifyToken, requireAdmin, async (req
         businessName: distributorUser.businessName,
         email: distributorUser.email,
         phoneNumber: distributorUser.phoneNumber,
+        userType: distributorUser.userType,
         accountStatus: distributorUser.accountStatus
       },
       summary: {
@@ -776,14 +797,14 @@ router.post('/admin/adjust', verifyToken, requireAdmin, async (req, res) => {
     }
 
     const distributorUser = await queryGet(
-      "SELECT id, userId, fullName, businessName, email, phoneNumber FROM users WHERE (userId = ? OR id = ?) AND userType = 'Distributor'",
+      "SELECT id, userId, fullName, businessName, email, phoneNumber, userType FROM users WHERE (userId = ? OR id = ?) AND userType IN ('Distributor', 'Retailer')",
       [distributorId, distributorId]
     );
 
     if (!distributorUser) {
       return res.status(404).json({
         success: false,
-        message: 'Distributor not found.'
+        message: 'Account not found.'
       });
     }
 
@@ -870,12 +891,12 @@ router.post('/admin/adjust', verifyToken, requireAdmin, async (req, res) => {
     try {
       await createNotification({
         recipientId: distributorUser.userId,
-        recipientRole: 'Distributor',
+        recipientRole: distributorUser.userType || 'Distributor',
         title: `💳 Available Credit Updated: ₹${newAvailable.toLocaleString('en-IN')}`,
         message: `Your credit limit has been adjusted by administration. Total Assigned: ₹${newTotal.toLocaleString('en-IN')}, Remaining Available: ₹${newAvailable.toLocaleString('en-IN')}.`,
         type: 'credit_update',
         entityId: String(creditRecord.id),
-        linkUrl: '/portal/distributor?tab=credit',
+        linkUrl: distributorUser.userType === 'Retailer' ? '/retailer?tab=credit' : '/portal/distributor?tab=credit',
         dedupKey: `credit_adj_${distributorUser.userId}_${Date.now()}`
       });
     } catch (e) {
@@ -927,14 +948,14 @@ router.post('/admin/settle-payment', verifyToken, requireAdmin, async (req, res)
     }
 
     const distributorUser = await queryGet(
-      "SELECT id, userId, fullName, businessName, email, phoneNumber FROM users WHERE (userId = ? OR id = ?) AND userType = 'Distributor'",
+      "SELECT id, userId, fullName, businessName, email, phoneNumber, userType FROM users WHERE (userId = ? OR id = ?) AND userType IN ('Distributor', 'Retailer')",
       [distributorId, distributorId]
     );
 
     if (!distributorUser) {
       return res.status(404).json({
         success: false,
-        message: 'Distributor not found.'
+        message: 'Account not found.'
       });
     }
 
@@ -1033,12 +1054,12 @@ router.post('/admin/settle-payment', verifyToken, requireAdmin, async (req, res)
     try {
       await createNotification({
         recipientId: distributorUser.userId,
-        recipientRole: 'Distributor',
+        recipientRole: distributorUser.userType || 'Distributor',
         title: `✅ Payment Received: ₹${parsedAmount.toLocaleString('en-IN')}`,
         message: `Your payment of ₹${parsedAmount.toLocaleString('en-IN')} has been recorded. Principal Outstanding: ₹${outstandingAfter.toLocaleString('en-IN')}, Interest Due: ₹${accInterestAfter.toLocaleString('en-IN')}, Available Credit: ₹${availableAfter.toLocaleString('en-IN')}.`,
         type: 'credit_update',
         entityId: txnNumber,
-        linkUrl: '/portal/distributor?tab=credit',
+        linkUrl: distributorUser.userType === 'Retailer' ? '/retailer?tab=credit' : '/portal/distributor?tab=credit',
         dedupKey: `credit_pay_${txnNumber}`
       });
     } catch (e) {

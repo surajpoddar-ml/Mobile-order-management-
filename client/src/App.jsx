@@ -80,7 +80,7 @@ function AppContent() {
       );
     }
 
-    if (path === '/portal/distributor' || path === '/distributor') {
+    if (path === '/portal/distributor' || path === '/distributor' || path === '/portal/retailer' || path === '/retailer') {
       return (
         <ProtectedRoute allowedRoles={['Distributor', 'Retailer']}>
           {user?.distributorLevel || user?.userType === 'Retailer' ? (
@@ -116,6 +116,7 @@ function AppContent() {
       const role = user.role || user.userType;
       if (role === 'Customer') return <CustomerPortal />;
       if (role === 'Distributor') return <DistributorPortal />;
+      if (role === 'Retailer') return <DistributionHierarchyPortal user={user} onLogout={() => navigate('/login')} />;
       if (role === 'Admin') return <AdminPanel />;
     }
 

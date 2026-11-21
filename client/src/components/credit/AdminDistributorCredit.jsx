@@ -29,7 +29,9 @@ import {
 export const AdminDistributorCredit = () => {
   const [distributors, setDistributors] = useState([]);
   const [stats, setStats] = useState({
+    totalAccounts: 0,
     totalDistributors: 0,
+    totalRetailers: 0,
     totalAssigned: 0,
     totalUsed: 0,
     totalPaid: 0,
@@ -40,6 +42,7 @@ export const AdminDistributorCredit = () => {
     totalDailyInterestAll: 0
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL'); // 'ALL' | 'Distributor' | 'Retailer'
   const [loading, setLoading] = useState(false);
 
   // Global Credit Interest Settings State
@@ -147,11 +150,11 @@ export const AdminDistributorCredit = () => {
     }
   };
 
-  // Load all distributors credit summary + global interest config
-  const loadDistributorCredits = async (query = '') => {
+  // Load all distributors & retailers credit summary + global interest config
+  const loadDistributorCredits = async (query = searchQuery, role = roleFilter) => {
     setLoading(true);
     try {
-      const res = await api.credits.getDistributorsCredit(query);
+      const res = await api.credits.getDistributorsCredit(query, role);
       if (res.success) {
         setDistributors(res.distributors || []);
         if (res.stats) setStats(res.stats);
@@ -165,8 +168,8 @@ export const AdminDistributorCredit = () => {
   };
 
   useEffect(() => {
-    loadDistributorCredits(searchQuery);
-  }, [searchQuery]);
+    loadDistributorCredits(searchQuery, roleFilter);
+  }, [searchQuery, roleFilter]);
 
   // Save global Credit Interest Settings
   const handleSaveInterestSettings = async (e) => {
@@ -584,10 +587,10 @@ export const AdminDistributorCredit = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
-            Distributor Credit, Interest & Accounting System
+            Distributor & Retailer Credit, Interest & Accounting System
           </h2>
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.88rem' }}>
-            Administer credit lines, configure automatic daily interest, settle payments, and inspect immutable ledgers.
+            Administer credit lines, configure automatic daily interest, settle payments, and inspect immutable ledgers for wholesale distributors and retailers.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -614,7 +617,7 @@ export const AdminDistributorCredit = () => {
           <button
             type="button"
             onClick={() => {
-              loadDistributorCredits(searchQuery);
+              loadDistributorCredits(searchQuery, roleFilter);
               if (selectedDistributor) {
                 loadLedger(selectedDistributor.distributorId, ledgerFilters);
               }
@@ -650,7 +653,7 @@ export const AdminDistributorCredit = () => {
             {formatCurrency(stats.totalAssigned)}
           </div>
           <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '2px' }}>
-            {stats.totalDistributors} distributors
+            {stats.totalAccounts ?? (stats.totalDistributors + (stats.totalRetailers || 0))} accounts ({stats.totalDistributors || 0} dist, {stats.totalRetailers || 0} ret)
           </div>
         </div>
 
@@ -943,34 +946,94 @@ export const AdminDistributorCredit = () => {
         </div>
       )}
 
-      {/* 4. Distributor Credit & Interest Management Directory */}
+      {/* 4. Partner Credit & Interest Management Directory */}
       <div className="glass-panel" style={{ padding: '20px', borderRadius: '16px', background: '#ffffff', border: '1px solid #e2e8f0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '16px' }}>
           <div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
-              Distributor Credit & Individual Interest Management
+              Partner Credit & Individual Interest Management
             </h3>
             <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '0.82rem' }}>
-              Manage credit limits, customize per-distributor interest rates, inspect daily interest history, or open full ledgers.
+              Manage credit limits, customize interest rates, inspect daily interest logs, or open full ledgers for distributors and retailers.
             </p>
           </div>
 
-          <div style={{ position: 'relative', minWidth: '280px' }}>
-            <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-            <input
-              type="text"
-              placeholder="Search by ID, name, business, phone..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="form-input"
-              style={{
-                width: '100%',
-                padding: '8px 12px 8px 36px',
-                borderRadius: '10px',
-                fontSize: '0.86rem',
-                border: '1.5px solid #cbd5e1'
-              }}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Role Filter Tabs */}
+            <div style={{ display: 'flex', background: '#f1f5f9', padding: '3px', borderRadius: '10px', gap: '3px' }}>
+              <button
+                type="button"
+                onClick={() => setRoleFilter('ALL')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '7px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: roleFilter === 'ALL' ? '#ffffff' : 'transparent',
+                  color: roleFilter === 'ALL' ? '#0f172a' : '#64748b',
+                  boxShadow: roleFilter === 'ALL' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                All ({stats.totalAccounts ?? distributors.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setRoleFilter('Distributor')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '7px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: roleFilter === 'Distributor' ? '#ffffff' : 'transparent',
+                  color: roleFilter === 'Distributor' ? '#0284c7' : '#64748b',
+                  boxShadow: roleFilter === 'Distributor' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                Distributors ({stats.totalDistributors ?? 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setRoleFilter('Retailer')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '7px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: roleFilter === 'Retailer' ? '#ffffff' : 'transparent',
+                  color: roleFilter === 'Retailer' ? '#059669' : '#64748b',
+                  boxShadow: roleFilter === 'Retailer' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                Retailers ({stats.totalRetailers ?? 0})
+              </button>
+            </div>
+
+            <div style={{ position: 'relative', minWidth: '260px' }}>
+              <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                type="text"
+                placeholder="Search by ID, name, shop, phone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="form-input"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px 8px 36px',
+                  borderRadius: '10px',
+                  fontSize: '0.86rem',
+                  border: '1.5px solid #cbd5e1'
+                }}
+              />
+            </div>
           </div>
         </div>
 
@@ -979,7 +1042,7 @@ export const AdminDistributorCredit = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: 700 }}>
-                <th style={{ padding: '12px 12px' }}>Distributor</th>
+                <th style={{ padding: '12px 12px' }}>Account / Partner</th>
                 <th style={{ padding: '12px 10px' }}>Credit Limit</th>
                 <th style={{ padding: '12px 10px' }}>Outstanding Principal</th>
                 <th style={{ padding: '12px 10px' }}>Monthly Rate</th>
@@ -994,12 +1057,13 @@ export const AdminDistributorCredit = () => {
               {distributors.length === 0 ? (
                 <tr>
                   <td colSpan={9} style={{ padding: '36px', textAlign: 'center', color: '#94a3b8' }}>
-                    {loading ? 'Loading distributor credit records...' : 'No distributors found matching query.'}
+                    {loading ? 'Loading credit records...' : 'No accounts found matching query or role filter.'}
                   </td>
                 </tr>
               ) : (
                 distributors.map((d) => {
                   const isSelected = selectedDistributor?.distributorId === d.distributorId;
+                  const isRetailer = d.userType === 'Retailer';
                   return (
                     <tr
                       key={d.distributorId}
@@ -1014,10 +1078,22 @@ export const AdminDistributorCredit = () => {
                       onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = '#ffffff'; }}
                     >
                       <td style={{ padding: '12px' }}>
-                        <div style={{ fontWeight: 800, color: '#0284c7', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                          {d.distributorId}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 800, color: isRetailer ? '#059669' : '#0284c7', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                            {d.distributorId}
+                          </span>
+                          <span style={{
+                            padding: '1px 6px',
+                            borderRadius: '10px',
+                            fontSize: '0.66rem',
+                            fontWeight: 800,
+                            background: isRetailer ? 'rgba(16, 185, 129, 0.14)' : 'rgba(2, 132, 199, 0.14)',
+                            color: isRetailer ? '#059669' : '#0284c7'
+                          }}>
+                            {isRetailer ? 'Retailer' : 'Distributor'}
+                          </span>
                         </div>
-                        <div style={{ fontWeight: 700, color: '#0f172a' }}>{d.fullName}</div>
+                        <div style={{ fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{d.fullName}</div>
                         <div style={{ fontSize: '0.73rem', color: '#64748b' }}>
                           {d.businessName ? `${d.businessName} • ` : ''}{d.phoneNumber || d.email}
                         </div>
@@ -1195,13 +1271,23 @@ export const AdminDistributorCredit = () => {
                 <span style={{
                   padding: '4px 10px',
                   borderRadius: '6px',
-                  background: '#0284c7',
+                  background: selectedDistributor.userType === 'Retailer' ? '#059669' : '#0284c7',
                   color: '#ffffff',
                   fontFamily: 'monospace',
                   fontSize: '0.85rem',
                   fontWeight: 800
                 }}>
                   {selectedDistributor.distributorId}
+                </span>
+                <span style={{
+                  padding: '3px 8px',
+                  borderRadius: '12px',
+                  background: selectedDistributor.userType === 'Retailer' ? 'rgba(16, 185, 129, 0.14)' : 'rgba(2, 132, 199, 0.14)',
+                  color: selectedDistributor.userType === 'Retailer' ? '#059669' : '#0284c7',
+                  fontSize: '0.74rem',
+                  fontWeight: 800
+                }}>
+                  {selectedDistributor.userType === 'Retailer' ? 'Authorized Retailer' : 'Wholesale Distributor'}
                 </span>
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
                   {selectedDistributor.fullName} — Official Credit & Interest Ledger

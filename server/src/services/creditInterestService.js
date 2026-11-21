@@ -254,12 +254,12 @@ export const processDailyInterestForAllDistributors = async ({
       };
     }
 
-    // Fetch all eligible credit accounts (or specific distributor)
+    // Fetch all eligible credit accounts (or specific distributor / retailer)
     let distSql = `
-      SELECT dc.*, u.userId AS user_code, u.fullName, u.businessName, u.accountStatus
+      SELECT dc.*, u.userId AS user_code, u.fullName, u.businessName, u.userType, u.accountStatus
       FROM distributor_credits dc
       INNER JOIN users u ON (dc.distributor_id = u.userId OR dc.user_id = u.id)
-      WHERE u.userType = 'Distributor'
+      WHERE u.userType IN ('Distributor', 'Retailer')
     `;
     const distParams = [];
     if (onlyDistributorId) {
@@ -501,16 +501,16 @@ export const processDailyInterestForAllDistributors = async ({
             principalUsed: latestPrincipalUsed
           });
 
-          // Send clean notification to distributor
+          // Send clean notification to distributor or retailer
           try {
             await createNotification({
               recipientId: locked.distributor_id,
-              recipientRole: 'Distributor',
+              recipientRole: row.userType || 'Distributor',
               title: `📈 Daily Credit Interest Added: ₹${chargedForThisDistributor.toLocaleString('en-IN')}`,
               message: `Daily interest of ₹${chargedForThisDistributor.toLocaleString('en-IN')} (${effectiveRate}%/mo on ₹${latestPrincipalUsed.toLocaleString('en-IN')} principal) has been recorded for ${endDate}. Accumulated interest: ₹${latestInterestAfter.toLocaleString('en-IN')}.`,
               type: 'credit_update',
               entityId: `INT-${locked.distributor_id}-${endDate}`,
-              linkUrl: '/portal/distributor?tab=credit',
+              linkUrl: row.userType === 'Retailer' ? '/retailer?tab=credit' : '/portal/distributor?tab=credit',
               dedupKey: `daily_int_${locked.distributor_id}_${endDate}`
             });
           } catch (notifErr) {

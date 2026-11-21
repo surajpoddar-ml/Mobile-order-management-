@@ -780,8 +780,13 @@ export const api = {
     getMyCredit: () =>
       request('/credits/my-credit', { method: 'GET' }),
 
-    getDistributorsCredit: (query = '') =>
-      request(`/credits/admin/distributors${query ? `?query=${encodeURIComponent(query)}` : ''}`, { method: 'GET' }),
+    getDistributorsCredit: (query = '', role = 'ALL') => {
+      const q = new URLSearchParams();
+      if (query && query.trim()) q.append('query', query.trim());
+      if (role && role !== 'ALL') q.append('role', role);
+      const qs = q.toString();
+      return request(`/credits/admin/distributors${qs ? `?${qs}` : ''}`, { method: 'GET' });
+    },
 
     getDistributorLedger: (distributorId, params = {}) => {
       const qs = new URLSearchParams();
